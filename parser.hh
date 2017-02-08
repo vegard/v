@@ -53,6 +53,8 @@ enum ast_node_type {
 	/* Binary infix operators */
 	AST_MEMBER,
 	AST_PAIR,
+	AST_MULTIPLY,
+	AST_ADD,
 	AST_COMMA,
 	AST_SEMICOLON,
 };
@@ -115,6 +117,8 @@ struct ast_node {
 		/* Binary operators */
 		case AST_MEMBER:
 		case AST_PAIR:
+		case AST_MULTIPLY:
+		case AST_ADD:
 		case AST_COMMA:
 		case AST_SEMICOLON:
 			binop.lhs.~ast_node_ptr();
@@ -188,6 +192,12 @@ struct ast_node {
 		case AST_PAIR:
 			dump_binop(fp, indent, "pair");
 			break;
+		case AST_MULTIPLY:
+			dump_binop(fp, indent, "multiply");
+			break;
+		case AST_ADD:
+			dump_binop(fp, indent, "add");
+			break;
 		case AST_COMMA:
 			dump_binop(fp, indent, "comma");
 			break;
@@ -235,14 +245,14 @@ struct parser {
 	ast_node_ptr parse_symbol_name(unsigned int &pos);
 	ast_node_ptr parse_atom(unsigned int &pos);
 
-	ast_node_ptr parse_expr(unsigned int &pos);
-
 	template<ast_node_type type, unsigned int left_size, unsigned int right_size>
 	ast_node_ptr parse_outfix(const char (&left)[left_size], const char (&right)[right_size], unsigned int &pos);
 	template<ast_node_type type, unsigned int op_size>
 	ast_node_ptr parse_unop_prefix(const char (&op)[op_size], unsigned int &pos);
 	template<ast_node_type type, unsigned int op_size>
 	ast_node_ptr parse_binop(const char (&op)[op_size], ast_node_ptr lhs, unsigned int &pos);
+
+	ast_node_ptr parse_expr(unsigned int &pos);
 
 	ast_node_ptr parse_doc(unsigned int &pos);
 };
@@ -484,6 +494,10 @@ ast_node_ptr parser::parse_expr(unsigned int &pos)
 		result = parse_binop<AST_MEMBER>(".", lhs, i);
 	if (!result)
 		result = parse_binop<AST_PAIR>(":", lhs, i);
+	if (!result)
+		result = parse_binop<AST_MULTIPLY>("*", lhs, i);
+	if (!result)
+		result = parse_binop<AST_ADD>("+", lhs, i);
 	if (!result)
 		result = parse_binop<AST_COMMA>(",", lhs, i);
 	if (!result)

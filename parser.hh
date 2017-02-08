@@ -106,7 +106,7 @@ struct ast_node {
 
 	// Position where it was defined in the source document
 	unsigned int pos;
-	unsigned int len;
+	unsigned int end;
 
 	union {
 		mpz_class literal_integer;
@@ -123,6 +123,13 @@ struct ast_node {
 
 	ast_node():
 		type(AST_UNKNOWN)
+	{
+	}
+
+	ast_node(ast_node_type type, unsigned int pos, unsigned int end):
+		type(type),
+		pos(pos),
+		end(end)
 	{
 	}
 
@@ -336,8 +343,7 @@ ast_node_ptr parser::parse_literal_integer(unsigned int &pos)
 		}
 	}
 
-	auto result = std::make_shared<ast_node>();
-	result->type = AST_LITERAL_INTEGER;
+	auto result = std::make_shared<ast_node>(AST_LITERAL_INTEGER, pos, i);
 	new (&result->literal_integer) mpz_class();
 	if (result->literal_integer.set_str(str, base))
 		// TODO: need to free data->value?
@@ -371,8 +377,7 @@ ast_node_ptr parser::parse_literal_string(unsigned int &pos)
 		throw syntax_error("unterminated string literal", pos, i);
 	++i;
 
-	auto result = std::make_shared<ast_node>();
-	result->type = AST_LITERAL_STRING;
+	auto result = std::make_shared<ast_node>(AST_LITERAL_STRING, pos, i);
 	new (&result->literal_string) std::string(&str[0], str.size());
 
 	pos = i;
@@ -390,8 +395,7 @@ ast_node_ptr parser::parse_symbol_name(unsigned int &pos)
 	if (i == pos)
 		return nullptr;
 
-	auto result = std::make_shared<ast_node>();
-	result->type = AST_SYMBOL_NAME;
+	auto result = std::make_shared<ast_node>(AST_SYMBOL_NAME, pos, i);
 	auto &data = result->symbol_name;
 	new (&data) std::string(buf + pos, i - pos);
 
@@ -435,11 +439,10 @@ ast_node_ptr parser::parse_outfix(const char (&left)[left_size], const char (&ri
 		throw syntax_error("expected terminator", i, i + right_size - 1);
 	i += right_size - 1;
 
-	skip_whitespace(i);
-
-	auto result = std::make_shared<ast_node>();
-	result->type = type;
+	auto result = std::make_shared<ast_node>(type, pos, i);
 	new (&result->unop) ast_node_ptr(operand);
+
+	skip_whitespace(i);
 
 	pos = i;
 	return result;
@@ -461,11 +464,10 @@ ast_node_ptr parser::parse_unop_prefix(const char (&op)[op_size], unsigned int &
 	if (!operand)
 		return nullptr;
 
-	skip_whitespace(i);
-
-	auto result = std::make_shared<ast_node>();
-	result->type = type;
+	auto result = std::make_shared<ast_node>(type, pos, i);
 	new (&result->unop) ast_node_ptr(operand);
+
+	skip_whitespace(i);
 
 	pos = i;
 	return result;
@@ -503,29 +505,28 @@ ast_node_ptr parser::parse_binop(const char (&op)[op_size], ast_node_ptr lhs, un
 		return lhs;
 	}
 
-	skip_whitespace(i);
-
 	// Jon Blow-style precedence handling
 	// <https://twitter.com/jonathan_blow/status/747623921822760960>
 	if (should_shuffle_args(type, rhs->type)) {
-		auto new_lhs = std::make_shared<ast_node>();
-		new_lhs->type = type;
+		auto new_lhs = std::make_shared<ast_node>(type, pos, i);
 		new (&new_lhs->binop.lhs) ast_node_ptr(lhs);
 		new (&new_lhs->binop.rhs) ast_node_ptr(rhs->binop.lhs);
 
-		auto result = std::make_shared<ast_node>();
-		result->type = rhs->type;
+		auto result = std::make_shared<ast_node>(rhs->type, rhs->pos, rhs->end);
 		new (&result->binop.lhs) ast_node_ptr(new_lhs);
 		new (&result->binop.rhs) ast_node_ptr(rhs->binop.rhs);
+
+		skip_whitespace(i);
 
 		pos = i;
 		return result;
 	}
 
-	auto result = std::make_shared<ast_node>();
-	result->type = type;
+	auto result = std::make_shared<ast_node>(type, pos, i);
 	new (&result->binop.lhs) ast_node_ptr(lhs);
 	new (&result->binop.rhs) ast_node_ptr(rhs);
+
+	skip_whitespace(i);
 
 	pos = i;
 	return result;

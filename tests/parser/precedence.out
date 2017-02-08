@@ -1,0 +1,7 @@
+(add
+    (multiply
+        (symbol_name a)
+        (symbol_name b)
+    )
+    (symbol_name c)
+)

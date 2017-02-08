@@ -1,0 +1,134 @@
+(semicolon
+    (parens)
+    (semicolon
+        (brackets
+            (literal_integer 1)
+        )
+        (semicolon
+            (brackets
+                (literal_integer 1)
+            )
+            (semicolon
+                (brackets
+                    (comma
+                        (literal_integer 1)
+                        (literal_integer 2)
+                    )
+                )
+                (semicolon
+                    (brackets
+                        (comma
+                            (literal_integer 1)
+                            (literal_integer 2)
+                        )
+                    )
+                    (semicolon
+                        (brackets
+                            (comma
+                                (literal_integer 1)
+                                (comma
+                                    (literal_integer 2)
+                                    (literal_integer 3)
+                                )
+                            )
+                        )
+                        (semicolon
+                            (brackets
+                                (parens)
+                            )
+                            (semicolon
+                                (brackets
+                                    (comma
+                                        (parens)
+                                        (parens)
+                                    )
+                                )
+                                (semicolon
+                                    (brackets
+                                        (brackets
+                                            (brackets
+                                                (brackets
+                                                    (brackets
+                                                        (brackets
+                                                            (brackets
+                                                                (brackets
+                                                                    (literal_integer 0)
+                                                                )
+                                                            )
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                    (semicolon
+                                        (parens)
+                                        (semicolon
+                                            (square-brackets
+                                                (literal_integer 1)
+                                            )
+                                            (semicolon
+                                                (square-brackets
+                                                    (literal_integer 1)
+                                                )
+                                                (semicolon
+                                                    (square-brackets
+                                                        (comma
+                                                            (literal_integer 1)
+                                                            (literal_integer 2)
+                                                        )
+                                                    )
+                                                    (semicolon
+                                                        (square-brackets
+                                                            (comma
+                                                                (literal_integer 1)
+                                                                (comma
+                                                                    (literal_integer 2)
+                                                                    (literal_integer 3)
+                                                                )
+                                                            )
+                                                        )
+                                                        (semicolon
+                                                            (parens)
+                                                            (semicolon
+                                                                (angle-brackets
+                                                                    (literal_integer 1)
+                                                                )
+                                                                (semicolon
+                                                                    (angle-brackets
+                                                                        (comma
+                                                                            (literal_integer 1)
+                                                                            (literal_integer 2)
+                                                                        )
+                                                                    )
+                                                                    (semicolon
+                                                                        (parens)
+                                                                        (semicolon
+                                                                            (curly-brackets
+                                                                                (literal_integer 1)
+                                                                            )
+                                                                            (curly-brackets
+                                                                                (comma
+                                                                                    (literal_integer 1)
+                                                                                    (literal_integer 2)
+                                                                                )
+                                                                            )
+                                                                        )
+                                                                    )
+                                                                )
+                                                            )
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    )
+)

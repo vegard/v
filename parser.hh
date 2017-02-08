@@ -59,6 +59,33 @@ enum ast_node_type {
 	AST_SEMICOLON,
 };
 
+bool is_binop(ast_node_type t)
+{
+	switch (t) {
+	case AST_MEMBER:
+	case AST_PAIR:
+	case AST_MULTIPLY:
+	case AST_ADD:
+	case AST_COMMA:
+	case AST_SEMICOLON:
+		return true;
+	default:
+		break;
+	}
+
+	return false;
+}
+
+unsigned int precedence(ast_node_type t)
+{
+	return t;
+}
+
+bool left_associative(ast_node_type t)
+{
+	return true;
+}
+
 struct ast_node;
 typedef std::shared_ptr<ast_node> ast_node_ptr;
 
@@ -432,6 +459,17 @@ ast_node_ptr parser::parse_unop_prefix(const char (&op)[op_size], unsigned int &
 	return result;
 }
 
+static bool should_shuffle_args(ast_node_type lhs_type, ast_node_type rhs_type)
+{
+	if (!is_binop(rhs_type))
+		return false;
+	if (precedence(lhs_type) < precedence(rhs_type))
+		return true;
+	if (precedence(lhs_type) != precedence(rhs_type))
+		return false;
+	return left_associative(lhs_type);
+}
+
 // NOTE: We expect the caller to have parsed the left hand side already
 // TODO: compute strlen(op) at compile-time by passing another template parameter
 template<ast_node_type type, unsigned int op_size>
@@ -454,6 +492,23 @@ ast_node_ptr parser::parse_binop(const char (&op)[op_size], ast_node_ptr lhs, un
 	}
 
 	skip_whitespace(i);
+
+	// Jon Blow-style precedence handling
+	// <https://twitter.com/jonathan_blow/status/747623921822760960>
+	if (should_shuffle_args(type, rhs->type)) {
+		auto new_lhs = std::make_shared<ast_node>();
+		new_lhs->type = type;
+		new (&new_lhs->binop.lhs) ast_node_ptr(lhs);
+		new (&new_lhs->binop.rhs) ast_node_ptr(rhs->binop.lhs);
+
+		auto result = std::make_shared<ast_node>();
+		result->type = rhs->type;
+		new (&result->binop.lhs) ast_node_ptr(new_lhs);
+		new (&result->binop.rhs) ast_node_ptr(rhs->binop.rhs);
+
+		pos = i;
+		return result;
+	}
 
 	auto result = std::make_shared<ast_node>();
 	result->type = type;

@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 			auto pos = line_numbers.lookup(e.pos);
 			auto end = line_numbers.lookup(e.end);
 
-			printf("%u:%u: %s\n", pos.line, pos.column, e.what());
+			printf("%s:%u:%u: %s\n", filename, pos.line, pos.column, e.what());
 			if (pos.line == end.line) {
 				printf("%.*s", pos.line_length, doc + pos.line_start);
 				printf("%*s%s\n", pos.column, "", std::string(end.column - pos.column, '^').c_str());

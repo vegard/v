@@ -218,7 +218,34 @@ struct syntax_error: parse_error {
 	}
 };
 
-static void skip_whitespace(unsigned int &pos, const char *buf, size_t len)
+struct parser {
+	const char *buf;
+	unsigned int len;
+
+	parser(const char *buf, size_t len):
+		buf(buf),
+		len(len)
+	{
+	}
+
+	void skip_whitespace(unsigned int &pos);
+
+	ast_node_ptr parse_literal_integer(unsigned int &pos);
+	ast_node_ptr parse_literal_string(unsigned int &pos);
+	ast_node_ptr parse_symbol_name(unsigned int &pos);
+	ast_node_ptr parse_atom(unsigned int &pos);
+
+	ast_node_ptr parse_expr(unsigned int &pos);
+
+	template<ast_node_type type, unsigned int left_size, unsigned int right_size>
+	ast_node_ptr parse_outfix(const char (&left)[left_size], const char (&right)[right_size], unsigned int &pos);
+	template<ast_node_type type, unsigned int op_size>
+	ast_node_ptr parse_unop_prefix(const char (&op)[op_size], unsigned int &pos);
+	template<ast_node_type type, unsigned int op_size>
+	ast_node_ptr parse_binop(const char (&op)[op_size], ast_node_ptr lhs, unsigned int &pos);
+};
+
+void parser::skip_whitespace(unsigned int &pos)
 {
 	unsigned int i = pos;
 
@@ -228,7 +255,7 @@ static void skip_whitespace(unsigned int &pos, const char *buf, size_t len)
 	pos = i;
 }
 
-static ast_node_ptr parse_literal_integer(unsigned int &pos, const char *buf, size_t len)
+ast_node_ptr parser::parse_literal_integer(unsigned int &pos)
 {
 	unsigned int i = pos;
 	unsigned int base = 10;
@@ -269,7 +296,7 @@ static ast_node_ptr parse_literal_integer(unsigned int &pos, const char *buf, si
 	return result;
 }
 
-static ast_node_ptr parse_literal_string(unsigned int &pos, const char *buf, size_t len)
+ast_node_ptr parser::parse_literal_string(unsigned int &pos)
 {
 	unsigned int i = pos;
 	std::vector<char> str;
@@ -301,7 +328,7 @@ static ast_node_ptr parse_literal_string(unsigned int &pos, const char *buf, siz
 	return result;
 }
 
-static ast_node_ptr parse_symbol_name(unsigned int &pos, const char *buf, size_t len)
+ast_node_ptr parser::parse_symbol_name(unsigned int &pos)
 {
 	unsigned int i = pos;
 
@@ -321,26 +348,24 @@ static ast_node_ptr parse_symbol_name(unsigned int &pos, const char *buf, size_t
 	return result;
 }
 
-static ast_node_ptr parse_atom(unsigned int &pos, const char *buf, size_t len)
+ast_node_ptr parser::parse_atom(unsigned int &pos)
 {
 	ast_node_ptr ptr;
 
 	if (!ptr)
-		ptr = parse_literal_integer(pos, buf, len);
+		ptr = parse_literal_integer(pos);
 	if (!ptr)
-		ptr = parse_literal_string(pos, buf, len);
+		ptr = parse_literal_string(pos);
 	if (!ptr)
-		ptr = parse_symbol_name(pos, buf, len);
+		ptr = parse_symbol_name(pos);
 
 	if (ptr)
-		skip_whitespace(pos, buf, len);
+		skip_whitespace(pos);
 	return ptr;
 }
 
-static ast_node_ptr parse_expr(unsigned int &pos, const char *buf, size_t len);
-
 template<ast_node_type type, unsigned int left_size, unsigned int right_size>
-static ast_node_ptr parse_outfix(const char (&left)[left_size], const char (&right)[right_size], unsigned int &pos, const char *buf, size_t len)
+ast_node_ptr parser::parse_outfix(const char (&left)[left_size], const char (&right)[right_size], unsigned int &pos)
 {
 	unsigned int i = pos;
 
@@ -348,18 +373,18 @@ static ast_node_ptr parse_outfix(const char (&left)[left_size], const char (&rig
 		return nullptr;
 	i += left_size - 1;
 
-	skip_whitespace(i, buf, len);
+	skip_whitespace(i);
 
-	ast_node_ptr operand = parse_expr(i, buf, len);
+	ast_node_ptr operand = parse_expr(i);
 	// operand can be nullptr when parsing e.g. "()"
 
-	skip_whitespace(i, buf, len);
+	skip_whitespace(i);
 
 	if (i + right_size - 1 > len || strncmp(buf + i, right, right_size - 1))
 		throw syntax_error("expected terminator", i, i + right_size - 1);
 	i += right_size - 1;
 
-	skip_whitespace(i, buf, len);
+	skip_whitespace(i);
 
 	auto result = std::make_shared<ast_node>();
 	result->type = type;
@@ -370,7 +395,7 @@ static ast_node_ptr parse_outfix(const char (&left)[left_size], const char (&rig
 }
 
 template<ast_node_type type, unsigned int op_size>
-static ast_node_ptr parse_unop_prefix(const char (&op)[op_size], unsigned int &pos, const char *buf, size_t len)
+ast_node_ptr parser::parse_unop_prefix(const char (&op)[op_size], unsigned int &pos)
 {
 	unsigned int i = pos;
 
@@ -379,13 +404,13 @@ static ast_node_ptr parse_unop_prefix(const char (&op)[op_size], unsigned int &p
 	i += op_size - 1;
 
 	// TODO: decide whether to allow whitespace between a unary operator and its operand
-	//skip_whitespace(i, buf, len);
+	//skip_whitespace(i);
 
-	ast_node_ptr operand = parse_expr(i, buf, len);
+	ast_node_ptr operand = parse_expr(i);
 	if (!operand)
 		return nullptr;
 
-	skip_whitespace(i, buf, len);
+	skip_whitespace(i);
 
 	auto result = std::make_shared<ast_node>();
 	result->type = type;
@@ -398,7 +423,7 @@ static ast_node_ptr parse_unop_prefix(const char (&op)[op_size], unsigned int &p
 // NOTE: We expect the caller to have parsed the left hand side already
 // TODO: compute strlen(op) at compile-time by passing another template parameter
 template<ast_node_type type, unsigned int op_size>
-static ast_node_ptr parse_binop(const char (&op)[op_size], ast_node_ptr lhs, unsigned int &pos, const char *buf, size_t len)
+ast_node_ptr parser::parse_binop(const char (&op)[op_size], ast_node_ptr lhs, unsigned int &pos)
 {
 	unsigned int i = pos;
 
@@ -406,17 +431,17 @@ static ast_node_ptr parse_binop(const char (&op)[op_size], ast_node_ptr lhs, uns
 		return nullptr;
 	i += op_size - 1;
 
-	skip_whitespace(i, buf, len);
+	skip_whitespace(i);
 
 	// TODO: don't require the final operand in e.g. (a, b, c)
-	ast_node_ptr rhs = parse_expr(i, buf, len);
+	ast_node_ptr rhs = parse_expr(i);
 	if (!rhs) {
 		//throw syntax_error("expected expression", pos, i);
 		pos = i;
 		return lhs;
 	}
 
-	skip_whitespace(i, buf, len);
+	skip_whitespace(i);
 
 	auto result = std::make_shared<ast_node>();
 	result->type = type;
@@ -427,7 +452,7 @@ static ast_node_ptr parse_binop(const char (&op)[op_size], ast_node_ptr lhs, uns
 	return result;
 }
 
-static ast_node_ptr parse_expr(unsigned int &pos, const char *buf, size_t len)
+ast_node_ptr parser::parse_expr(unsigned int &pos)
 {
 	//printf("parse_expr(%u, \"%.*s\")\n", pos, len - pos, buf + pos);
 
@@ -436,31 +461,31 @@ static ast_node_ptr parse_expr(unsigned int &pos, const char *buf, size_t len)
 	/* Outfix unary operators */
 	ast_node_ptr lhs = nullptr;
 	if (!lhs)
-		lhs = parse_outfix<AST_BRACKETS>("(", ")", i, buf, len);
+		lhs = parse_outfix<AST_BRACKETS>("(", ")", i);
 	if (!lhs)
-		lhs = parse_outfix<AST_SQUARE_BRACKETS>("[", "]", i, buf, len);
+		lhs = parse_outfix<AST_SQUARE_BRACKETS>("[", "]", i);
 	if (!lhs)
-		lhs = parse_outfix<AST_ANGLE_BRACKETS>("<", ">", i, buf, len);
+		lhs = parse_outfix<AST_ANGLE_BRACKETS>("<", ">", i);
 	if (!lhs)
-		lhs = parse_outfix<AST_CURLY_BRACKETS>("{", "}", i, buf, len);
+		lhs = parse_outfix<AST_CURLY_BRACKETS>("{", "}", i);
 
 	/* Unary prefix operators */
 	if (!lhs)
-		lhs = parse_unop_prefix<AST_AT>("@", i, buf, len);
+		lhs = parse_unop_prefix<AST_AT>("@", i);
 
 	/* Infix binary operators (basically anything that starts with a literal) */
 	if (!lhs)
-		lhs = parse_atom(i, buf, len);
+		lhs = parse_atom(i);
 
 	ast_node_ptr result = nullptr;
 	if (!result)
-		result = parse_binop<AST_MEMBER>(".", lhs, i, buf, len);
+		result = parse_binop<AST_MEMBER>(".", lhs, i);
 	if (!result)
-		result = parse_binop<AST_PAIR>(":", lhs, i, buf, len);
+		result = parse_binop<AST_PAIR>(":", lhs, i);
 	if (!result)
-		result = parse_binop<AST_COMMA>(",", lhs, i, buf, len);
+		result = parse_binop<AST_COMMA>(",", lhs, i);
 	if (!result)
-		result = parse_binop<AST_SEMICOLON>(";", lhs, i, buf, len);
+		result = parse_binop<AST_SEMICOLON>(";", lhs, i);
 	if (!result)
 		result = lhs;
 
@@ -499,7 +524,8 @@ int main(int argc, char *argv[])
 
 	try {
 		unsigned int pos = 0;
-		auto node = parse_expr(pos, doc, strlen(doc));
+		parser p(doc, strlen(doc));
+		auto node = p.parse_expr(pos);
 		if (node) {
 			node->dump();
 			printf("\n");

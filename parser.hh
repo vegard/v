@@ -83,6 +83,18 @@ unsigned int precedence(ast_node_type t)
 
 bool left_associative(ast_node_type t)
 {
+	switch (t) {
+	case AST_COMMA:
+	case AST_SEMICOLON:
+		/* We want comma and semicolon lists to behave like they
+		 * typically do in lisp, scheme, etc. where you have the
+		 * head of the list as the first operand and then the rest
+		 * of it as the second operand. */
+		return false;
+	default:
+		break;
+	}
+
 	return true;
 }
 

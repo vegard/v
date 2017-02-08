@@ -19,15 +19,15 @@ int main(int argc, char *argv[])
 
 		int fd = open(filename, O_RDONLY);
 		if (fd == -1)
-			error(EXIT_FAILURE, errno, "open(%s)", filename);
+			error(EXIT_FAILURE, errno, "%s: open()", filename);
 
 		struct stat stbuf;
 		if (fstat(fd, &stbuf) == -1)
-			error(EXIT_FAILURE, errno, "fstat(%s)", filename);
+			error(EXIT_FAILURE, errno, "%s: fstat()", filename);
 
 		void *mem = mmap(nullptr, stbuf.st_size, PROT_READ, MAP_SHARED, fd, 0);
 		if (mem == MAP_FAILED)
-			error(EXIT_FAILURE, errno, "mmap(%s)", filename);
+			error(EXIT_FAILURE, errno, "%s: mmap()", filename);
 
 		close(fd);
 

@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
 
 		try {
 			unsigned int pos = 0;
-			auto node = p.parse_expr(pos);
+			auto node = p.parse_doc(pos);
 			if (node) {
 				node->dump();
 				printf("\n");

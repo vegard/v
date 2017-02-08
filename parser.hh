@@ -243,6 +243,8 @@ struct parser {
 	ast_node_ptr parse_unop_prefix(const char (&op)[op_size], unsigned int &pos);
 	template<ast_node_type type, unsigned int op_size>
 	ast_node_ptr parse_binop(const char (&op)[op_size], ast_node_ptr lhs, unsigned int &pos);
+
+	ast_node_ptr parse_doc(unsigned int &pos);
 };
 
 void parser::skip_whitespace(unsigned int &pos)
@@ -496,6 +498,21 @@ ast_node_ptr parser::parse_expr(unsigned int &pos)
 	assert(false);
 	result = std::make_shared<ast_node>();
 	// TODO
+
+	pos = i;
+	return result;
+}
+
+ast_node_ptr parser::parse_doc(unsigned int &pos)
+{
+	unsigned int i = pos;
+
+	auto result = parse_expr(i);
+	if (!result)
+		throw syntax_error("expected expression", i, i + 1);
+
+	if (i != len)
+		throw syntax_error("expected end-of-file", i, len - 1);
 
 	pos = i;
 	return result;

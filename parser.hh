@@ -59,6 +59,7 @@ enum ast_node_type {
 	AST_SUBTRACT,
 	AST_COMMA,
 	AST_ASSIGN,
+	AST_DEFINE,
 	AST_SEMICOLON,
 };
 
@@ -73,6 +74,7 @@ bool is_binop(ast_node_type t)
 	case AST_SUBTRACT:
 	case AST_COMMA:
 	case AST_ASSIGN:
+	case AST_DEFINE:
 	case AST_SEMICOLON:
 		return true;
 	default:
@@ -186,6 +188,7 @@ struct ast_node {
 		case AST_SUBTRACT:
 		case AST_COMMA:
 		case AST_ASSIGN:
+		case AST_DEFINE:
 		case AST_SEMICOLON:
 			binop.lhs.~ast_node_ptr();
 			binop.rhs.~ast_node_ptr();
@@ -275,6 +278,9 @@ struct ast_node {
 			break;
 		case AST_ASSIGN:
 			dump_binop(fp, indent, "assign");
+			break;
+		case AST_DEFINE:
+			dump_binop(fp, indent, "define");
 			break;
 		case AST_SEMICOLON:
 			dump_binop(fp, indent, "semicolon");
@@ -596,6 +602,11 @@ ast_node_ptr parser::parse_expr(unsigned int &pos)
 		return nullptr;
 
 	ast_node_ptr result = nullptr;
+
+	// This must appear before ":" since that's a prefix
+	if (!result)
+		result = parse_binop<AST_DEFINE>(":=", lhs, i);
+
 	if (!result)
 		result = parse_binop<AST_MEMBER>(".", lhs, i);
 	if (!result)

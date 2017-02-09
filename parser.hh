@@ -58,6 +58,7 @@ enum ast_node_type {
 	AST_ADD,
 	AST_SUBTRACT,
 	AST_COMMA,
+	AST_ASSIGN,
 	AST_SEMICOLON,
 };
 
@@ -71,6 +72,7 @@ bool is_binop(ast_node_type t)
 	case AST_ADD:
 	case AST_SUBTRACT:
 	case AST_COMMA:
+	case AST_ASSIGN:
 	case AST_SEMICOLON:
 		return true;
 	default:
@@ -183,6 +185,7 @@ struct ast_node {
 		case AST_ADD:
 		case AST_SUBTRACT:
 		case AST_COMMA:
+		case AST_ASSIGN:
 		case AST_SEMICOLON:
 			binop.lhs.~ast_node_ptr();
 			binop.rhs.~ast_node_ptr();
@@ -269,6 +272,9 @@ struct ast_node {
 			break;
 		case AST_COMMA:
 			dump_binop(fp, indent, "comma");
+			break;
+		case AST_ASSIGN:
+			dump_binop(fp, indent, "assign");
 			break;
 		case AST_SEMICOLON:
 			dump_binop(fp, indent, "semicolon");
@@ -599,6 +605,8 @@ ast_node_ptr parser::parse_expr(unsigned int &pos)
 		result = parse_binop<AST_SUBTRACT>("-", lhs, i);
 	if (!result)
 		result = parse_binop<AST_COMMA>(",", lhs, i);
+	if (!result)
+		result = parse_binop<AST_ASSIGN>("=", lhs, i);
 	if (!result)
 		result = parse_binop<AST_SEMICOLON>(";", lhs, i);
 	if (!result)

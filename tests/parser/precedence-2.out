@@ -1,0 +1,22 @@
+(add
+    (add
+        (symbol_name x)
+        (multiply
+            (divide
+                (multiply
+                    (divide
+                        (multiply
+                            (symbol_name a)
+                            (symbol_name b)
+                        )
+                        (symbol_name c)
+                    )
+                    (symbol_name d)
+                )
+                (symbol_name e)
+            )
+            (symbol_name f)
+        )
+    )
+    (symbol_name y)
+)

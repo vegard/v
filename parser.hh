@@ -520,7 +520,6 @@ static bool should_shuffle_args(ast_node_type lhs_type, ast_node_type rhs_type)
 }
 
 // NOTE: We expect the caller to have parsed the left hand side already
-// TODO: compute strlen(op) at compile-time by passing another template parameter
 template<ast_node_type type, unsigned int op_size>
 ast_node_ptr parser::parse_binop(const char (&op)[op_size], ast_node_ptr lhs, unsigned int &pos)
 {

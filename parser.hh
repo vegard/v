@@ -508,18 +508,22 @@ ast_node_ptr parser::parse_binop(const char (&op)[op_size], ast_node_ptr lhs, un
 	// Jon Blow-style precedence handling
 	// <https://twitter.com/jonathan_blow/status/747623921822760960>
 	if (should_shuffle_args(type, rhs->type)) {
+		// It would have been nicer to make this constant-time,
+		// but I don't think it's possible.
+		auto *pivot = &rhs;
+		while (should_shuffle_args(type, (*pivot)->binop.lhs->type))
+			pivot = &(*pivot)->binop.lhs;
+
 		auto new_lhs = std::make_shared<ast_node>(type, pos, i);
 		new (&new_lhs->binop.lhs) ast_node_ptr(lhs);
-		new (&new_lhs->binop.rhs) ast_node_ptr(rhs->binop.lhs);
+		new (&new_lhs->binop.rhs) ast_node_ptr((*pivot)->binop.lhs);
 
-		auto result = std::make_shared<ast_node>(rhs->type, rhs->pos, rhs->end);
-		new (&result->binop.lhs) ast_node_ptr(new_lhs);
-		new (&result->binop.rhs) ast_node_ptr(rhs->binop.rhs);
+		(*pivot)->binop.lhs = new_lhs;
 
 		skip_whitespace(i);
 
 		pos = i;
-		return result;
+		return rhs;
 	}
 
 	auto result = std::make_shared<ast_node>(type, pos, i);

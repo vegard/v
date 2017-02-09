@@ -52,6 +52,7 @@ enum ast_node_type {
 
 	/* Binary infix operators */
 	AST_MEMBER,
+	AST_JUXTAPOSE,
 	AST_PAIR,
 	AST_MULTIPLY,
 	AST_DIVIDE,
@@ -67,6 +68,7 @@ bool is_binop(ast_node_type t)
 {
 	switch (t) {
 	case AST_MEMBER:
+	case AST_JUXTAPOSE:
 	case AST_PAIR:
 	case AST_MULTIPLY:
 	case AST_DIVIDE:
@@ -103,6 +105,8 @@ unsigned int precedence(ast_node_type t)
 bool left_associative(ast_node_type t)
 {
 	switch (t) {
+	case AST_JUXTAPOSE:
+		return false;
 	case AST_COMMA:
 	case AST_SEMICOLON:
 		/* We want comma and semicolon lists to behave like they
@@ -181,6 +185,7 @@ struct ast_node {
 
 		/* Binary operators */
 		case AST_MEMBER:
+		case AST_JUXTAPOSE:
 		case AST_PAIR:
 		case AST_MULTIPLY:
 		case AST_DIVIDE:
@@ -257,6 +262,9 @@ struct ast_node {
 
 		case AST_MEMBER:
 			dump_binop(fp, indent, "member");
+			break;
+		case AST_JUXTAPOSE:
+			dump_binop(fp, indent, "juxtapose");
 			break;
 		case AST_PAIR:
 			dump_binop(fp, indent, "pair");
@@ -624,16 +632,14 @@ ast_node_ptr parser::parse_expr(unsigned int &pos)
 		result = parse_binop<AST_ASSIGN>("=", lhs, i);
 	if (!result)
 		result = parse_binop<AST_SEMICOLON>(";", lhs, i);
+
+	// This must appear last since it's a prefix of any other
+	// operator.
+	if (!result)
+		result = parse_binop<AST_JUXTAPOSE>("", lhs, i);
+
 	if (!result)
 		result = lhs;
-
-	pos = i;
-	return result;
-
-	// TODO: expression juxtaposition
-	assert(false);
-	result = std::make_shared<ast_node>();
-	// TODO
 
 	pos = i;
 	return result;

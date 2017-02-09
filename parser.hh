@@ -54,6 +54,7 @@ enum ast_node_type {
 	AST_MEMBER,
 	AST_PAIR,
 	AST_MULTIPLY,
+	AST_DIVIDE,
 	AST_ADD,
 	AST_COMMA,
 	AST_SEMICOLON,
@@ -65,6 +66,7 @@ bool is_binop(ast_node_type t)
 	case AST_MEMBER:
 	case AST_PAIR:
 	case AST_MULTIPLY:
+	case AST_DIVIDE:
 	case AST_ADD:
 	case AST_COMMA:
 	case AST_SEMICOLON:
@@ -78,6 +80,14 @@ bool is_binop(ast_node_type t)
 
 unsigned int precedence(ast_node_type t)
 {
+	switch (t) {
+	case AST_DIVIDE:
+		t = AST_MULTIPLY;
+		break;
+	default:
+		break;
+	}
+
 	return t;
 }
 
@@ -164,6 +174,7 @@ struct ast_node {
 		case AST_MEMBER:
 		case AST_PAIR:
 		case AST_MULTIPLY:
+		case AST_DIVIDE:
 		case AST_ADD:
 		case AST_COMMA:
 		case AST_SEMICOLON:
@@ -240,6 +251,9 @@ struct ast_node {
 			break;
 		case AST_MULTIPLY:
 			dump_binop(fp, indent, "multiply");
+			break;
+		case AST_DIVIDE:
+			dump_binop(fp, indent, "divide");
 			break;
 		case AST_ADD:
 			dump_binop(fp, indent, "add");
@@ -568,6 +582,8 @@ ast_node_ptr parser::parse_expr(unsigned int &pos)
 		result = parse_binop<AST_PAIR>(":", lhs, i);
 	if (!result)
 		result = parse_binop<AST_MULTIPLY>("*", lhs, i);
+	if (!result)
+		result = parse_binop<AST_DIVIDE>("/", lhs, i);
 	if (!result)
 		result = parse_binop<AST_ADD>("+", lhs, i);
 	if (!result)

@@ -520,6 +520,8 @@ ast_node_ptr parser::parse_binop(const char (&op)[op_size], ast_node_ptr lhs, un
 {
 	unsigned int i = pos;
 
+	assert(lhs);
+
 	if (i + op_size - 1 >= len || strncmp(buf + i, op, op_size - 1))
 		return nullptr;
 	i += op_size - 1;
@@ -589,6 +591,9 @@ ast_node_ptr parser::parse_expr(unsigned int &pos)
 	/* Infix binary operators (basically anything that starts with a literal) */
 	if (!lhs)
 		lhs = parse_atom(i);
+
+	if (!lhs)
+		return nullptr;
 
 	ast_node_ptr result = nullptr;
 	if (!result)

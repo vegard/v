@@ -15,58 +15,6 @@ extern "C" {
 #include "line_number_info.hh"
 #include "parser.hh"
 
-template<ast_node_type type>
-struct traverse {
-	struct iterator {
-		ast_node_ptr node;
-
-		iterator(ast_node_ptr node):
-			node(node)
-		{
-		}
-
-		ast_node_ptr operator*()
-		{
-			if (node->type == type)
-				return node->binop.lhs;
-
-			return node;
-		}
-
-		iterator &operator++()
-		{
-			if (node->type == type)
-				node = node->binop.rhs;
-			else
-				node = nullptr;
-
-			return *this;
-		}
-
-		bool operator!=(const iterator &other) const
-		{
-			return node != other.node;
-		}
-	};
-
-	ast_node_ptr node;
-
-	traverse(ast_node_ptr node):
-		node(node)
-	{
-	}
-
-	iterator begin()
-	{
-		return iterator(node);
-	}
-
-	iterator end()
-	{
-		return iterator(nullptr);
-	}
-};
-
 static void eval(const ast_node_ptr node)
 {
 	assert(node);

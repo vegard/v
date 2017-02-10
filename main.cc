@@ -11,6 +11,7 @@ extern "C" {
 
 #include <functional>
 
+#include "ast.hh"
 #include "line_number_info.hh"
 #include "parser.hh"
 

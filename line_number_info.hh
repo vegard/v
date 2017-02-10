@@ -1,3 +1,6 @@
+#ifndef V_LINE_NUMBER_INFO_HH
+#define V_LINE_NUMBER_INFO_HH
+
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
@@ -60,4 +63,6 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
+#endif
+
 #endif

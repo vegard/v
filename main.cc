@@ -36,10 +36,28 @@ static void eval(const ast_node_ptr node)
 	}
 }
 
+bool strstarts(const char *str, const char *prefix)
+{
+	return !strncmp(str, prefix, strlen(prefix));
+}
+
 int main(int argc, char *argv[])
 {
+	bool do_dump_ast = false;
+	bool do_eval = true;
+	std::vector<const char *> filenames;
+
 	for (int i = 1; i < argc; ++i) {
-		file_document doc(argv[i]);
+		if (strstarts(argv[i], "--dump-ast"))
+			do_dump_ast = true;
+		else if (strstarts(argv[i], "--no-eval"))
+			do_eval = false;
+		else
+			filenames.push_back(argv[i]);
+	}
+
+	for (const char *filename: filenames) {
+		file_document doc(filename);
 		ast_node_ptr node;
 
 		try {
@@ -49,12 +67,14 @@ int main(int argc, char *argv[])
 			return EXIT_FAILURE;
 		}
 
-		if (node) {
+		assert(node);
+
+		if (do_dump_ast) {
 			node->dump();
 			printf("\n");
 		}
 
-		if (false) {
+		if (do_eval) {
 			for (ast_node_ptr stmt: traverse<AST_SEMICOLON>(node))
 				eval(stmt);
 		}

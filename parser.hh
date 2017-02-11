@@ -51,7 +51,8 @@ unsigned int precedence(ast_node_type t)
 		break;
 	}
 
-	return t;
+	// Higher numerical values means stronger associativity
+	return -t;
 }
 
 bool left_associative(ast_node_type t)
@@ -115,9 +116,9 @@ struct parser {
 	template<ast_node_type type, unsigned int op_size>
 	ast_node_ptr parse_unop_prefix(const char (&op)[op_size], unsigned int &pos);
 	template<ast_node_type type, unsigned int op_size>
-	ast_node_ptr parse_binop(const char (&op)[op_size], ast_node_ptr lhs, unsigned int &pos);
+	ast_node_ptr parse_binop(const char (&op)[op_size], ast_node_ptr lhs, unsigned int &pos, unsigned int min_precedence);
 
-	ast_node_ptr parse_expr(unsigned int &pos);
+	ast_node_ptr parse_expr(unsigned int &pos, unsigned int min_precedence = 0);
 
 	ast_node_ptr parse_doc(unsigned int &pos);
 };
@@ -279,7 +280,7 @@ ast_node_ptr parser::parse_unop_prefix(const char (&op)[op_size], unsigned int &
 	// TODO: decide whether to allow whitespace between a unary operator and its operand
 	//skip_whitespace(i);
 
-	ast_node_ptr operand = parse_expr(i);
+	ast_node_ptr operand = parse_expr(i, precedence(type));
 	if (!operand)
 		return nullptr;
 
@@ -292,24 +293,16 @@ ast_node_ptr parser::parse_unop_prefix(const char (&op)[op_size], unsigned int &
 	return result;
 }
 
-static bool should_shuffle_args(ast_node_type lhs_type, ast_node_type rhs_type)
-{
-	if (!is_binop(rhs_type))
-		return false;
-	if (precedence(lhs_type) < precedence(rhs_type))
-		return true;
-	if (precedence(lhs_type) != precedence(rhs_type))
-		return false;
-	return left_associative(lhs_type);
-}
-
 // NOTE: We expect the caller to have parsed the left hand side already
 template<ast_node_type type, unsigned int op_size>
-ast_node_ptr parser::parse_binop(const char (&op)[op_size], ast_node_ptr lhs, unsigned int &pos)
+ast_node_ptr parser::parse_binop(const char (&op)[op_size], ast_node_ptr lhs, unsigned int &pos, unsigned int min_precedence)
 {
-	unsigned int i = pos;
-
 	assert(lhs);
+
+	if (precedence(type) < min_precedence)
+		return nullptr;
+
+	unsigned int i = pos;
 
 	if (i + op_size - 1 >= len || strncmp(buf + i, op, op_size - 1))
 		return nullptr;
@@ -317,33 +310,10 @@ ast_node_ptr parser::parse_binop(const char (&op)[op_size], ast_node_ptr lhs, un
 
 	skip_whitespace(i);
 
-	// TODO: don't require the final operand in e.g. (a, b, c)
-	ast_node_ptr rhs = parse_expr(i);
+	ast_node_ptr rhs = parse_expr(i, precedence(type) + left_associative(type));
 	if (!rhs) {
-		//throw syntax_error("expected expression", pos, i);
 		pos = i;
 		return lhs;
-	}
-
-	// Jon Blow-style precedence handling
-	// <https://twitter.com/jonathan_blow/status/747623921822760960>
-	if (should_shuffle_args(type, rhs->type)) {
-		// It would have been nicer to make this constant-time,
-		// but I don't think it's possible.
-		auto *pivot = &rhs;
-		while (should_shuffle_args(type, (*pivot)->binop.lhs->type))
-			pivot = &(*pivot)->binop.lhs;
-
-		auto new_lhs = std::make_shared<ast_node>(type, pos, i);
-		new (&new_lhs->binop.lhs) ast_node_ptr(lhs);
-		new (&new_lhs->binop.rhs) ast_node_ptr((*pivot)->binop.lhs);
-
-		(*pivot)->binop.lhs = new_lhs;
-
-		skip_whitespace(i);
-
-		pos = i;
-		return rhs;
 	}
 
 	auto result = std::make_shared<ast_node>(type, pos, i);
@@ -356,10 +326,8 @@ ast_node_ptr parser::parse_binop(const char (&op)[op_size], ast_node_ptr lhs, un
 	return result;
 }
 
-ast_node_ptr parser::parse_expr(unsigned int &pos)
+ast_node_ptr parser::parse_expr(unsigned int &pos, unsigned int min_precedence)
 {
-	//printf("parse_expr(%u, \"%.*s\")\n", pos, len - pos, buf + pos);
-
 	unsigned int i = pos;
 
 	/* Outfix unary operators */
@@ -386,36 +354,51 @@ ast_node_ptr parser::parse_expr(unsigned int &pos)
 
 	ast_node_ptr result = nullptr;
 
-	// This must appear before ":" since that's a prefix
-	if (!result)
-		result = parse_binop<AST_DEFINE>(":=", lhs, i);
+	while (true) {
+		// This must appear before ":" since that's a prefix
+		if (!result)
+			result = parse_binop<AST_DEFINE>(":=", lhs, i, min_precedence);
 
-	if (!result)
-		result = parse_binop<AST_MEMBER>(".", lhs, i);
-	if (!result)
-		result = parse_binop<AST_PAIR>(":", lhs, i);
-	if (!result)
-		result = parse_binop<AST_MULTIPLY>("*", lhs, i);
-	if (!result)
-		result = parse_binop<AST_DIVIDE>("/", lhs, i);
-	if (!result)
-		result = parse_binop<AST_ADD>("+", lhs, i);
-	if (!result)
-		result = parse_binop<AST_SUBTRACT>("-", lhs, i);
-	if (!result)
-		result = parse_binop<AST_COMMA>(",", lhs, i);
-	if (!result)
-		result = parse_binop<AST_ASSIGN>("=", lhs, i);
-	if (!result)
-		result = parse_binop<AST_SEMICOLON>(";", lhs, i);
+		if (!result)
+			result = parse_binop<AST_MEMBER>(".", lhs, i, min_precedence);
+		if (!result)
+			result = parse_binop<AST_PAIR>(":", lhs, i, min_precedence);
+		if (!result)
+			result = parse_binop<AST_MULTIPLY>("*", lhs, i, min_precedence);
+		if (!result)
+			result = parse_binop<AST_DIVIDE>("/", lhs, i, min_precedence);
+		if (!result)
+			result = parse_binop<AST_ADD>("+", lhs, i, min_precedence);
+		if (!result)
+			result = parse_binop<AST_SUBTRACT>("-", lhs, i, min_precedence);
+		if (!result)
+			result = parse_binop<AST_COMMA>(",", lhs, i, min_precedence);
+		if (!result)
+			result = parse_binop<AST_ASSIGN>("=", lhs, i, min_precedence);
+		if (!result)
+			result = parse_binop<AST_SEMICOLON>(";", lhs, i, min_precedence);
 
-	// This must appear last since it's a prefix of any other
-	// operator.
-	if (!result)
-		result = parse_binop<AST_JUXTAPOSE>("", lhs, i);
+		// This must appear last since it's a prefix of any other
+		// operator.
+		if (!result) {
+			result = parse_binop<AST_JUXTAPOSE>("", lhs, i, min_precedence);
+			// Special case: parse_binop() typically returns the lhs if
+			// it didn't consume any characters, but for a "" operator it
+			// means we didn't even consume the operator itself, and so
+			// we should stop the search here (otherwise we would enter
+			// an infinite loop).
+			if (result == lhs)
+				break;
+		}
 
-	if (!result)
-		result = lhs;
+		if (result) {
+			lhs = result;
+			result = nullptr;
+		} else {
+			result = lhs;
+			break;
+		}
+	}
 
 	pos = i;
 	return result;

@@ -1,0 +1,25 @@
+(semicolon
+    (comma
+        (literal_integer 1)
+        (comma
+            (literal_integer 2)
+            (literal_integer 3)
+        )
+    )
+    (semicolon
+        (comma
+            (literal_integer 4)
+            (comma
+                (literal_integer 5)
+                (literal_integer 6)
+            )
+        )
+        (comma
+            (literal_integer 7)
+            (comma
+                (literal_integer 8)
+                (literal_integer 9)
+            )
+        )
+    )
+)

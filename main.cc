@@ -48,12 +48,16 @@ int main(int argc, char *argv[])
 	std::vector<const char *> filenames;
 
 	for (int i = 1; i < argc; ++i) {
-		if (strstarts(argv[i], "--dump-ast"))
-			do_dump_ast = true;
-		else if (strstarts(argv[i], "--no-eval"))
-			do_eval = false;
-		else
+		if (strstarts(argv[i], "--")) {
+			if (strstarts(argv[i], "--dump-ast"))
+				do_dump_ast = true;
+			else if (strstarts(argv[i], "--no-eval"))
+				do_eval = false;
+			else
+				error(EXIT_FAILURE, 0, "Unrecognised option: %s", argv[i]);
+		} else {
 			filenames.push_back(argv[i]);
+		}
 	}
 
 	for (const char *filename: filenames) {

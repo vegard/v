@@ -1,0 +1,17 @@
+(semicolon
+    (juxtapose
+        (at
+            (symbol_name foo)
+        )
+        (brackets
+            (comma
+                (symbol_name bar)
+                (symbol_name baz)
+            )
+        )
+    )
+    (semicolon
+        (symbol_name bar)
+        (symbol_name baz)
+    )
+)

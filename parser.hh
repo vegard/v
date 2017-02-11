@@ -115,7 +115,7 @@ struct parser {
 	ast_node_ptr parse_outfix(const char (&left)[left_size], const char (&right)[right_size], unsigned int &pos);
 	template<ast_node_type type, unsigned int op_size>
 	ast_node_ptr parse_unop_prefix(const char (&op)[op_size], unsigned int &pos);
-	template<ast_node_type type, unsigned int op_size>
+	template<ast_node_type type, bool allow_trailing, unsigned int op_size>
 	ast_node_ptr parse_binop(const char (&op)[op_size], ast_node_ptr lhs, unsigned int &pos, unsigned int min_precedence);
 
 	ast_node_ptr parse_expr(unsigned int &pos, unsigned int min_precedence = 0);
@@ -294,7 +294,7 @@ ast_node_ptr parser::parse_unop_prefix(const char (&op)[op_size], unsigned int &
 }
 
 // NOTE: We expect the caller to have parsed the left hand side already
-template<ast_node_type type, unsigned int op_size>
+template<ast_node_type type, bool allow_trailing, unsigned int op_size>
 ast_node_ptr parser::parse_binop(const char (&op)[op_size], ast_node_ptr lhs, unsigned int &pos, unsigned int min_precedence)
 {
 	assert(lhs);
@@ -312,6 +312,9 @@ ast_node_ptr parser::parse_binop(const char (&op)[op_size], ast_node_ptr lhs, un
 
 	ast_node_ptr rhs = parse_expr(i, precedence(type) + left_associative(type));
 	if (!rhs) {
+		if (!allow_trailing)
+			return nullptr;
+
 		pos = i;
 		return lhs;
 	}
@@ -357,39 +360,31 @@ ast_node_ptr parser::parse_expr(unsigned int &pos, unsigned int min_precedence)
 	while (true) {
 		// This must appear before ":" since that's a prefix
 		if (!result)
-			result = parse_binop<AST_DEFINE>(":=", lhs, i, min_precedence);
+			result = parse_binop<AST_DEFINE, false>(":=", lhs, i, min_precedence);
 
 		if (!result)
-			result = parse_binop<AST_MEMBER>(".", lhs, i, min_precedence);
+			result = parse_binop<AST_MEMBER, false>(".", lhs, i, min_precedence);
 		if (!result)
-			result = parse_binop<AST_PAIR>(":", lhs, i, min_precedence);
+			result = parse_binop<AST_PAIR, false>(":", lhs, i, min_precedence);
 		if (!result)
-			result = parse_binop<AST_MULTIPLY>("*", lhs, i, min_precedence);
+			result = parse_binop<AST_MULTIPLY, false>("*", lhs, i, min_precedence);
 		if (!result)
-			result = parse_binop<AST_DIVIDE>("/", lhs, i, min_precedence);
+			result = parse_binop<AST_DIVIDE, false>("/", lhs, i, min_precedence);
 		if (!result)
-			result = parse_binop<AST_ADD>("+", lhs, i, min_precedence);
+			result = parse_binop<AST_ADD, false>("+", lhs, i, min_precedence);
 		if (!result)
-			result = parse_binop<AST_SUBTRACT>("-", lhs, i, min_precedence);
+			result = parse_binop<AST_SUBTRACT, false>("-", lhs, i, min_precedence);
 		if (!result)
-			result = parse_binop<AST_COMMA>(",", lhs, i, min_precedence);
+			result = parse_binop<AST_COMMA, true>(",", lhs, i, min_precedence);
 		if (!result)
-			result = parse_binop<AST_ASSIGN>("=", lhs, i, min_precedence);
+			result = parse_binop<AST_ASSIGN, false>("=", lhs, i, min_precedence);
 		if (!result)
-			result = parse_binop<AST_SEMICOLON>(";", lhs, i, min_precedence);
+			result = parse_binop<AST_SEMICOLON, true>(";", lhs, i, min_precedence);
 
 		// This must appear last since it's a prefix of any other
 		// operator.
-		if (!result) {
-			result = parse_binop<AST_JUXTAPOSE>("", lhs, i, min_precedence);
-			// Special case: parse_binop() typically returns the lhs if
-			// it didn't consume any characters, but for a "" operator it
-			// means we didn't even consume the operator itself, and so
-			// we should stop the search here (otherwise we would enter
-			// an infinite loop).
-			if (result == lhs)
-				break;
-		}
+		if (!result)
+			result = parse_binop<AST_JUXTAPOSE, false>("", lhs, i, min_precedence);
 
 		if (result) {
 			lhs = result;

@@ -105,6 +105,8 @@ struct parser {
 	}
 
 	void skip_whitespace(unsigned int &pos);
+	void skip_comments(unsigned int &pos);
+	void skip_whitespace_and_comments(unsigned int &pos);
 
 	ast_node_ptr parse_literal_integer(unsigned int &pos);
 	ast_node_ptr parse_literal_string(unsigned int &pos);
@@ -129,6 +131,43 @@ void parser::skip_whitespace(unsigned int &pos)
 
 	while (i < len && isspace(buf[i]))
 		++i;
+
+	pos = i;
+}
+
+void parser::skip_comments(unsigned int &pos)
+{
+	unsigned int i = pos;
+
+	if (i < len && buf[i] == '#') {
+		++i;
+
+		while (i < len && buf[i] != '\n')
+			++i;
+		if (i < len && buf[i] == '\n')
+			++i;
+	}
+
+	pos = i;
+}
+
+void parser::skip_whitespace_and_comments(unsigned int &pos)
+{
+	unsigned int i = pos;
+
+	while (true) {
+		skip_whitespace(i);
+		skip_comments(i);
+
+		if (i == len)
+			break;
+
+		// If we didn't skip anything, we should stop
+		if (i == pos)
+			break;
+
+		pos = i;
+	}
 
 	pos = i;
 }
@@ -235,7 +274,7 @@ ast_node_ptr parser::parse_atom(unsigned int &pos)
 		ptr = parse_symbol_name(pos);
 
 	if (ptr)
-		skip_whitespace(pos);
+		skip_whitespace_and_comments(pos);
 	return ptr;
 }
 
@@ -248,12 +287,12 @@ ast_node_ptr parser::parse_outfix(const char (&left)[left_size], const char (&ri
 		return nullptr;
 	i += left_size - 1;
 
-	skip_whitespace(i);
+	skip_whitespace_and_comments(i);
 
 	ast_node_ptr operand = parse_expr(i);
 	// operand can be nullptr when parsing e.g. "()"
 
-	skip_whitespace(i);
+	skip_whitespace_and_comments(i);
 
 	if (i + right_size - 1 > len || strncmp(buf + i, right, right_size - 1))
 		throw syntax_error("expected terminator", i, i + right_size - 1);
@@ -262,7 +301,7 @@ ast_node_ptr parser::parse_outfix(const char (&left)[left_size], const char (&ri
 	auto result = std::make_shared<ast_node>(type, pos, i);
 	new (&result->unop) ast_node_ptr(operand);
 
-	skip_whitespace(i);
+	skip_whitespace_and_comments(i);
 
 	pos = i;
 	return result;
@@ -278,7 +317,7 @@ ast_node_ptr parser::parse_unop_prefix(const char (&op)[op_size], unsigned int &
 	i += op_size - 1;
 
 	// TODO: decide whether to allow whitespace between a unary operator and its operand
-	//skip_whitespace(i);
+	//skip_whitespace_and_comments(i);
 
 	ast_node_ptr operand = parse_expr(i, precedence(type));
 	if (!operand)
@@ -287,7 +326,7 @@ ast_node_ptr parser::parse_unop_prefix(const char (&op)[op_size], unsigned int &
 	auto result = std::make_shared<ast_node>(type, pos, i);
 	new (&result->unop) ast_node_ptr(operand);
 
-	skip_whitespace(i);
+	skip_whitespace_and_comments(i);
 
 	pos = i;
 	return result;
@@ -308,7 +347,7 @@ ast_node_ptr parser::parse_binop(const char (&op)[op_size], ast_node_ptr lhs, un
 		return nullptr;
 	i += op_size - 1;
 
-	skip_whitespace(i);
+	skip_whitespace_and_comments(i);
 
 	ast_node_ptr rhs = parse_expr(i, precedence(type) + left_associative(type));
 	if (!rhs) {
@@ -323,7 +362,7 @@ ast_node_ptr parser::parse_binop(const char (&op)[op_size], ast_node_ptr lhs, un
 	new (&result->binop.lhs) ast_node_ptr(lhs);
 	new (&result->binop.rhs) ast_node_ptr(rhs);
 
-	skip_whitespace(i);
+	skip_whitespace_and_comments(i);
 
 	pos = i;
 	return result;

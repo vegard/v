@@ -46,7 +46,7 @@ struct line_number_info {
 		assert(byte_offset >= it->first);
 		return lookup_result{
 			it->first,
-			it2->first - it->first + 1,
+			it2->first - it->first,
 			it->second,
 			byte_offset - it->first,
 		};

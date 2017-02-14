@@ -31,12 +31,12 @@ enum ast_node_type {
 
 	/* Binary infix operators */
 	AST_MEMBER,
-	AST_JUXTAPOSE,
 	AST_PAIR,
 	AST_MULTIPLY,
 	AST_DIVIDE,
 	AST_ADD,
 	AST_SUBTRACT,
+	AST_JUXTAPOSE,
 	AST_COMMA,
 	AST_ASSIGN,
 	AST_DEFINE,
@@ -47,12 +47,12 @@ bool is_binop(ast_node_type t)
 {
 	switch (t) {
 	case AST_MEMBER:
-	case AST_JUXTAPOSE:
 	case AST_PAIR:
 	case AST_MULTIPLY:
 	case AST_DIVIDE:
 	case AST_ADD:
 	case AST_SUBTRACT:
+	case AST_JUXTAPOSE:
 	case AST_COMMA:
 	case AST_ASSIGN:
 	case AST_DEFINE:
@@ -129,12 +129,12 @@ struct ast_node {
 
 		/* Binary operators */
 		case AST_MEMBER:
-		case AST_JUXTAPOSE:
 		case AST_PAIR:
 		case AST_MULTIPLY:
 		case AST_DIVIDE:
 		case AST_ADD:
 		case AST_SUBTRACT:
+		case AST_JUXTAPOSE:
 		case AST_COMMA:
 		case AST_ASSIGN:
 		case AST_DEFINE:
@@ -207,9 +207,6 @@ struct ast_node {
 		case AST_MEMBER:
 			dump_binop(fp, indent, "member");
 			break;
-		case AST_JUXTAPOSE:
-			dump_binop(fp, indent, "juxtapose");
-			break;
 		case AST_PAIR:
 			dump_binop(fp, indent, "pair");
 			break;
@@ -224,6 +221,9 @@ struct ast_node {
 			break;
 		case AST_SUBTRACT:
 			dump_binop(fp, indent, "subtract");
+			break;
+		case AST_JUXTAPOSE:
+			dump_binop(fp, indent, "juxtapose");
 			break;
 		case AST_COMMA:
 			dump_binop(fp, indent, "comma");

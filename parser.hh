@@ -38,41 +38,25 @@
  *   x; y
  */
 
-unsigned int precedence(ast_node_type t)
-{
-	switch (t) {
-	case AST_DIVIDE:
-		t = AST_MULTIPLY;
-		break;
-	case AST_SUBTRACT:
-		t = AST_ADD;
-		break;
-	default:
-		break;
-	}
+enum precedence {
+	PREC_SEMICOLON,
+	PREC_DEFINE,
+	PREC_ASSIGN,
+	PREC_COMMA,
+	PREC_JUXTAPOSE,
+	PREC_ADD_SUBTRACT,
+	PREC_MULTIPLY_DIVIDE,
+	PREC_PAIR,
+	PREC_MEMBER,
+	PREC_PREFIX,
+	PREC_OUTFIX,
+	PREC_LITERAL,
+};
 
-	// Higher numerical values means stronger associativity
-	return -t;
-}
-
-bool left_associative(ast_node_type t)
-{
-	switch (t) {
-	case AST_JUXTAPOSE:
-		return false;
-	case AST_COMMA:
-	case AST_SEMICOLON:
-		/* We want comma and semicolon lists to behave like they
-		 * typically do in lisp, scheme, etc. where you have the
-		 * head of the list as the first operand and then the rest
-		 * of it as the second operand. */
-		return false;
-	default:
-		break;
-	}
-
-	return true;
-}
+enum associativity {
+	ASSOC_RIGHT,
+	ASSOC_LEFT,
+};
 
 struct parse_error: std::runtime_error {
 	unsigned int pos;
@@ -115,10 +99,16 @@ struct parser {
 
 	template<ast_node_type type, unsigned int left_size, unsigned int right_size>
 	ast_node_ptr parse_outfix(const char (&left)[left_size], const char (&right)[right_size], unsigned int &pos);
-	template<ast_node_type type, unsigned int op_size>
+
+	template<ast_node_type type, precedence prec, unsigned int op_size>
 	ast_node_ptr parse_unop_prefix(const char (&op)[op_size], unsigned int &pos);
-	template<ast_node_type type, bool allow_trailing, unsigned int op_size>
+
+	template<ast_node_type type, precedence prec, associativity assoc, bool allow_trailing, unsigned int op_size>
 	ast_node_ptr parse_binop(const char (&op)[op_size], ast_node_ptr lhs, unsigned int &pos, unsigned int min_precedence);
+
+	template<precedence prec, associativity assoc, bool allow_trailing, unsigned int op_size>
+	ast_node_ptr parse_binop_as_call(const char (&op)[op_size], const char *symbol_name,
+		ast_node_ptr lhs, unsigned int &pos, unsigned int min_precedence);
 
 	ast_node_ptr parse_expr(unsigned int &pos, unsigned int min_precedence = 0);
 
@@ -307,7 +297,7 @@ ast_node_ptr parser::parse_outfix(const char (&left)[left_size], const char (&ri
 	return result;
 }
 
-template<ast_node_type type, unsigned int op_size>
+template<ast_node_type type, precedence prec, unsigned int op_size>
 ast_node_ptr parser::parse_unop_prefix(const char (&op)[op_size], unsigned int &pos)
 {
 	unsigned int i = pos;
@@ -319,7 +309,7 @@ ast_node_ptr parser::parse_unop_prefix(const char (&op)[op_size], unsigned int &
 	// TODO: decide whether to allow whitespace between a unary operator and its operand
 	//skip_whitespace_and_comments(i);
 
-	ast_node_ptr operand = parse_expr(i, precedence(type));
+	ast_node_ptr operand = parse_expr(i, prec);
 	if (!operand)
 		return nullptr;
 
@@ -333,12 +323,12 @@ ast_node_ptr parser::parse_unop_prefix(const char (&op)[op_size], unsigned int &
 }
 
 // NOTE: We expect the caller to have parsed the left hand side already
-template<ast_node_type type, bool allow_trailing, unsigned int op_size>
+template<ast_node_type type, precedence prec, associativity assoc, bool allow_trailing, unsigned int op_size>
 ast_node_ptr parser::parse_binop(const char (&op)[op_size], ast_node_ptr lhs, unsigned int &pos, unsigned int min_precedence)
 {
 	assert(lhs);
 
-	if (precedence(type) < min_precedence)
+	if (prec < min_precedence)
 		return nullptr;
 
 	unsigned int i = pos;
@@ -349,7 +339,7 @@ ast_node_ptr parser::parse_binop(const char (&op)[op_size], ast_node_ptr lhs, un
 
 	skip_whitespace_and_comments(i);
 
-	ast_node_ptr rhs = parse_expr(i, precedence(type) + left_associative(type));
+	ast_node_ptr rhs = parse_expr(i, prec + assoc);
 	if (!rhs) {
 		if (!allow_trailing)
 			return nullptr;
@@ -361,6 +351,36 @@ ast_node_ptr parser::parse_binop(const char (&op)[op_size], ast_node_ptr lhs, un
 	auto result = std::make_shared<ast_node>(type, pos, i);
 	new (&result->binop.lhs) ast_node_ptr(lhs);
 	new (&result->binop.rhs) ast_node_ptr(rhs);
+
+	skip_whitespace_and_comments(i);
+
+	pos = i;
+	return result;
+}
+
+// Helper wrapper for parsing a binary operator as a call to a built-in macro.
+// This is kind of a transformation of the "true" AST which puts a bit more of
+// the language into the parser (and maybe makes it a bit less elegant). We
+// also have to create 2 more node objects than we would have otherwise. But
+// putting it here simplifies anything that needs to traverse the AST later,
+// since it can handle these operators in a uniform way (as opposed to
+// handling separate AST types for each built-in operator).
+template<precedence prec, associativity assoc, bool allow_trailing, unsigned int op_size>
+ast_node_ptr parser::parse_binop_as_call(const char (&op)[op_size], const char *symbol_name,
+	ast_node_ptr lhs, unsigned int &pos, unsigned int min_precedence)
+{
+	unsigned int i = pos;
+
+	auto args = parse_binop<AST_JUXTAPOSE, prec, assoc, allow_trailing>(op, lhs, i, min_precedence);
+	if (!args)
+		return nullptr;
+
+	auto symbol_name_node = std::make_shared<ast_node>(AST_SYMBOL_NAME, pos, i);
+	new (&symbol_name_node->symbol_name) std::string(symbol_name);
+
+	auto result = std::make_shared<ast_node>(AST_JUXTAPOSE, pos, i);
+	new (&result->binop.lhs) ast_node_ptr(symbol_name_node);
+	new (&result->binop.rhs) ast_node_ptr(args);
 
 	skip_whitespace_and_comments(i);
 
@@ -385,7 +405,7 @@ ast_node_ptr parser::parse_expr(unsigned int &pos, unsigned int min_precedence)
 
 	/* Unary prefix operators */
 	if (!lhs)
-		lhs = parse_unop_prefix<AST_AT>("@", i);
+		lhs = parse_unop_prefix<AST_AT, PREC_PREFIX>("@", i);
 
 	/* Infix binary operators (basically anything that starts with a literal) */
 	if (!lhs)
@@ -397,33 +417,39 @@ ast_node_ptr parser::parse_expr(unsigned int &pos, unsigned int min_precedence)
 	ast_node_ptr result = nullptr;
 
 	while (true) {
+		/* We want comma and semicolon lists to behave like they
+		 * typically do in lisp, scheme, etc. where you have the
+		 * head of the list as the first operand and then the rest
+		 * of it as the second operand; therefore they should right
+		 * associative. The same goes for juxtaposition. */
+
 		// This must appear before ":" since that's a prefix
 		if (!result)
-			result = parse_binop<AST_DEFINE, false>(":=", lhs, i, min_precedence);
+			result = parse_binop_as_call<PREC_DEFINE, ASSOC_LEFT, false>(":=", "_define", lhs, i, min_precedence);
 
 		if (!result)
-			result = parse_binop<AST_MEMBER, false>(".", lhs, i, min_precedence);
+			result = parse_binop<AST_MEMBER, PREC_MEMBER, ASSOC_LEFT, false>(".", lhs, i, min_precedence);
 		if (!result)
-			result = parse_binop<AST_PAIR, false>(":", lhs, i, min_precedence);
+			result = parse_binop<AST_PAIR, PREC_PAIR, ASSOC_LEFT, false>(":", lhs, i, min_precedence);
 		if (!result)
-			result = parse_binop<AST_MULTIPLY, false>("*", lhs, i, min_precedence);
+			result = parse_binop_as_call<PREC_MULTIPLY_DIVIDE, ASSOC_LEFT, false>("*", "_multiply", lhs, i, min_precedence);
 		if (!result)
-			result = parse_binop<AST_DIVIDE, false>("/", lhs, i, min_precedence);
+			result = parse_binop_as_call<PREC_MULTIPLY_DIVIDE, ASSOC_LEFT, false>("/", "_divide", lhs, i, min_precedence);
 		if (!result)
-			result = parse_binop<AST_ADD, false>("+", lhs, i, min_precedence);
+			result = parse_binop_as_call<PREC_ADD_SUBTRACT, ASSOC_LEFT, false>("+", "_add", lhs, i, min_precedence);
 		if (!result)
-			result = parse_binop<AST_SUBTRACT, false>("-", lhs, i, min_precedence);
+			result = parse_binop_as_call<PREC_ADD_SUBTRACT, ASSOC_LEFT, false>("-", "_subtract", lhs, i, min_precedence);
 		if (!result)
-			result = parse_binop<AST_COMMA, true>(",", lhs, i, min_precedence);
+			result = parse_binop<AST_COMMA, PREC_COMMA, ASSOC_RIGHT, true>(",", lhs, i, min_precedence);
 		if (!result)
-			result = parse_binop<AST_ASSIGN, false>("=", lhs, i, min_precedence);
+			result = parse_binop_as_call<PREC_ASSIGN, ASSOC_LEFT, false>("=", "_assign", lhs, i, min_precedence);
 		if (!result)
-			result = parse_binop<AST_SEMICOLON, true>(";", lhs, i, min_precedence);
+			result = parse_binop<AST_SEMICOLON, PREC_SEMICOLON, ASSOC_RIGHT, true>(";", lhs, i, min_precedence);
 
 		// This must appear last since it's a prefix of any other
 		// operator.
 		if (!result)
-			result = parse_binop<AST_JUXTAPOSE, false>("", lhs, i, min_precedence);
+			result = parse_binop<AST_JUXTAPOSE, PREC_JUXTAPOSE, ASSOC_RIGHT, false>("", lhs, i, min_precedence);
 
 		if (result) {
 			lhs = result;

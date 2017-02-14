@@ -1,22 +1,43 @@
-(add
-    (add
-        (symbol_name x)
-        (multiply
-            (divide
-                (multiply
-                    (divide
-                        (multiply
-                            (symbol_name a)
-                            (symbol_name b)
+(juxtapose
+    (symbol_name _add)
+    (juxtapose
+        (juxtapose
+            (symbol_name _add)
+            (juxtapose
+                (symbol_name x)
+                (juxtapose
+                    (symbol_name _multiply)
+                    (juxtapose
+                        (juxtapose
+                            (symbol_name _divide)
+                            (juxtapose
+                                (juxtapose
+                                    (symbol_name _multiply)
+                                    (juxtapose
+                                        (juxtapose
+                                            (symbol_name _divide)
+                                            (juxtapose
+                                                (juxtapose
+                                                    (symbol_name _multiply)
+                                                    (juxtapose
+                                                        (symbol_name a)
+                                                        (symbol_name b)
+                                                    )
+                                                )
+                                                (symbol_name c)
+                                            )
+                                        )
+                                        (symbol_name d)
+                                    )
+                                )
+                                (symbol_name e)
+                            )
                         )
-                        (symbol_name c)
+                        (symbol_name f)
                     )
-                    (symbol_name d)
                 )
-                (symbol_name e)
             )
-            (symbol_name f)
         )
+        (symbol_name y)
     )
-    (symbol_name y)
 )

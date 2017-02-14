@@ -32,14 +32,8 @@ enum ast_node_type {
 	/* Binary infix operators */
 	AST_MEMBER,
 	AST_PAIR,
-	AST_MULTIPLY,
-	AST_DIVIDE,
-	AST_ADD,
-	AST_SUBTRACT,
 	AST_JUXTAPOSE,
 	AST_COMMA,
-	AST_ASSIGN,
-	AST_DEFINE,
 	AST_SEMICOLON,
 };
 
@@ -48,14 +42,8 @@ bool is_binop(ast_node_type t)
 	switch (t) {
 	case AST_MEMBER:
 	case AST_PAIR:
-	case AST_MULTIPLY:
-	case AST_DIVIDE:
-	case AST_ADD:
-	case AST_SUBTRACT:
 	case AST_JUXTAPOSE:
 	case AST_COMMA:
-	case AST_ASSIGN:
-	case AST_DEFINE:
 	case AST_SEMICOLON:
 		return true;
 	default:
@@ -130,14 +118,8 @@ struct ast_node {
 		/* Binary operators */
 		case AST_MEMBER:
 		case AST_PAIR:
-		case AST_MULTIPLY:
-		case AST_DIVIDE:
-		case AST_ADD:
-		case AST_SUBTRACT:
 		case AST_JUXTAPOSE:
 		case AST_COMMA:
-		case AST_ASSIGN:
-		case AST_DEFINE:
 		case AST_SEMICOLON:
 			binop.lhs.~ast_node_ptr();
 			binop.rhs.~ast_node_ptr();
@@ -210,29 +192,11 @@ struct ast_node {
 		case AST_PAIR:
 			dump_binop(fp, indent, "pair");
 			break;
-		case AST_MULTIPLY:
-			dump_binop(fp, indent, "multiply");
-			break;
-		case AST_DIVIDE:
-			dump_binop(fp, indent, "divide");
-			break;
-		case AST_ADD:
-			dump_binop(fp, indent, "add");
-			break;
-		case AST_SUBTRACT:
-			dump_binop(fp, indent, "subtract");
-			break;
 		case AST_JUXTAPOSE:
 			dump_binop(fp, indent, "juxtapose");
 			break;
 		case AST_COMMA:
 			dump_binop(fp, indent, "comma");
-			break;
-		case AST_ASSIGN:
-			dump_binop(fp, indent, "assign");
-			break;
-		case AST_DEFINE:
-			dump_binop(fp, indent, "define");
 			break;
 		case AST_SEMICOLON:
 			dump_binop(fp, indent, "semicolon");

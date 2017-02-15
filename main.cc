@@ -1,3 +1,8 @@
+extern "C" {
+#include <sys/mman.h>
+#include <sys/types.h>
+}
+
 #include <cstdio>
 
 #include "ast.hh"
@@ -35,6 +40,7 @@ int main(int argc, char *argv[])
 {
 	bool do_dump_ast = false;
 	bool do_compile = true;
+	bool do_run = true;
 	const char *output_filename = "out.bin";
 	std::vector<const char *> filenames;
 
@@ -44,6 +50,8 @@ int main(int argc, char *argv[])
 				do_dump_ast = true;
 			else if (strstarts(argv[i], "--no-compile"))
 				do_compile = false;
+			else if (strstarts(argv[i], "--no-run"))
+				do_run = false;
 			else
 				error(EXIT_FAILURE, 0, "Unrecognised option: %s", argv[i]);
 		} else {
@@ -85,6 +93,28 @@ int main(int argc, char *argv[])
 			if (fwrite(&f->bytes[0], f->bytes.size(), 1, fp) != 1)
 				error(EXIT_FAILURE, errno, "%s: fwrite()", output_filename);
 			fclose(fp);
+
+			if (do_run) {
+				size_t length = (f->bytes.size() + 4095) & ~4095;
+				void *mem = mmap(NULL, length,
+					PROT_READ | PROT_WRITE | PROT_EXEC,
+					MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+				if (mem == MAP_FAILED)
+					error(EXIT_FAILURE, errno, "%s: mmap()", filename);
+
+				memcpy(mem, &f->bytes[0], f->bytes.size());
+
+				// Flush instruction cache so we know we'll
+				// execute what we compiled and not some
+				// garbage that happened to be in the cache.
+				__builtin___clear_cache((char *) mem, (char *) mem + length);
+
+				auto fn = (void (*)()) mem;
+				printf("executing code at %p\n", fn);
+				fn();
+
+				munmap(mem, length);
+			}
 		}
 	}
 

@@ -65,7 +65,7 @@ struct function {
 	{
 		auto result = std::make_shared<value>(VALUE_LOCAL, type);
 		// TODO
-		result->local.offset = 0;
+		result->local.offset = 8;
 		return result;
 	}
 
@@ -114,9 +114,16 @@ struct function {
 		// TODO
 	}
 
+	void emit_return()
+	{
+		// retq
+		emit_byte(0xc3);
+	}
+
 	void emit_epilogue()
 	{
 		// TODO
+		emit_return();
 	}
 
 	void emit_move_reg_to_mreg_offset(machine_register source, machine_register dest, unsigned int dest_offset)

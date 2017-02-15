@@ -57,15 +57,23 @@ struct function {
 	//std::shared_ptr<value> return_value;
 	std::vector<uint8_t> bytes;
 
-	function()
+	unsigned int next_local_slot;
+
+	function():
+		// slot 0 is the return address
+		next_local_slot(8)
 	{
 	}
 
 	value_ptr alloc_local_value(value_type *type)
 	{
 		auto result = std::make_shared<value>(VALUE_LOCAL, type);
-		// TODO
-		result->local.offset = 8;
+
+		// TODO: we could try to rearrange/pack values to avoid wasting stack space
+		unsigned int offset = (next_local_slot + type->alignment - 1) & ~(type->alignment - 1);
+		result->local.offset = offset;
+		next_local_slot = next_local_slot + type->size;
+
 		return result;
 	}
 

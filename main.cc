@@ -35,6 +35,7 @@ int main(int argc, char *argv[])
 {
 	bool do_dump_ast = false;
 	bool do_compile = true;
+	bool do_dump_binary = false;
 	bool do_run = true;
 	std::vector<const char *> filenames;
 
@@ -44,6 +45,8 @@ int main(int argc, char *argv[])
 				do_dump_ast = true;
 			else if (!strcmp(argv[i], "--no-compile"))
 				do_compile = false;
+			else if (!strcmp(argv[i], "--dump-binary"))
+				do_dump_binary = true;
 			else if (!strcmp(argv[i], "--no-run"))
 				do_run = false;
 			else
@@ -81,14 +84,16 @@ int main(int argc, char *argv[])
 				return EXIT_FAILURE;
 			}
 
-			std::string output_filename = std::string(filename) + ".bin";
+			if (do_dump_binary) {
+				std::string output_filename = std::string(filename) + ".bin";
 
-			FILE *fp = fopen(output_filename, "wb+");
-			if (!fp)
-				error(EXIT_FAILURE, errno, "%s: fopen()", output_filename);
-			if (fwrite(&f->bytes[0], f->bytes.size(), 1, fp) != 1)
-				error(EXIT_FAILURE, errno, "%s: fwrite()", output_filename);
-			fclose(fp);
+				FILE *fp = fopen(output_filename.c_str(), "wb+");
+				if (!fp)
+					error(EXIT_FAILURE, errno, "%s: fopen()", output_filename.c_str());
+				if (fwrite(&f->bytes[0], f->bytes.size(), 1, fp) != 1)
+					error(EXIT_FAILURE, errno, "%s: fwrite()", output_filename.c_str());
+				fclose(fp);
+			}
 
 			if (do_run) {
 				size_t length = (f->bytes.size() + 4095) & ~4095;

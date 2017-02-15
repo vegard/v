@@ -2,6 +2,7 @@
 #define V_COMPILE_HH
 
 #include "ast.hh"
+#include "format.hh"
 #include "function.hh"
 #include "scope.hh"
 
@@ -9,8 +10,9 @@ struct compile_error: std::runtime_error {
 	unsigned int pos;
 	unsigned int end;
 
-	compile_error(const ast_node_ptr &node, const char *message):
-		std::runtime_error(message),
+	template<typename... Args>
+	compile_error(const ast_node_ptr &node, const char *fmt, Args... args):
+		std::runtime_error(format(fmt, args...)),
 		pos(node->pos),
 		end(node->end)
 	{

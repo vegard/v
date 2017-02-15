@@ -57,11 +57,11 @@ struct value {
 };
 
 // All builtin types
-// TODO: set sizes, etc.
-static value_type void_type = {0, 0};
-static value_type boolean_type = {1, 1};
-static value_type int_type = {alignof(mpz_class), sizeof(mpz_class)};
-static value_type uint64_type = {8, 8};
-static value_type builtin_macro_type = {alignof(void *), sizeof(void *)};
+
+static value_type builtin_type_void = {0, 0};
+static value_type builtin_type_boolean= {1, 1};
+static value_type builtin_type_int = {alignof(mpz_class), sizeof(mpz_class)};
+static value_type builtin_type_uint64 = {8, 8};
+static value_type builtin_type_macro = {alignof(void *), sizeof(void *)};
 
 #endif

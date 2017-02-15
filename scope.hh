@@ -35,7 +35,7 @@ struct scope {
 	// NOTE: builtin macros are always global
 	void define_builtin_macro(const std::string name, value_ptr (*fn)(function &, scope_ptr, ast_node_ptr))
 	{
-		auto macro_value = std::make_shared<value>(VALUE_GLOBAL, &builtin_macro_type);
+		auto macro_value = std::make_shared<value>(VALUE_GLOBAL, &builtin_type_macro);
 		macro_value->global.host_address = (void *) fn;
 		contents[name] = macro_value;
 	}

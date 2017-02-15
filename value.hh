@@ -12,6 +12,8 @@ typedef std::shared_ptr<value_type> value_type_ptr;
 
 struct value_type {
 	// TODO
+	unsigned int alignment;
+	unsigned int size;
 };
 
 struct value;
@@ -56,9 +58,10 @@ struct value {
 
 // All builtin types
 // TODO: set sizes, etc.
-static value_type void_type;
-static value_type boolean_type;
-static value_type int_type;
-static value_type builtin_macro_type;
+static value_type void_type = {0, 0};
+static value_type boolean_type = {1, 1};
+static value_type int_type = {alignof(mpz_class), sizeof(mpz_class)};
+static value_type uint64_type = {8, 8};
+static value_type builtin_macro_type = {alignof(void *), sizeof(void *)};
 
 #endif

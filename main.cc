@@ -3,6 +3,7 @@
 #include "ast.hh"
 #include "document.hh"
 #include "parser.hh"
+#include "value.hh"
 
 static void eval(const ast_node_ptr node)
 {

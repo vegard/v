@@ -36,7 +36,6 @@ int main(int argc, char *argv[])
 	bool do_dump_ast = false;
 	bool do_compile = true;
 	bool do_run = true;
-	const char *output_filename = "out.bin";
 	std::vector<const char *> filenames;
 
 	for (int i = 1; i < argc; ++i) {
@@ -82,6 +81,8 @@ int main(int argc, char *argv[])
 				return EXIT_FAILURE;
 			}
 
+			std::string output_filename = std::string(filename) + ".bin";
+
 			FILE *fp = fopen(output_filename, "wb+");
 			if (!fp)
 				error(EXIT_FAILURE, errno, "%s: fopen()", output_filename);
@@ -105,7 +106,6 @@ int main(int argc, char *argv[])
 				__builtin___clear_cache((char *) mem, (char *) mem + length);
 
 				auto fn = (void (*)()) mem;
-				printf("executing code at %p\n", fn);
 				fn();
 
 				munmap(mem, length);

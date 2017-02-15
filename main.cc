@@ -13,11 +13,6 @@ extern "C" {
 #include "scope.hh"
 #include "value.hh"
 
-bool strstarts(const char *str, const char *prefix)
-{
-	return !strncmp(str, prefix, strlen(prefix));
-}
-
 static function_ptr compile_metaprogram(ast_node_ptr root)
 {
 	auto global_scope = std::make_shared<scope>();
@@ -45,12 +40,12 @@ int main(int argc, char *argv[])
 	std::vector<const char *> filenames;
 
 	for (int i = 1; i < argc; ++i) {
-		if (strstarts(argv[i], "--")) {
-			if (strstarts(argv[i], "--dump-ast"))
+		if (argv[i][0] == '-') {
+			if (!strcmp(argv[i], "--dump-ast"))
 				do_dump_ast = true;
-			else if (strstarts(argv[i], "--no-compile"))
+			else if (!strcmp(argv[i], "--no-compile"))
 				do_compile = false;
-			else if (strstarts(argv[i], "--no-run"))
+			else if (!strcmp(argv[i], "--no-run"))
 				do_run = false;
 			else
 				error(EXIT_FAILURE, 0, "Unrecognised option: %s", argv[i]);

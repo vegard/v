@@ -43,6 +43,7 @@ enum precedence {
 	PREC_DEFINE,
 	PREC_ASSIGN,
 	PREC_COMMA,
+	PREC_EQUALITY,
 	PREC_JUXTAPOSE,
 	PREC_ADD_SUBTRACT,
 	PREC_MULTIPLY_DIVIDE,
@@ -441,6 +442,8 @@ ast_node_ptr parser::parse_expr(unsigned int &pos, unsigned int min_precedence)
 			result = parse_binop_as_call<PREC_ADD_SUBTRACT, ASSOC_LEFT, false>("-", "_subtract", lhs, i, min_precedence);
 		if (!result)
 			result = parse_binop<AST_COMMA, PREC_COMMA, ASSOC_RIGHT, true>(",", lhs, i, min_precedence);
+		if (!result)
+			result = parse_binop_as_call<PREC_EQUALITY, ASSOC_LEFT, false>("==", "_equals", lhs, i, min_precedence);
 		if (!result)
 			result = parse_binop_as_call<PREC_ASSIGN, ASSOC_LEFT, false>("=", "_assign", lhs, i, min_precedence);
 		if (!result)

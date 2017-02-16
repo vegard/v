@@ -16,9 +16,16 @@ extern "C" {
 static function_ptr compile_metaprogram(ast_node_ptr root)
 {
 	auto global_scope = std::make_shared<scope>();
+
+	// Types
+	global_scope->define_builtin_type("uint64", &builtin_type_uint64);
+
+	// Operators
 	global_scope->define_builtin_macro("_define", builtin_macro_define);
 	global_scope->define_builtin_macro("_assign", builtin_macro_assign);
 	global_scope->define_builtin_macro("_equals", builtin_macro_equals);
+
+	// Keywords
 	global_scope->define_builtin_macro("debug", builtin_macro_debug);
 	global_scope->define_builtin_macro("if", builtin_macro_if);
 	global_scope->define_builtin_macro("fun", builtin_macro_fun);

@@ -43,6 +43,16 @@ static value_ptr compile_juxtapose(function &f, scope_ptr s, ast_node_ptr node)
 		return fn(f, s, node->binop.rhs);
 	}
 
+	if (lhs->type == &builtin_type_type) {
+		// call type's constructor
+		auto type = (value_type *) lhs->global.host_address;
+		if (!type->constructor)
+			throw compile_error(node, "type doesn't have a constructor");
+
+		// TODO
+		return type->constructor(/*f, s, node->binop.rhs*/);
+	}
+
 	// TODO: handle functions?
 	assert(false);
 }

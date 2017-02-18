@@ -1,0 +1,22 @@
+(semicolon
+    (juxtapose
+        (symbol_name _define)
+        (juxtapose
+            (symbol_name x)
+            (juxtapose
+                (symbol_name foo)
+                (parens)
+            )
+        )
+    )
+    (juxtapose
+        (symbol_name _define)
+        (juxtapose
+            (symbol_name y)
+            (juxtapose
+                (symbol_name foo)
+                (parens)
+            )
+        )
+    )
+)

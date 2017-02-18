@@ -474,6 +474,8 @@ ast_node_ptr parser::parse_doc(unsigned int &pos)
 {
 	unsigned int i = pos;
 
+	skip_whitespace_and_comments(i);
+
 	auto result = parse_expr(i);
 	if (!result)
 		throw syntax_error("expected expression", i, i + 1);

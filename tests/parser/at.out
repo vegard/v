@@ -1,12 +1,12 @@
 (semicolon
-    (juxtapose
-        (at
+    (at
+        (juxtapose
             (symbol_name foo)
-        )
-        (brackets
-            (comma
-                (symbol_name bar)
-                (symbol_name baz)
+            (brackets
+                (comma
+                    (symbol_name bar)
+                    (symbol_name baz)
+                )
             )
         )
     )

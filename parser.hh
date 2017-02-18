@@ -40,6 +40,7 @@
 
 enum precedence {
 	PREC_SEMICOLON,
+	PREC_AT,
 	PREC_DEFINE,
 	PREC_ASSIGN,
 	PREC_COMMA,
@@ -49,7 +50,6 @@ enum precedence {
 	PREC_MULTIPLY_DIVIDE,
 	PREC_PAIR,
 	PREC_MEMBER,
-	PREC_PREFIX,
 	PREC_OUTFIX,
 	PREC_LITERAL,
 };
@@ -406,7 +406,7 @@ ast_node_ptr parser::parse_expr(unsigned int &pos, unsigned int min_precedence)
 
 	/* Unary prefix operators */
 	if (!lhs)
-		lhs = parse_unop_prefix<AST_AT, PREC_PREFIX>("@", i);
+		lhs = parse_unop_prefix<AST_AT, PREC_AT>("@", i);
 
 	/* Infix binary operators (basically anything that starts with a literal) */
 	if (!lhs)

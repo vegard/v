@@ -1,5 +1,6 @@
 (semicolon
-    (at
+    (juxtapose
+        (symbol_name _eval)
         (juxtapose
             (symbol_name foo)
             (brackets

@@ -101,8 +101,8 @@ struct parser {
 	template<ast_node_type type, unsigned int left_size, unsigned int right_size>
 	ast_node_ptr parse_outfix(const char (&left)[left_size], const char (&right)[right_size], unsigned int &pos);
 
-	template<ast_node_type type, precedence prec, unsigned int op_size>
-	ast_node_ptr parse_unop_prefix(const char (&op)[op_size], unsigned int &pos);
+	template<precedence prec, unsigned int op_size>
+	ast_node_ptr parse_unop_prefix_as_call(const char (&op)[op_size], const char *symbol_name, unsigned int &pos);
 
 	template<ast_node_type type, precedence prec, associativity assoc, bool allow_trailing, unsigned int op_size>
 	ast_node_ptr parse_binop(const char (&op)[op_size], ast_node_ptr lhs, unsigned int &pos, unsigned int min_precedence);
@@ -298,8 +298,8 @@ ast_node_ptr parser::parse_outfix(const char (&left)[left_size], const char (&ri
 	return result;
 }
 
-template<ast_node_type type, precedence prec, unsigned int op_size>
-ast_node_ptr parser::parse_unop_prefix(const char (&op)[op_size], unsigned int &pos)
+template<precedence prec, unsigned int op_size>
+ast_node_ptr parser::parse_unop_prefix_as_call(const char (&op)[op_size], const char *symbol_name, unsigned int &pos)
 {
 	unsigned int i = pos;
 
@@ -307,15 +307,18 @@ ast_node_ptr parser::parse_unop_prefix(const char (&op)[op_size], unsigned int &
 		return nullptr;
 	i += op_size - 1;
 
-	// TODO: decide whether to allow whitespace between a unary operator and its operand
-	//skip_whitespace_and_comments(i);
+	skip_whitespace_and_comments(i);
 
 	ast_node_ptr operand = parse_expr(i, prec);
 	if (!operand)
 		return nullptr;
 
-	auto result = std::make_shared<ast_node>(type, pos, i);
-	new (&result->unop) ast_node_ptr(operand);
+	auto symbol_name_node = std::make_shared<ast_node>(AST_SYMBOL_NAME, pos, i);
+	new (&symbol_name_node->symbol_name) std::string(symbol_name);
+
+	auto result = std::make_shared<ast_node>(AST_JUXTAPOSE, pos, i);
+	new (&result->binop.lhs) ast_node_ptr(symbol_name_node);
+	new (&result->binop.rhs) ast_node_ptr(operand);
 
 	skip_whitespace_and_comments(i);
 
@@ -406,7 +409,7 @@ ast_node_ptr parser::parse_expr(unsigned int &pos, unsigned int min_precedence)
 
 	/* Unary prefix operators */
 	if (!lhs)
-		lhs = parse_unop_prefix<AST_AT, PREC_AT>("@", i);
+		lhs = parse_unop_prefix_as_call<PREC_AT>("@", "_eval", i);
 
 	/* Infix binary operators (basically anything that starts with a literal) */
 	if (!lhs)

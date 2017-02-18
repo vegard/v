@@ -26,9 +26,6 @@ enum ast_node_type {
 	AST_ANGLE_BRACKETS,
 	AST_CURLY_BRACKETS,
 
-	/* Unary prefix operators */
-	AST_AT,
-
 	/* Binary infix operators */
 	AST_MEMBER,
 	AST_PAIR,
@@ -111,7 +108,6 @@ struct ast_node {
 		case AST_SQUARE_BRACKETS:
 		case AST_ANGLE_BRACKETS:
 		case AST_CURLY_BRACKETS:
-		case AST_AT:
 			unop.~ast_node_ptr();
 			break;
 
@@ -180,10 +176,6 @@ struct ast_node {
 			break;
 		case AST_CURLY_BRACKETS:
 			dump_unop(fp, indent, "curly-brackets");
-			break;
-
-		case AST_AT:
-			dump_unop(fp, indent, "at");
 			break;
 
 		case AST_MEMBER:

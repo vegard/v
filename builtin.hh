@@ -23,8 +23,24 @@ static void run(function_ptr f)
 	// garbage that happened to be in the cache.
 	__builtin___clear_cache((char *) mem, (char *) mem + length);
 
-	auto fn = (void (*)()) mem;
-	fn();
+	// TODO: ABI
+	auto ret = f->return_value;
+	if (!ret || ret->type->size == 0) {
+		// No return value
+		auto fn = (void (*)()) mem;
+		fn();
+	} else if (ret->type->size > sizeof(unsigned long)) {
+		// TODO
+		// If the return value is bigger than a long, we need to pass
+		// a pointer to it as the first argument.
+		//auto fn = (void (*)(void *)) mem;
+		//fn();
+		assert(false);
+	} else {
+		// The return value fits in a long
+		auto fn = (long (*)()) mem;
+		fn();
+	}
 
 	munmap(mem, length);
 }

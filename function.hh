@@ -54,7 +54,7 @@ struct function;
 typedef std::shared_ptr<function> function_ptr;
 
 struct function {
-	//std::shared_ptr<value> return_value;
+	std::shared_ptr<value> return_value;
 	std::vector<uint8_t> bytes;
 
 	unsigned int next_local_slot;

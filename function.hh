@@ -259,4 +259,6 @@ struct function {
 	}
 };
 
+static value_type builtin_type_function = {alignof(function_ptr), sizeof(function_ptr)};
+
 #endif

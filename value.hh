@@ -59,7 +59,7 @@ struct value {
 	}
 };
 
-// All builtin types
+// Some builtin types
 
 static value_type builtin_type_void = {0, 0};
 static value_type builtin_type_type = {alignof(value_type), sizeof(value_type)};

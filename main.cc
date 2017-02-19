@@ -21,6 +21,7 @@ static function_ptr compile_metaprogram(ast_node_ptr root)
 	global_scope->define_builtin_type("uint64", &builtin_type_uint64);
 
 	// Operators
+	global_scope->define_builtin_macro("_eval", builtin_macro_eval);
 	global_scope->define_builtin_macro("_define", builtin_macro_define);
 	global_scope->define_builtin_macro("_assign", builtin_macro_assign);
 	global_scope->define_builtin_macro("_equals", builtin_macro_equals);
@@ -102,26 +103,8 @@ int main(int argc, char *argv[])
 				fclose(fp);
 			}
 
-			if (do_run) {
-				size_t length = (f->bytes.size() + 4095) & ~4095;
-				void *mem = mmap(NULL, length,
-					PROT_READ | PROT_WRITE | PROT_EXEC,
-					MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-				if (mem == MAP_FAILED)
-					error(EXIT_FAILURE, errno, "%s: mmap()", filename);
-
-				memcpy(mem, &f->bytes[0], f->bytes.size());
-
-				// Flush instruction cache so we know we'll
-				// execute what we compiled and not some
-				// garbage that happened to be in the cache.
-				__builtin___clear_cache((char *) mem, (char *) mem + length);
-
-				auto fn = (void (*)()) mem;
-				fn();
-
-				munmap(mem, length);
-			}
+			if (do_run)
+				run(f);
 		}
 	}
 

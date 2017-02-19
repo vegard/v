@@ -7,6 +7,41 @@
 #include "scope.hh"
 #include "value.hh"
 
+static void run(function_ptr f)
+{
+	size_t length = (f->bytes.size() + 4095) & ~4095;
+	void *mem = mmap(NULL, length,
+		PROT_READ | PROT_WRITE | PROT_EXEC,
+		MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	if (mem == MAP_FAILED)
+		throw std::runtime_error(format("mmap() failed: %s", strerror(errno)));
+
+	memcpy(mem, &f->bytes[0], f->bytes.size());
+
+	// Flush instruction cache so we know we'll
+	// execute what we compiled and not some
+	// garbage that happened to be in the cache.
+	__builtin___clear_cache((char *) mem, (char *) mem + length);
+
+	auto fn = (void (*)()) mem;
+	fn();
+
+	munmap(mem, length);
+}
+
+static value_ptr builtin_macro_eval(function &f, scope_ptr s, ast_node_ptr node)
+{
+	auto new_f = std::make_shared<function>();
+	new_f->emit_prologue();
+	auto v = compile(*new_f, s, node);
+	new_f->emit_prologue();
+
+	run(new_f);
+
+	// TODO
+	return v;
+}
+
 static value_ptr builtin_macro_define(function &f, scope_ptr s, ast_node_ptr node)
 {
 	auto lhs = node->binop.lhs;

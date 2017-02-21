@@ -50,7 +50,7 @@ static value_ptr builtin_macro_eval(function &f, scope_ptr s, ast_node_ptr node)
 	auto new_f = std::make_shared<function>();
 	new_f->emit_prologue();
 	auto v = compile(*new_f, s, node);
-	new_f->emit_prologue();
+	new_f->emit_epilogue();
 
 	run(new_f);
 

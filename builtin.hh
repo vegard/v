@@ -1,11 +1,28 @@
 #ifndef V_BUILTIN_HH
 #define V_BUILTIN_HH
 
+#include "libudis86/extern.h"
+
 #include "ast.hh"
 #include "compile.hh"
 #include "function.hh"
 #include "scope.hh"
 #include "value.hh"
+
+static void disassemble(const uint8_t *buf, size_t len, uint64_t pc)
+{
+	ud_t u;
+	ud_init(&u);
+	ud_set_input_buffer(&u, buf, len);
+	ud_set_mode(&u, 64);
+	ud_set_pc(&u, pc);
+	ud_set_syntax(&u, UD_SYN_INTEL);
+
+	printf("Disassembly at 0x%08lx:\n", pc);
+
+	while (ud_disassemble(&u))
+		printf("  %s\n", ud_insn_asm(&u));
+}
 
 static void run(function_ptr f)
 {
@@ -22,6 +39,8 @@ static void run(function_ptr f)
 	// execute what we compiled and not some
 	// garbage that happened to be in the cache.
 	__builtin___clear_cache((char *) mem, (char *) mem + length);
+
+	disassemble((const uint8_t *) mem, f->bytes.size(), (uint64_t) mem);
 
 	// TODO: ABI
 	auto ret = f->return_value;

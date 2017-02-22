@@ -3,4 +3,5 @@
 set -e
 set -u
 
-g++ -std=c++14 -Wall -g -o v main.cc -lgmp -lgmpxx
+make -C udis86 install
+g++ -std=c++14 -Wall -Iudis86-install/include -g -o v main.cc -lgmp -lgmpxx -Ludis86-install/lib/ -ludis86

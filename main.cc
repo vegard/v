@@ -31,7 +31,7 @@ static function_ptr compile_metaprogram(ast_node_ptr root)
 	global_scope->define_builtin_macro("if", builtin_macro_if);
 	global_scope->define_builtin_macro("fun", builtin_macro_fun);
 
-	auto f = std::make_shared<function>();
+	auto f = std::make_shared<function>(true);
 	f->emit_prologue();
 	compile(*f, global_scope, root);
 	f->emit_epilogue();

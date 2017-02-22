@@ -183,8 +183,9 @@ struct function {
 	{
 		switch (source->metatype) {
 		case VALUE_GLOBAL:
-			emit_move_imm_to_reg((uint64_t) source->global.host_address, RAX);
-			emit_move_mreg_offset_to_reg(RAX, 0, dest);
+			// TODO
+			emit_move_imm_to_reg((uint64_t) source->global.host_address, RBX);
+			emit_move_mreg_offset_to_reg(RBX, 0, dest);
 			break;
 		case VALUE_LOCAL:
 			emit_move_mreg_offset_to_reg(RSP, source->local.offset, dest);
@@ -200,8 +201,8 @@ struct function {
 		switch (dest->metatype) {
 		case VALUE_GLOBAL:
 			// TODO
-			emit_move_imm_to_reg((uint64_t) dest->global.host_address, RAX);
-			emit_move_reg_to_mreg_offset(source, RAX, 0);
+			emit_move_imm_to_reg((uint64_t) dest->global.host_address, RBX);
+			emit_move_reg_to_mreg_offset(source, RBX, 0);
 			break;
 		case VALUE_LOCAL:
 			emit_move_reg_to_mreg_offset(source, RSP, dest->local.offset);

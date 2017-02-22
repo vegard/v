@@ -64,9 +64,19 @@ static value_ptr builtin_macro_define(function &f, scope_ptr s, ast_node_ptr nod
 	if (lhs->type != AST_SYMBOL_NAME)
 		throw compile_error(node, "definition of non-symbol");
 
-	// Create new local
 	auto rhs = compile(f, s, node->binop.rhs);
-	auto val = f.alloc_local_value(rhs->type);
+	value_ptr val;
+	if (f.target_jit) {
+		// For functions that are run at compile-time, we allocate
+		// a new global value. The _name_ is still scoped as usual,
+		// though.
+		val = std::make_shared<value>(VALUE_GLOBAL, rhs->type);
+		auto global = new uint8_t[rhs->type->size];
+		val->global.host_address = (void *) global;
+	} else {
+		// Create new local
+		val = f.alloc_local_value(rhs->type);
+	}
 	s->define(node, lhs->symbol_name, val);
 	f.emit_move(rhs, val);
 	return val;

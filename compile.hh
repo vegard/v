@@ -78,11 +78,14 @@ static value_ptr compile(function &f, scope_ptr s, ast_node_ptr node)
 	switch (node->type) {
 	case AST_LITERAL_INTEGER:
 		{
-			auto ret = std::make_shared<value>(VALUE_CONSTANT, &builtin_type_int);
+			auto ret = std::make_shared<value>(VALUE_GLOBAL, &builtin_type_int);
 			// TODO: handle 'int' as arbitrary-precision
 			if (!node->literal_integer.fits_slong_p())
 				throw compile_error(node, "[tmp] int is too large to fit in 64 bits");
-			ret->constant.u64 = node->literal_integer.get_si();
+			//ret->constant.u64 = node->literal_integer.get_si();
+			auto global = new uint64_t;
+			*global = node->literal_integer.get_si();
+			ret->global.host_address = (void *) global;
 			return ret;
 		}
 #if 0

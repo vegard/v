@@ -183,8 +183,8 @@ struct function {
 	{
 		switch (source->metatype) {
 		case VALUE_GLOBAL:
-			// TODO
-			assert(false);
+			emit_move_imm_to_reg((uint64_t) source->global.host_address, RAX);
+			emit_move_mreg_offset_to_reg(RAX, 0, dest);
 			break;
 		case VALUE_LOCAL:
 			emit_move_mreg_offset_to_reg(RSP, source->local.offset, dest);
@@ -200,7 +200,8 @@ struct function {
 		switch (dest->metatype) {
 		case VALUE_GLOBAL:
 			// TODO
-			assert(false);
+			emit_move_imm_to_reg((uint64_t) dest->global.host_address, RAX);
+			emit_move_reg_to_mreg_offset(source, RAX, 0);
 			break;
 		case VALUE_LOCAL:
 			emit_move_reg_to_mreg_offset(source, RSP, dest->local.offset);
@@ -217,8 +218,18 @@ struct function {
 		// TODO: check that the source is big enough to fit in
 		// a register; if not, use more registers?
 		// TODO: check for compatible types?
-		emit_move(source, RAX);
-		emit_move(RAX, dest);
+		assert(source->type->size == dest->type->size);
+
+		if (source->type->size == 8) {
+			emit_move(source, RAX);
+			emit_move(RAX, dest);
+		} else {
+			// TODO: improve message
+			fprintf(stderr, "error: unhandled metatypes %u, %u, size %u in move\n",
+				source->metatype, dest->metatype,
+				source->type->size);
+			assert(false);
+		}
 	}
 
 	void emit_cmp_reg_reg(machine_register source1, machine_register source2)

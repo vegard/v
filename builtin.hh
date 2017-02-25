@@ -227,9 +227,48 @@ static value_ptr builtin_macro_if(function &f, scope_ptr s, ast_node_ptr node)
 
 static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
 {
-	// TODO
-	assert(false);
-	return nullptr;
+	// Extract parameters and code block from AST
+
+	if (node->type != AST_JUXTAPOSE)
+		throw compile_error(node, "expected 'fun (<expression>) <expression>'");
+
+	auto brackets_node = node->binop.lhs;
+	if (brackets_node->type != AST_BRACKETS)
+		throw compile_error(brackets_node, "expected (<expression>...)");
+
+	auto code_node = node->binop.rhs;
+	auto args_node = brackets_node->unop;
+
+	auto new_f = std::make_shared<function>(false);
+	new_f->emit_prologue();
+
+	// The signature is a tuple of <argument types..., return type>
+	// TODO: move arguments from registers to locals
+	std::vector<value_type_ptr> signature;
+	for (auto arg_node: traverse<AST_COMMA>(args_node)) {
+		if (arg_node->type != AST_PAIR)
+			throw compile_error(arg_node, "expected <name>: <type> pair");
+
+		auto name_node = arg_node->binop.lhs;
+
+		// Find the type by evaluating the <type> expression
+		auto type_node = arg_node->binop.rhs;
+		value_ptr arg_type_value = builtin_macro_eval(f, s, type_node);
+		if (arg_type_value->metatype != VALUE_GLOBAL)
+			throw compile_error(type_node, "argument type must be known at compile time");
+		if (arg_type_value->type != &builtin_type_type)
+			throw compile_error(type_node, "argument type must be an instance of a type");
+		auto arg_type = *(value_type_ptr *) arg_type_value->global.host_address;
+
+		signature.push_back(arg_type);
+	}
+
+	auto v = compile(*new_f, s, code_node);
+	new_f->emit_epilogue();
+
+	// TODO: ??? I'm so sleepy I don't know what we're supposed to return
+	// but this is the only variable with the right type
+	return v;
 }
 
 #endif

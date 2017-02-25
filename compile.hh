@@ -1,6 +1,8 @@
 #ifndef V_COMPILE_HH
 #define V_COMPILE_HH
 
+#include "libudis86/extern.h"
+
 #include "ast.hh"
 #include "format.hh"
 #include "function.hh"
@@ -21,6 +23,74 @@ struct compile_error: std::runtime_error {
 };
 
 static value_ptr compile(function &f, scope_ptr s, ast_node_ptr node);
+
+static void disassemble(const uint8_t *buf, size_t len, uint64_t pc)
+{
+	ud_t u;
+	ud_init(&u);
+	ud_set_input_buffer(&u, buf, len);
+	ud_set_mode(&u, 64);
+	ud_set_pc(&u, pc);
+	ud_set_syntax(&u, UD_SYN_INTEL);
+
+	printf("Disassembly at 0x%08lx:\n", pc);
+
+	while (ud_disassemble(&u))
+		printf("  %s\n", ud_insn_asm(&u));
+}
+
+static void run(function_ptr f)
+{
+	size_t length = (f->bytes.size() + 4095) & ~4095;
+	void *mem = mmap(NULL, length,
+		PROT_READ | PROT_WRITE | PROT_EXEC,
+		MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	if (mem == MAP_FAILED)
+		throw std::runtime_error(format("mmap() failed: %s", strerror(errno)));
+
+	memcpy(mem, &f->bytes[0], f->bytes.size());
+
+	// Flush instruction cache so we know we'll
+	// execute what we compiled and not some
+	// garbage that happened to be in the cache.
+	__builtin___clear_cache((char *) mem, (char *) mem + length);
+
+	disassemble((const uint8_t *) mem, f->bytes.size(), (uint64_t) mem);
+
+	// TODO: ABI
+	auto ret = f->return_value;
+	if (!ret || ret->type->size == 0) {
+		// No return value
+		auto fn = (void (*)()) mem;
+		fn();
+	} else if (ret->type->size > sizeof(unsigned long)) {
+		// TODO
+		// If the return value is bigger than a long, we need to pass
+		// a pointer to it as the first argument.
+		//auto fn = (void (*)(void *)) mem;
+		//fn();
+		assert(false);
+	} else {
+		// The return value fits in a long
+		auto fn = (long (*)()) mem;
+		fn();
+	}
+
+	munmap(mem, length);
+}
+
+static value_ptr eval(function &f, scope_ptr s, ast_node_ptr node)
+{
+	auto new_f = std::make_shared<function>(true);
+	new_f->emit_prologue();
+	auto v = compile(*new_f, s, node);
+	new_f->emit_epilogue();
+
+	run(new_f);
+
+	// TODO
+	return v;
+}
 
 static value_ptr compile_brackets(function &f, scope_ptr s, ast_node_ptr node)
 {

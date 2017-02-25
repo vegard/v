@@ -71,7 +71,7 @@ struct function {
 	{
 	}
 
-	value_ptr alloc_local_value(value_type *type)
+	value_ptr alloc_local_value(value_type_ptr type)
 	{
 		auto result = std::make_shared<value>(VALUE_LOCAL, type);
 

@@ -33,10 +33,10 @@ struct scope {
 
 	// Helper for defining builtin types
 	// NOTE: builtin types are always global
-	void define_builtin_type(const std::string name, value_type *type)
+	void define_builtin_type(const std::string name, value_type_ptr type)
 	{
-		auto type_value = std::make_shared<value>(VALUE_GLOBAL, &builtin_type_type);
-		type_value->global.host_address = (void *) type;
+		auto type_value = std::make_shared<value>(VALUE_GLOBAL, builtin_type_type);
+		type_value->global.host_address = (void *) &type;
 		contents[name] = type_value;
 	}
 
@@ -44,7 +44,7 @@ struct scope {
 	// NOTE: builtin macros are always global
 	void define_builtin_macro(const std::string name, value_ptr (*fn)(function &, scope_ptr, ast_node_ptr))
 	{
-		auto macro_value = std::make_shared<value>(VALUE_GLOBAL, &builtin_type_macro);
+		auto macro_value = std::make_shared<value>(VALUE_GLOBAL, builtin_type_macro);
 		macro_value->global.host_address = (void *) fn;
 		contents[name] = macro_value;
 	}

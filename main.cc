@@ -18,7 +18,7 @@ static function_ptr compile_metaprogram(ast_node_ptr root)
 	auto global_scope = std::make_shared<scope>();
 
 	// Types
-	global_scope->define_builtin_type("uint64", &builtin_type_uint64);
+	global_scope->define_builtin_type("uint64", builtin_type_uint64);
 
 	// Operators
 	global_scope->define_builtin_macro("_eval", builtin_macro_eval);

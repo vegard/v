@@ -41,14 +41,13 @@ struct value {
 		} constant;
 	};
 
-	// TODO: use value_type_ptr?
-	value_type *type;
+	value_type_ptr type;
 
 	value()
 	{
 	}
 
-	value(value_metatype metatype, value_type *type):
+	value(value_metatype metatype, value_type_ptr type):
 		metatype(metatype),
 		type(type)
 	{
@@ -61,15 +60,15 @@ struct value {
 
 // Some builtin types
 
-static value_type builtin_type_void = {0, 0};
-static value_type builtin_type_type = {alignof(value_type), sizeof(value_type)};
-static value_type builtin_type_boolean= {1, 1};
+static auto builtin_type_void = std::make_shared<value_type>(value_type{0, 0});
+static auto builtin_type_type = std::make_shared<value_type>(value_type{alignof(value_type), sizeof(value_type)});
+static auto builtin_type_boolean= std::make_shared<value_type>(value_type{1, 1});
 
 // TODO: "int" is 64-bit for the time being, see copmile(AST_LITERAL_INTEGER) in compile.hh
 //static value_type builtin_type_int = {alignof(mpz_class), sizeof(mpz_class)};
-static value_type builtin_type_int = {8, 8};
+static auto builtin_type_int = std::make_shared<value_type>(value_type{8, 8});
 
-static value_type builtin_type_uint64 = {8, 8};
-static value_type builtin_type_macro = {alignof(void *), sizeof(void *)};
+static auto builtin_type_uint64 = std::make_shared<value_type>(value_type{8, 8});
+static auto builtin_type_macro = std::make_shared<value_type>(value_type{alignof(void *), sizeof(void *)});
 
 #endif

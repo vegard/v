@@ -54,7 +54,7 @@ static value_ptr builtin_macro_equals(function &f, scope_ptr s, ast_node_ptr nod
 	f.emit_compare(lhs, rhs);
 
 	// TODO: actually set the value
-	return std::make_shared<value>(VALUE_LOCAL, &builtin_type_boolean);
+	return std::make_shared<value>(VALUE_LOCAL, builtin_type_boolean);
 }
 
 static value_ptr builtin_macro_debug(function &f, scope_ptr s, ast_node_ptr node)
@@ -63,7 +63,7 @@ static value_ptr builtin_macro_debug(function &f, scope_ptr s, ast_node_ptr node
 	node->dump();
 	printf("\n");
 
-	return std::make_shared<value>(VALUE_CONSTANT, &builtin_type_void);
+	return std::make_shared<value>(VALUE_CONSTANT, builtin_type_void);
 }
 
 static value_ptr builtin_macro_if(function &f, scope_ptr s, ast_node_ptr node)
@@ -116,7 +116,7 @@ static value_ptr builtin_macro_if(function &f, scope_ptr s, ast_node_ptr node)
 
 	// "if" condition
 	auto condition_value = compile(f, s, condition_node);
-	if (condition_value->type != &builtin_type_boolean)
+	if (condition_value->type != builtin_type_boolean)
 		throw compile_error(condition_node, "'if' condition must be boolean");
 
 	label false_label;
@@ -124,7 +124,7 @@ static value_ptr builtin_macro_if(function &f, scope_ptr s, ast_node_ptr node)
 
 	// "if" block
 	auto true_value = compile(f, s, true_node);
-	if (true_value->type != &builtin_type_void) {
+	if (true_value->type != builtin_type_void) {
 		return_value = f.alloc_local_value(true_value->type);
 		f.emit_move(true_value, return_value);
 	}
@@ -138,10 +138,10 @@ static value_ptr builtin_macro_if(function &f, scope_ptr s, ast_node_ptr node)
 		auto false_value = compile(f, s, false_node);
 		if (false_value->type != true_value->type)
 			throw compile_error(false_node, "'else' block must return the same type as 'if' block");
-		if (false_value->type != &builtin_type_void)
+		if (false_value->type != builtin_type_void)
 			f.emit_move(false_value, return_value);
 	} else {
-		if (true_value->type != &builtin_type_void)
+		if (true_value->type != builtin_type_void)
 			throw compile_error(node, "expected 'else' since 'if' block has return value");
 	}
 
@@ -154,7 +154,7 @@ static value_ptr builtin_macro_if(function &f, scope_ptr s, ast_node_ptr node)
 
 	// TODO: just return nullptr instead?
 	if (!return_value) {
-		return_value = std::make_shared<value>(VALUE_CONSTANT, &builtin_type_void);
+		return_value = std::make_shared<value>(VALUE_CONSTANT, builtin_type_void);
 		//new (&return_value->constant.node) ast_node_ptr;
 	}
 	return return_value;
@@ -191,7 +191,7 @@ static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
 		value_ptr arg_type_value = builtin_macro_eval(f, s, type_node);
 		if (arg_type_value->metatype != VALUE_GLOBAL)
 			throw compile_error(type_node, "argument type must be known at compile time");
-		if (arg_type_value->type != &builtin_type_type)
+		if (arg_type_value->type != builtin_type_type)
 			throw compile_error(type_node, "argument type must be an instance of a type");
 		auto arg_type = *(value_type_ptr *) arg_type_value->global.host_address;
 

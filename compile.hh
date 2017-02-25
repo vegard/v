@@ -107,13 +107,17 @@ static value_ptr compile_curly_brackets(function &f, scope_ptr s, ast_node_ptr n
 static value_ptr compile_juxtapose(function &f, scope_ptr s, ast_node_ptr node)
 {
 	auto lhs = compile(f, s, node->binop.lhs);
-	if (lhs->type == &builtin_type_macro) {
+	if (lhs->type == builtin_type_macro) {
+		assert(lhs->metatype == VALUE_GLOBAL);
+
 		// macros are evaluated directly
 		auto fn = (value_ptr (*)(function &, scope_ptr, ast_node_ptr)) lhs->global.host_address;
 		return fn(f, s, node->binop.rhs);
 	}
 
-	if (lhs->type == &builtin_type_type) {
+	if (lhs->type == builtin_type_type) {
+		assert(lhs->metatype == VALUE_GLOBAL);
+
 		// call type's constructor
 		auto type = (value_type *) lhs->global.host_address;
 		if (!type->constructor)
@@ -148,7 +152,7 @@ static value_ptr compile(function &f, scope_ptr s, ast_node_ptr node)
 	switch (node->type) {
 	case AST_LITERAL_INTEGER:
 		{
-			auto ret = std::make_shared<value>(VALUE_GLOBAL, &builtin_type_int);
+			auto ret = std::make_shared<value>(VALUE_GLOBAL, builtin_type_int);
 			// TODO: handle 'int' as arbitrary-precision
 			if (!node->literal_integer.fits_slong_p())
 				throw compile_error(node, "[tmp] int is too large to fit in 64 bits");

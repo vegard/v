@@ -160,6 +160,12 @@ static value_ptr builtin_macro_if(function &f, scope_ptr s, ast_node_ptr node)
 	return return_value;
 }
 
+static value_ptr _call_fun(function &f, scope_ptr s, ast_node_ptr node)
+{
+	// TODO: emit CALL instruction
+	return nullptr;
+}
+
 static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
 {
 	// Extract parameters and code block from AST
@@ -198,12 +204,40 @@ static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
 		signature.push_back(arg_type);
 	}
 
+	// v is the return value of the compiled expression
 	auto v = compile(*new_f, s, code_node);
 	new_f->emit_epilogue();
 
-	// TODO: ??? I'm so sleepy I don't know what we're supposed to return
-	// but this is the only variable with the right type
-	return v;
+	// Now that we know the function's return type, we can finalize
+	// the signature and either find or create a type to represent
+	// the function signature.
+	signature.push_back(v->type);
+
+	// We memoise function types so that two functions with the same
+	// signature always get the same type
+	static std::map<std::vector<value_type_ptr>, value_type_ptr> signature_cache;
+
+	value_type_ptr ret_type;
+	auto it = signature_cache.find(signature);
+	if (it == signature_cache.end()) {
+		// Create new type for this signature
+		ret_type = std::make_shared<value_type>();
+		ret_type->alignment = 8;
+		ret_type->size = 8;
+		ret_type->constructor = nullptr;
+		ret_type->call = _call_fun;
+
+		signature_cache[signature] = ret_type;
+	} else {
+		ret_type = it->second;
+	}
+
+	auto ret = std::make_shared<value>(VALUE_GLOBAL, ret_type);
+	// TODO: this pointer gets freed when we return since we haven't
+	// taken any other references on "new_f"; attempting to call the
+	// function should result in a UAF
+	ret->global.host_address = &new_f->bytes[0];
+	return ret;
 }
 
 #endif

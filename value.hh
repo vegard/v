@@ -13,6 +13,13 @@ typedef std::shared_ptr<value_type> value_type_ptr;
 struct value;
 typedef std::shared_ptr<value> value_ptr;
 
+struct function;
+struct scope;
+typedef std::shared_ptr<scope> scope_ptr;
+
+struct ast_node;
+typedef std::shared_ptr<ast_node> ast_node_ptr;
+
 struct value_type {
 	// TODO
 	unsigned int alignment;
@@ -20,6 +27,8 @@ struct value_type {
 
 	// TODO
 	value_ptr (*constructor)();
+
+	value_ptr (*call)(function &, scope_ptr, ast_node_ptr);
 };
 
 struct value {

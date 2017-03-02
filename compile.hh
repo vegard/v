@@ -107,7 +107,8 @@ static value_ptr compile_curly_brackets(function &f, scope_ptr s, ast_node_ptr n
 static value_ptr compile_juxtapose(function &f, scope_ptr s, ast_node_ptr node)
 {
 	auto lhs = compile(f, s, node->binop.lhs);
-	if (lhs->type == builtin_type_macro) {
+	auto lhs_type = lhs->type;
+	if (lhs_type == builtin_type_macro) {
 		assert(lhs->metatype == VALUE_GLOBAL);
 
 		// macros are evaluated directly
@@ -115,7 +116,7 @@ static value_ptr compile_juxtapose(function &f, scope_ptr s, ast_node_ptr node)
 		return fn(f, s, node->binop.rhs);
 	}
 
-	if (lhs->type == builtin_type_type) {
+	if (lhs_type == builtin_type_type) {
 		assert(lhs->metatype == VALUE_GLOBAL);
 
 		// call type's constructor
@@ -127,8 +128,10 @@ static value_ptr compile_juxtapose(function &f, scope_ptr s, ast_node_ptr node)
 		return type->constructor(/*f, s, node->binop.rhs*/);
 	}
 
-	// TODO: handle functions?
-	assert(false);
+	if (lhs_type->call)
+		return lhs_type->call(f, s, node);
+
+	throw compile_error(node, "type is not callable");
 }
 
 static value_ptr compile_symbol_name(function &f, scope_ptr s, ast_node_ptr node)

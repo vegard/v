@@ -31,7 +31,7 @@ static void disassemble(const uint8_t *buf, size_t len, uint64_t pc)
 	ud_set_input_buffer(&u, buf, len);
 	ud_set_mode(&u, 64);
 	ud_set_pc(&u, pc);
-	ud_set_syntax(&u, UD_SYN_INTEL);
+	ud_set_syntax(&u, UD_SYN_ATT);
 
 	printf("Disassembly at 0x%08lx:\n", pc);
 

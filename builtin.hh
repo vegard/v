@@ -195,7 +195,7 @@ static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
 		// Find the type by evaluating the <type> expression
 		auto type_node = arg_node->binop.rhs;
 		value_ptr arg_type_value = builtin_macro_eval(f, s, type_node);
-		if (arg_type_value->metatype != VALUE_GLOBAL)
+		if (arg_type_value->storage_type != VALUE_GLOBAL)
 			throw compile_error(type_node, "argument type must be known at compile time");
 		if (arg_type_value->type != builtin_type_type)
 			throw compile_error(type_node, "argument type must be an instance of a type");

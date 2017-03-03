@@ -181,7 +181,7 @@ struct function {
 
 	void emit_move(value_ptr source, machine_register dest)
 	{
-		switch (source->metatype) {
+		switch (source->storage_type) {
 		case VALUE_GLOBAL:
 			// TODO
 			emit_move_imm_to_reg((uint64_t) source->global.host_address, RBX);
@@ -198,7 +198,7 @@ struct function {
 
 	void emit_move(machine_register source, value_ptr dest)
 	{
-		switch (dest->metatype) {
+		switch (dest->storage_type) {
 		case VALUE_GLOBAL:
 			// TODO
 			emit_move_imm_to_reg((uint64_t) dest->global.host_address, RBX);
@@ -226,8 +226,8 @@ struct function {
 			emit_move(RAX, dest);
 		} else {
 			// TODO: improve message
-			fprintf(stderr, "error: unhandled metatypes %u, %u, size %u in move\n",
-				source->metatype, dest->metatype,
+			fprintf(stderr, "error: unhandled storage_types %u, %u, size %u in move\n",
+				source->storage_type, dest->storage_type,
 				source->type->size);
 			assert(false);
 		}

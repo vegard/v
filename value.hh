@@ -1,7 +1,7 @@
 #ifndef V_VALUE_HH
 #define V_VALUE_HH
 
-enum value_metatype {
+enum value_storage_type {
 	VALUE_GLOBAL,
 	VALUE_LOCAL,
 	VALUE_CONSTANT,
@@ -32,7 +32,7 @@ struct value_type {
 };
 
 struct value {
-	value_metatype metatype;
+	value_storage_type storage_type;
 
 	union {
 		struct {
@@ -56,8 +56,8 @@ struct value {
 	{
 	}
 
-	value(value_metatype metatype, value_type_ptr type):
-		metatype(metatype),
+	value(value_storage_type storage_type, value_type_ptr type):
+		storage_type(storage_type),
 		type(type)
 	{
 	}

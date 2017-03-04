@@ -279,6 +279,35 @@ struct function {
 		emit_long_placeholder();
 	}
 
+	void emit_call(machine_register target)
+	{
+		// REX.B
+		bytes.push_back(REX | (REX_B * (target >= 8)));
+		// Opcode
+		emit_byte(0xff);
+		// Mod-Reg-R/M ?
+		bytes.push_back(0xd0 | (target & 7));
+	}
+
+	void emit_call(value_ptr target)
+	{
+		switch (target->storage_type) {
+		case VALUE_GLOBAL:
+			// TODO: optimise
+			emit_move_imm_to_reg((uint64_t) target->global.host_address, RAX);
+			emit_call(RAX);
+			break;
+		case VALUE_LOCAL:
+			// TODO: optimise
+			emit_move_mreg_offset_to_reg(RSP, target->local.offset, RAX);
+			emit_call(RAX);
+			break;
+		default:
+			assert(false);
+			break;
+		}
+	}
+
 	void link_label(const label &l)
 	{
 		for (const relocation &r: l.relocations)

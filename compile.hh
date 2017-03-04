@@ -146,7 +146,7 @@ static value_ptr compile_juxtapose(function &f, scope_ptr s, ast_node_ptr node)
 	}
 
 	if (lhs_type->call)
-		return lhs_type->call(f, s, node);
+		return lhs_type->call(f, s, lhs, node->binop.rhs);
 
 	throw compile_error(node, "type is not callable");
 }

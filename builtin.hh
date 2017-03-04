@@ -1,6 +1,8 @@
 #ifndef V_BUILTIN_HH
 #define V_BUILTIN_HH
 
+#include <set>
+
 #include "ast.hh"
 #include "compile.hh"
 #include "function.hh"
@@ -33,6 +35,7 @@ static value_ptr builtin_macro_define(function &f, scope_ptr s, ast_node_ptr nod
 	}
 	s->define(node, lhs->symbol_name, val);
 	f.emit_move(rhs, val);
+
 	return val;
 }
 
@@ -160,9 +163,12 @@ static value_ptr builtin_macro_if(function &f, scope_ptr s, ast_node_ptr node)
 	return return_value;
 }
 
-static value_ptr _call_fun(function &f, scope_ptr s, ast_node_ptr node)
+static value_ptr _call_fun(function &f, scope_ptr s, value_ptr fn, ast_node_ptr node)
 {
-	// TODO: emit CALL instruction
+	// TODO: save/restore caller save registers
+	// TODO: pass arguments
+	f.emit_call(fn);
+	// TODO: get return value
 	return nullptr;
 }
 
@@ -232,11 +238,20 @@ static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
 		ret_type = it->second;
 	}
 
+	// We need this to keep the new function from getting freed when this
+	// function returns.
+	// TODO: Another solution?
+	static std::set<function_ptr> functions;
+	functions.insert(new_f);
+
 	auto ret = std::make_shared<value>(VALUE_GLOBAL, ret_type);
-	// TODO: this pointer gets freed when we return since we haven't
-	// taken any other references on "new_f"; attempting to call the
-	// function should result in a UAF
-	ret->global.host_address = &new_f->bytes[0];
+	void *mem = map(new_f);
+
+	auto global = new void *;
+	*global = mem;
+	ret->global.host_address = (void *) global;
+
+	disassemble((const uint8_t *) mem, new_f->bytes.size(), (uint64_t) mem, new_f->comments);
 	return ret;
 }
 

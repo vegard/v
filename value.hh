@@ -28,7 +28,7 @@ struct value_type {
 	// TODO
 	value_ptr (*constructor)();
 
-	value_ptr (*call)(function &, scope_ptr, ast_node_ptr);
+	value_ptr (*call)(function &f, scope_ptr s, value_ptr lhs, ast_node_ptr rhs);
 };
 
 struct value {

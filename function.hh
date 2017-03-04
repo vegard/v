@@ -1,6 +1,7 @@
 #ifndef V_FUNCTION_HH
 #define V_FUNCTION_HH
 
+#include <map>
 #include <memory>
 
 #include "value.hh"
@@ -61,6 +62,7 @@ struct function {
 
 	std::shared_ptr<value> return_value;
 	std::vector<uint8_t> bytes;
+	std::map<size_t, std::vector<std::string>> comments;
 
 	unsigned int next_local_slot;
 
@@ -81,6 +83,11 @@ struct function {
 		next_local_slot = next_local_slot + type->size;
 
 		return result;
+	}
+
+	void comment(std::string s)
+	{
+		comments[bytes.size()].push_back(s);
 	}
 
 	void emit_byte(uint8_t v)
@@ -125,6 +132,7 @@ struct function {
 
 	void emit_prologue()
 	{
+		comment("prologue");
 		// TODO
 	}
 
@@ -136,6 +144,7 @@ struct function {
 
 	void emit_epilogue()
 	{
+		comment("epilogue");
 		// TODO
 		emit_return();
 	}

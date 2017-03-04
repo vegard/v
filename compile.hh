@@ -24,7 +24,7 @@ struct compile_error: std::runtime_error {
 
 static value_ptr compile(function &f, scope_ptr s, ast_node_ptr node);
 
-static void disassemble(const uint8_t *buf, size_t len, uint64_t pc)
+static void disassemble(const uint8_t *buf, size_t len, uint64_t pc, const std::map<size_t, std::vector<std::string>> &comments)
 {
 	ud_t u;
 	ud_init(&u);
@@ -35,11 +35,21 @@ static void disassemble(const uint8_t *buf, size_t len, uint64_t pc)
 
 	printf("Disassembly at 0x%08lx:\n", pc);
 
-	while (ud_disassemble(&u))
-		printf("  %s\n", ud_insn_asm(&u));
+	while (ud_disassemble(&u)) {
+		uint64_t offset = ud_insn_off(&u) - pc;
+		auto comments_it = comments.find(offset);
+		if (comments_it != comments.end()) {
+			for (const auto &comment: comments_it->second)
+				printf(" %4s  // %s\n", "", comment.c_str());
+		}
+
+		printf(" %4lu: %s\n", offset, ud_insn_asm(&u));
+	}
+
+	printf("\n");
 }
 
-static void run(function_ptr f)
+static void *map(function_ptr f)
 {
 	size_t length = (f->bytes.size() + 4095) & ~4095;
 	void *mem = mmap(NULL, length,
@@ -55,7 +65,13 @@ static void run(function_ptr f)
 	// garbage that happened to be in the cache.
 	__builtin___clear_cache((char *) mem, (char *) mem + length);
 
-	disassemble((const uint8_t *) mem, f->bytes.size(), (uint64_t) mem);
+	return mem;
+}
+
+static void run(function_ptr f)
+{
+	void *mem = map(f);
+	disassemble((const uint8_t *) mem, f->bytes.size(), (uint64_t) mem, f->comments);
 
 	// TODO: ABI
 	auto ret = f->return_value;
@@ -76,6 +92,7 @@ static void run(function_ptr f)
 		fn();
 	}
 
+	size_t length = (f->bytes.size() + 4095) & ~4095;
 	munmap(mem, length);
 }
 

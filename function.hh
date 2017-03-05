@@ -309,6 +309,18 @@ struct function {
 		}
 	}
 
+	void emit_add(value_ptr source1, value_ptr source2, value_ptr dest)
+	{
+		comment("add");
+		emit_move(source1, RAX);
+		emit_move(source2, RBX);
+		// hardcoded: addq %rbx, %rax
+		emit_byte(0x48);
+		emit_byte(0x01);
+		emit_byte(0xd8);
+		emit_move(RAX, dest);
+	}
+
 	void link_label(const label &l)
 	{
 		for (const relocation &r: l.relocations)

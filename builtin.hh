@@ -255,4 +255,35 @@ static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
 	return ret;
 }
 
+static value_ptr builtin_macro_add(function &f, scope_ptr s, ast_node_ptr node)
+{
+	// So this is probably a result of something (x + y), which got
+	// parsed as (juxtapose _add (juxtapose x y)).
+	// Compiling the "juxtapose" decided we're a macro, and "node" here
+	// refers to the (brackets ...) part.
+	//
+	// What we'd like to do is to evaluate 'x' to figure out what type
+	// it is. Once we know its type, we can call that type's ->add()
+	// operator.
+	//
+	// In general, we should be careful about "type only" evaluations
+	// because it's more expensive to first evaluate the type and then
+	// evaluate the type AND value than to just evaluate the type and
+	// the value at the same time.
+	//
+	// However, this allows operators to be macros, which is a very
+	// powerful feature.
+
+	assert(node->type == AST_JUXTAPOSE);
+
+	// TODO: only evaluate the type so we don't evaluate the value twice
+	auto lhs = compile(f, s, node->binop.lhs);
+	auto lhs_type = lhs->type;
+
+	if (!lhs_type->add)
+		throw compile_error(node, "type doesn't support +");
+
+	return lhs_type->add(f, s, lhs, node);
+}
+
 #endif

@@ -26,6 +26,7 @@ static function_ptr compile_metaprogram(ast_node_ptr root)
 	global_scope->define_builtin_macro("_define", builtin_macro_define);
 	global_scope->define_builtin_macro("_assign", builtin_macro_assign);
 	global_scope->define_builtin_macro("_equals", builtin_macro_equals);
+	global_scope->define_builtin_macro("_add", builtin_macro_add);
 
 	// Keywords
 	global_scope->define_builtin_macro("debug", builtin_macro_debug);

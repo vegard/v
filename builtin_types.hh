@@ -5,11 +5,14 @@
 #include "value.hh"
 
 static value_ptr builtin_type_u64_constructor(function &, scope_ptr, ast_node_ptr);
+static value_ptr builtin_type_u64_add(function &f, scope_ptr s, value_ptr lhs, ast_node_ptr node);
 
 static auto builtin_type_u64 = std::make_shared<value_type>(value_type {
 	.alignment = 8,
 	.size = 8,
 	.constructor = &builtin_type_u64_constructor,
+	.call = nullptr,
+	.add = &builtin_type_u64_add,
 });
 
 static value_ptr builtin_type_u64_constructor(function &f, scope_ptr s, ast_node_ptr node)
@@ -25,6 +28,18 @@ static value_ptr builtin_type_u64_constructor(function &f, scope_ptr s, ast_node
 	auto global = new uint64_t;
 	*global = node->literal_integer.get_si();
 	ret->global.host_address = (void *) global;
+	return ret;
+}
+
+// TODO: maybe this should really be a function rather than a macro
+static value_ptr builtin_type_u64_add(function &f, scope_ptr s, value_ptr lhs, ast_node_ptr node)
+{
+	auto rhs = compile(f, s, node->binop.rhs);
+	if (rhs->type != lhs->type)
+		throw compile_error(node->binop.rhs, "expected u64");
+
+	auto ret = f.alloc_local_value(lhs->type);
+	f.emit_add(lhs, rhs, ret);
 	return ret;
 }
 

@@ -7,6 +7,7 @@ extern "C" {
 
 #include "ast.hh"
 #include "builtin.hh"
+#include "builtin_types.hh"
 #include "compile.hh"
 #include "document.hh"
 #include "function.hh"
@@ -18,7 +19,7 @@ static function_ptr compile_metaprogram(ast_node_ptr root)
 	auto global_scope = std::make_shared<scope>();
 
 	// Types
-	global_scope->define_builtin_type("uint64", builtin_type_uint64);
+	global_scope->define_builtin_type("u64", builtin_type_u64);
 
 	// Operators
 	global_scope->define_builtin_macro("_eval", builtin_macro_eval);

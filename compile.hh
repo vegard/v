@@ -141,8 +141,8 @@ static value_ptr compile_juxtapose(function &f, scope_ptr s, ast_node_ptr node)
 		if (!type->constructor)
 			throw compile_error(node, "type doesn't have a constructor");
 
-		// TODO
-		return type->constructor(/*f, s, node->binop.rhs*/);
+		// TODO: functions as constructors
+		return type->constructor(f, s, node->binop.rhs);
 	}
 
 	if (lhs_type->call)
@@ -170,27 +170,6 @@ static value_ptr compile_semicolon(function &f, scope_ptr s, ast_node_ptr node)
 static value_ptr compile(function &f, scope_ptr s, ast_node_ptr node)
 {
 	switch (node->type) {
-	case AST_LITERAL_INTEGER:
-		{
-			auto ret = std::make_shared<value>(VALUE_GLOBAL, builtin_type_int);
-			// TODO: handle 'int' as arbitrary-precision
-			if (!node->literal_integer.fits_slong_p())
-				throw compile_error(node, "[tmp] int is too large to fit in 64 bits");
-			//ret->constant.u64 = node->literal_integer.get_si();
-			auto global = new uint64_t;
-			*global = node->literal_integer.get_si();
-			ret->global.host_address = (void *) global;
-			return ret;
-		}
-#if 0
-	case AST_LITERAL_STRING:
-		{
-			auto ret = std::make_shared<value>(VALUE_CONSTANT, &string_type);
-			new (&ret->constant.node) ast_node_ptr(node);
-			return ret;
-		}
-#endif
-
 	case AST_BRACKETS:
 		return compile_brackets(f, s, node);
 	case AST_CURLY_BRACKETS:

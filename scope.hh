@@ -36,7 +36,8 @@ struct scope {
 	void define_builtin_type(const std::string name, value_type_ptr type)
 	{
 		auto type_value = std::make_shared<value>(VALUE_GLOBAL, builtin_type_type);
-		type_value->global.host_address = (void *) &type;
+		auto type_copy = new value_type_ptr(type);
+		type_value->global.host_address = (void *) type_copy;
 		contents[name] = type_value;
 	}
 

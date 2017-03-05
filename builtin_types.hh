@@ -1,8 +1,31 @@
 #ifndef V_BUILTIN_TYPES_H
 #define V_BUILTIN_TYPES_H
 
+#include "compile.hh"
 #include "value.hh"
 
-static auto builtin_type_u64 = std::make_shared<value_type>(value_type{8, 8});
+static value_ptr builtin_type_u64_constructor(function &, scope_ptr, ast_node_ptr);
+
+static auto builtin_type_u64 = std::make_shared<value_type>(value_type {
+	.alignment = 8,
+	.size = 8,
+	.constructor = &builtin_type_u64_constructor,
+});
+
+static value_ptr builtin_type_u64_constructor(function &f, scope_ptr s, ast_node_ptr node)
+{
+	// TODO: support conversion from other integer types?
+	if (node->type != AST_LITERAL_INTEGER)
+		throw compile_error(node, "expected literal integer");
+
+	auto ret = std::make_shared<value>(VALUE_GLOBAL, builtin_type_u64);
+	if (!node->literal_integer.fits_ulong_p())
+		throw compile_error(node, "literal integer is too large to fit in u64");
+
+	auto global = new uint64_t;
+	*global = node->literal_integer.get_si();
+	ret->global.host_address = (void *) global;
+	return ret;
+}
 
 #endif

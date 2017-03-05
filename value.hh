@@ -26,7 +26,7 @@ struct value_type {
 	unsigned int size;
 
 	// TODO
-	value_ptr (*constructor)();
+	value_ptr (*constructor)(function &f, scope_ptr s, ast_node_ptr node);
 
 	value_ptr (*call)(function &f, scope_ptr s, value_ptr lhs, ast_node_ptr rhs);
 };

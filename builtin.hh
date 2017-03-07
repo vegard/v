@@ -186,6 +186,12 @@ static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
 	auto code_node = node->binop.rhs;
 	auto args_node = brackets_node->unop;
 
+	// TODO: abstract away ABI details
+	machine_register args_regs[] = {
+		RDI, RSI, RDX, RCX, R8, R9,
+	};
+	unsigned int current_arg = 0;
+
 	auto new_f = std::make_shared<function>(false);
 	new_f->emit_prologue();
 
@@ -216,6 +222,16 @@ static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
 		// Define arguments as local values
 		value_ptr arg_value = new_f->alloc_local_value(arg_type);
 		new_scope->define(node, name_node->literal_string, arg_value);
+
+		// TODO: use multiple regs or pass on stack
+		if (arg_type->size > sizeof(unsigned long))
+			throw compile_error(arg_node, "argument too big to fit in register");
+
+		// TODO: pass args on stack if there are too many to fit in registers
+		if (current_arg >= sizeof(args_regs) / sizeof(*args_regs))
+			throw compile_error(arg_node, "too many arguments");
+
+		new_f->emit_move(args_regs[current_arg++], arg_value);
 	}
 
 	// v is the return value of the compiled expression

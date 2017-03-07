@@ -79,7 +79,7 @@ struct function {
 
 		// TODO: we could try to rearrange/pack values to avoid wasting stack space
 		unsigned int offset = (next_local_slot + type->alignment - 1) & ~(type->alignment - 1);
-		result->local.offset = offset;
+		result->local.offset = -offset;
 		next_local_slot = next_local_slot + type->size;
 
 		return result;

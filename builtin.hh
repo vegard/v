@@ -189,6 +189,8 @@ static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
 	auto new_f = std::make_shared<function>(false);
 	new_f->emit_prologue();
 
+	auto new_scope = std::make_shared<scope>(s);
+
 	// The signature is a tuple of <argument types..., return type>
 	// TODO: move arguments from registers to locals
 	std::vector<value_type_ptr> signature;
@@ -197,6 +199,8 @@ static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
 			throw compile_error(arg_node, "expected <name>: <type> pair");
 
 		auto name_node = arg_node->binop.lhs;
+		if (name_node->type != AST_SYMBOL_NAME)
+			throw compile_error(arg_node, "argument name must be a symbol name");
 
 		// Find the type by evaluating the <type> expression
 		auto type_node = arg_node->binop.rhs;
@@ -208,10 +212,14 @@ static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
 		auto arg_type = *(value_type_ptr *) arg_type_value->global.host_address;
 
 		signature.push_back(arg_type);
+
+		// Define arguments as local values
+		value_ptr arg_value = new_f->alloc_local_value(arg_type);
+		new_scope->define(node, name_node->literal_string, arg_value);
 	}
 
 	// v is the return value of the compiled expression
-	auto v = compile(*new_f, s, code_node);
+	auto v = compile(*new_f, new_scope, code_node);
 	new_f->emit_epilogue();
 
 	// Now that we know the function's return type, we can finalize

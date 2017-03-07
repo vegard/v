@@ -236,12 +236,21 @@ static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
 
 	// v is the return value of the compiled expression
 	auto v = compile(*new_f, new_scope, code_node);
+	auto v_type = v->type;
+
+	// TODO: use multiple regs or pass on stack
+	if (v_type->size > sizeof(unsigned long))
+		throw compile_error(code_node, "return value too big to fit in register");
+
+	if (v_type->size)
+		new_f->emit_move(v, RAX);
+
 	new_f->emit_epilogue();
 
 	// Now that we know the function's return type, we can finalize
 	// the signature and either find or create a type to represent
 	// the function signature.
-	signature.push_back(v->type);
+	signature.push_back(v_type);
 
 	// We memoise function types so that two functions with the same
 	// signature always get the same type

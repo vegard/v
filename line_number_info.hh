@@ -53,16 +53,4 @@ struct line_number_info {
 	}
 };
 
-#if 0
-int main(int argc, char *argv[])
-{
-	const char *doc = "hello\n\n\nworld!\n";
-	line_number_info line_numbers("<buf>", doc, strlen(doc));
-	for (unsigned int i = 0; i < strlen(doc); ++i)
-		printf("%s: %s\n", line_numbers.tag(i).c_str(), &doc[i]);
-
-	return 0;
-}
-#endif
-
 #endif

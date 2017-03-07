@@ -155,7 +155,7 @@ static value_ptr compile_symbol_name(function &f, scope_ptr s, ast_node_ptr node
 {
 	auto ret = s->lookup(node->symbol_name);
 	if (!ret)
-		throw compile_error(node, "could not resolve symbol");
+		throw compile_error(node, "could not resolve symbol %s", node->symbol_name.c_str());
 
 	return ret;
 }

@@ -33,6 +33,7 @@ static void disassemble(const uint8_t *buf, size_t len, uint64_t pc, const std::
 	ud_set_pc(&u, pc);
 	ud_set_syntax(&u, UD_SYN_ATT);
 
+#if 0
 	printf("Disassembly at 0x%08lx:\n", pc);
 
 	while (ud_disassemble(&u)) {
@@ -47,6 +48,7 @@ static void disassemble(const uint8_t *buf, size_t len, uint64_t pc, const std::
 	}
 
 	printf("\n");
+#endif
 }
 
 static void *map(function_ptr f)

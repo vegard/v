@@ -14,6 +14,25 @@ extern "C" {
 #include "scope.hh"
 #include "value.hh"
 
+static void _print(uint64_t x)
+{
+	printf("%lu\n", x);
+}
+
+static value_ptr builtin_macro_print(function &f, scope_ptr s, ast_node_ptr node)
+{
+	auto print_fn = std::make_shared<value>(VALUE_GLOBAL, builtin_type_u64);
+	auto global = new void *;
+	*global = (void *) &_print;
+	print_fn->global.host_address = (void *) global;
+
+	auto arg = compile(f, s, node);
+	f.emit_move(arg, RDI);
+	f.emit_call(print_fn);
+
+	return std::make_shared<value>(VALUE_CONSTANT, builtin_type_void);
+}
+
 static function_ptr compile_metaprogram(ast_node_ptr root)
 {
 	auto global_scope = std::make_shared<scope>();
@@ -32,6 +51,8 @@ static function_ptr compile_metaprogram(ast_node_ptr root)
 	global_scope->define_builtin_macro("debug", builtin_macro_debug);
 	global_scope->define_builtin_macro("if", builtin_macro_if);
 	global_scope->define_builtin_macro("fun", builtin_macro_fun);
+
+	global_scope->define_builtin_macro("print", builtin_macro_print);
 
 	auto f = std::make_shared<function>(true);
 	f->emit_prologue();

@@ -11,6 +11,8 @@ static auto builtin_type_u64 = std::make_shared<value_type>(value_type {
 	.alignment = 8,
 	.size = 8,
 	.constructor = &builtin_type_u64_constructor,
+	.argument_types = std::vector<value_type_ptr>(),
+	.return_type = value_type_ptr(),
 	.call = nullptr,
 	.add = &builtin_type_u64_add,
 });

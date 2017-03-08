@@ -29,7 +29,10 @@ struct value_type {
 	value_ptr (*constructor)(function &f, scope_ptr s, ast_node_ptr node);
 
 	// Operators
+	std::vector<value_type_ptr> argument_types;
+	value_type_ptr return_type;
 	value_ptr (*call)(function &f, scope_ptr s, value_ptr lhs, ast_node_ptr rhs);
+
 	value_ptr (*add)(function &f, scope_ptr s, value_ptr lhs, ast_node_ptr node);
 };
 

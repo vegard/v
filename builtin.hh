@@ -165,11 +165,39 @@ static value_ptr builtin_macro_if(function &f, scope_ptr s, ast_node_ptr node)
 
 static value_ptr _call_fun(function &f, scope_ptr s, value_ptr fn, ast_node_ptr node)
 {
+	if (node->type != AST_BRACKETS)
+		throw compile_error(node, "expected parantheses");
+
 	// TODO: save/restore caller save registers
-	// TODO: pass arguments
+	auto type = fn->type;
+
+	// TODO: abstract away ABI details
+	machine_register args_regs[] = {
+		RDI, RSI, RDX, RCX, R8, R9,
+	};
+
+	std::vector<std::pair<ast_node_ptr, value_ptr>> args;
+	for (auto arg_node: traverse<AST_COMMA>(node->unop))
+		args.push_back(std::make_pair(arg_node, compile(f, s, arg_node)));
+
+	if (args.size() != type->argument_types.size())
+		throw compile_error(node, "expected %u arguments; got %u", type->argument_types.size(), args.size());
+
+	for (unsigned int i = 0; i < args.size(); ++i) {
+		auto arg_node = args[i].first;
+		auto arg_value = args[i].second;
+
+		if (type->argument_types[i] != arg_value->type)
+			throw compile_error(arg_node, "wrong argument type");
+
+		f.emit_move(arg_value, args_regs[i]);
+	}
+
 	f.emit_call(fn);
-	// TODO: get return value
-	return nullptr;
+
+	value_ptr ret_value = f.alloc_local_value(type->return_type);
+	f.emit_move(RAX, ret_value);
+	return ret_value;
 }
 
 static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
@@ -197,9 +225,7 @@ static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
 
 	auto new_scope = std::make_shared<scope>(s);
 
-	// The signature is a tuple of <argument types..., return type>
-	// TODO: move arguments from registers to locals
-	std::vector<value_type_ptr> signature;
+	std::vector<value_type_ptr> argument_types;
 	for (auto arg_node: traverse<AST_COMMA>(args_node)) {
 		if (arg_node->type != AST_PAIR)
 			throw compile_error(arg_node, "expected <name>: <type> pair");
@@ -217,7 +243,7 @@ static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
 			throw compile_error(type_node, "argument type must be an instance of a type");
 		auto arg_type = *(value_type_ptr *) arg_type_value->global.host_address;
 
-		signature.push_back(arg_type);
+		argument_types.push_back(arg_type);
 
 		// Define arguments as local values
 		value_ptr arg_value = new_f->alloc_local_value(arg_type);
@@ -250,11 +276,14 @@ static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
 	// Now that we know the function's return type, we can finalize
 	// the signature and either find or create a type to represent
 	// the function signature.
-	signature.push_back(v_type);
+	//.push_back(v_type);
 
 	// We memoise function types so that two functions with the same
 	// signature always get the same type
-	static std::map<std::vector<value_type_ptr>, value_type_ptr> signature_cache;
+	static std::map<std::pair<std::vector<value_type_ptr>, value_type_ptr>, value_type_ptr> signature_cache;
+
+	// TODO: This is a *bit* ugly
+	auto signature = std::make_pair(argument_types, v_type);
 
 	value_type_ptr ret_type;
 	auto it = signature_cache.find(signature);
@@ -264,6 +293,8 @@ static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
 		ret_type->alignment = 8;
 		ret_type->size = 8;
 		ret_type->constructor = nullptr;
+		ret_type->argument_types = argument_types;
+		ret_type->return_type = v_type;
 		ret_type->call = _call_fun;
 
 		signature_cache[signature] = ret_type;

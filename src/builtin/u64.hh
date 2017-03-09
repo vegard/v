@@ -16,8 +16,8 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef V_BUILTIN_TYPES_H
-#define V_BUILTIN_TYPES_H
+#ifndef V_BUILTIN_U64_H
+#define V_BUILTIN_U64_H
 
 #include "compile.hh"
 #include "value.hh"

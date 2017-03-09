@@ -32,7 +32,7 @@ extern "C" {
 #include "builtin/eval.hh"
 #include "builtin/fun.hh"
 #include "builtin/if.hh"
-#include "builtin_types.hh"
+#include "builtin/u64.hh"
 #include "compile.hh"
 #include "document.hh"
 #include "function.hh"

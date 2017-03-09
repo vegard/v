@@ -1,5 +1,5 @@
 //
-//  The V programming language compiler
+//  V compiler
 //  Copyright (C) 2017  Vegard Nossum <vegard.nossum@gmail.com>
 //
 //  This program is free software: you can redistribute it and/or modify

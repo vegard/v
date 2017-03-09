@@ -24,7 +24,14 @@ extern "C" {
 #include <cstdio>
 
 #include "ast.hh"
-#include "builtin.hh"
+#include "builtin/add.hh"
+#include "builtin/assign.hh"
+#include "builtin/debug.hh"
+#include "builtin/define.hh"
+#include "builtin/equals.hh"
+#include "builtin/eval.hh"
+#include "builtin/fun.hh"
+#include "builtin/if.hh"
 #include "builtin_types.hh"
 #include "compile.hh"
 #include "document.hh"

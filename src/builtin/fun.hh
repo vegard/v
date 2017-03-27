@@ -54,13 +54,13 @@ static value_ptr _call_fun(function &f, scope_ptr s, value_ptr fn, ast_node_ptr 
 		if (type->argument_types[i] != arg_value->type)
 			throw compile_error(arg_node, "wrong argument type");
 
-		f.emit_move(arg_value, args_regs[i]);
+		f.emit_move(arg_value, 0, args_regs[i]);
 	}
 
 	f.emit_call(fn);
 
 	value_ptr ret_value = f.alloc_local_value(type->return_type);
-	f.emit_move(RAX, ret_value);
+	f.emit_move(RAX, ret_value, 0);
 	return ret_value;
 }
 

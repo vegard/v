@@ -52,7 +52,7 @@ static value_ptr builtin_macro_print(function &f, scope_ptr s, ast_node_ptr node
 	print_fn->global.host_address = (void *) global;
 
 	auto arg = compile(f, s, node);
-	f.emit_move(arg, RDI);
+	f.emit_move(arg, 0, RDI);
 	f.emit_call(print_fn);
 
 	return std::make_shared<value>(VALUE_CONSTANT, builtin_type_void);

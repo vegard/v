@@ -206,33 +206,33 @@ struct function {
 		emit_quad(source);
 	}
 
-	void emit_move(value_ptr source, machine_register dest)
+	void emit_move(value_ptr source, unsigned int source_offset, machine_register dest)
 	{
 		switch (source->storage_type) {
 		case VALUE_GLOBAL:
 			// TODO
 			emit_move_imm_to_reg((uint64_t) source->global.host_address, RBX);
-			emit_move_mreg_offset_to_reg(RBX, 0, dest);
+			emit_move_mreg_offset_to_reg(RBX, source_offset, dest);
 			break;
 		case VALUE_LOCAL:
-			emit_move_mreg_offset_to_reg(RSP, source->local.offset, dest);
+			emit_move_mreg_offset_to_reg(RSP, source->local.offset + source_offset, dest);
 			break;
 		case VALUE_CONSTANT:
-			emit_move_imm_to_reg(source->constant.u64, dest);
+			emit_move_imm_to_reg(source->constant.u64 >> (8 * source_offset), dest);
 			break;
 		}
 	}
 
-	void emit_move(machine_register source, value_ptr dest)
+	void emit_move(machine_register source, value_ptr dest, unsigned int dest_offset)
 	{
 		switch (dest->storage_type) {
 		case VALUE_GLOBAL:
 			// TODO
 			emit_move_imm_to_reg((uint64_t) dest->global.host_address, RBX);
-			emit_move_reg_to_mreg_offset(source, RBX, 0);
+			emit_move_reg_to_mreg_offset(source, RBX, dest_offset);
 			break;
 		case VALUE_LOCAL:
-			emit_move_reg_to_mreg_offset(source, RSP, dest->local.offset);
+			emit_move_reg_to_mreg_offset(source, RSP, dest->local.offset + dest_offset);
 			break;
 		case VALUE_CONSTANT:
 			// TODO
@@ -243,20 +243,13 @@ struct function {
 
 	void emit_move(value_ptr source, value_ptr dest)
 	{
-		// TODO: check that the source is big enough to fit in
-		// a register; if not, use more registers?
 		// TODO: check for compatible types?
 		assert(source->type->size == dest->type->size);
 
-		if (source->type->size == 8) {
-			emit_move(source, RAX);
-			emit_move(RAX, dest);
-		} else {
-			// TODO: improve message
-			fprintf(stderr, "error: unhandled storage_types %u, %u, size %u in move\n",
-				source->storage_type, dest->storage_type,
-				source->type->size);
-			assert(false);
+		// Poor man's memcpy
+		for (unsigned int i = 0; i < source->type->size; i += 8) {
+			emit_move(source, i, RAX);
+			emit_move(RAX, dest, i);
 		}
 	}
 
@@ -272,8 +265,12 @@ struct function {
 
 	void emit_compare(value_ptr lhs, value_ptr rhs)
 	{
-		emit_move(lhs, RAX);
-		emit_move(rhs, RBX);
+		assert(lhs->type->size == rhs->type->size);
+		// TODO: handle other sizes?
+		assert(lhs->type->size == 8);
+
+		emit_move(lhs, 0, RAX);
+		emit_move(rhs, 0, RBX);
 		emit_cmp_reg_reg(RAX, RBX);
 	}
 
@@ -329,14 +326,19 @@ struct function {
 
 	void emit_add(value_ptr source1, value_ptr source2, value_ptr dest)
 	{
+		assert(source1->type->size == dest->type->size);
+		assert(source2->type->size == dest->type->size);
+		// TODO: handle other sizes?
+		assert(dest->type->size == 8);
+
 		comment("add");
-		emit_move(source1, RAX);
-		emit_move(source2, RBX);
+		emit_move(source1, 0, RAX);
+		emit_move(source2, 0, RBX);
 		// hardcoded: addq %rbx, %rax
 		emit_byte(0x48);
 		emit_byte(0x01);
 		emit_byte(0xd8);
-		emit_move(RAX, dest);
+		emit_move(RAX, dest, 0);
 	}
 
 	void link_label(const label &l)

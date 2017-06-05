@@ -162,7 +162,7 @@ static value_ptr compile_juxtapose(function &f, scope_ptr s, ast_node_ptr node)
 			throw compile_error(node, "type doesn't have a constructor");
 
 		// TODO: functions as constructors
-		return type->constructor(f, s, node->binop.rhs);
+		return type->constructor(type, f, s, node->binop.rhs);
 	}
 
 	if (lhs_type->call)

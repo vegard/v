@@ -44,7 +44,7 @@ struct value_type {
 	unsigned int size;
 
 	// TODO
-	value_ptr (*constructor)(function &f, scope_ptr s, ast_node_ptr node);
+	value_ptr (*constructor)(value_type_ptr type, function &f, scope_ptr s, ast_node_ptr node);
 
 	// Operators
 	std::vector<value_type_ptr> argument_types;

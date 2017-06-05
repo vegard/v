@@ -22,7 +22,7 @@
 #include "compile.hh"
 #include "value.hh"
 
-static value_ptr builtin_type_u64_constructor(function &, scope_ptr, ast_node_ptr);
+static value_ptr builtin_type_u64_constructor(value_type_ptr, function &, scope_ptr, ast_node_ptr);
 static value_ptr builtin_type_u64_add(function &f, scope_ptr s, value_ptr lhs, ast_node_ptr node);
 
 static auto builtin_type_u64 = std::make_shared<value_type>(value_type {
@@ -35,7 +35,7 @@ static auto builtin_type_u64 = std::make_shared<value_type>(value_type {
 	.add = &builtin_type_u64_add,
 });
 
-static value_ptr builtin_type_u64_constructor(function &f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_type_u64_constructor(value_type_ptr type, function &f, scope_ptr s, ast_node_ptr node)
 {
 	// TODO: support conversion from other integer types?
 	if (node->type != AST_LITERAL_INTEGER)

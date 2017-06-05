@@ -27,6 +27,49 @@
 #include "scope.hh"
 #include "value.hh"
 
+// actually compile a function body
+//  - 'type' is the function type (signature)
+//  - 'node' is the function body
+static value_ptr _construct_fun(value_type_ptr type, function &f, scope_ptr s, ast_node_ptr node)
+{
+	auto new_f = std::make_shared<function>(false);
+	new_f->emit_prologue();
+
+	auto new_scope = std::make_shared<scope>(s);
+
+	auto v = compile(*new_f, new_scope, node);
+	auto v_type = v->type;
+
+	if (v_type != type->return_type)
+		throw compile_error(node, "wrong return type for function");
+
+	// TODO: use multiple regs or pass on stack
+	if (v_type->size > sizeof(unsigned long))
+		throw compile_error(node, "return value too big to fit in register");
+
+	if (v_type->size)
+		new_f->emit_move(v, 0, RAX);
+
+	new_f->emit_epilogue();
+
+	// We need this to keep the new function from getting freed when this
+	// function returns.
+	// TODO: Another solution?
+	static std::set<function_ptr> functions;
+	functions.insert(new_f);
+
+	auto ret = std::make_shared<value>(VALUE_GLOBAL, type);
+	void *mem = map(new_f);
+
+	// XXX: why the indirection? I forgot why I did it this way.
+	auto global = new void *;
+	*global = mem;
+	ret->global.host_address = (void *) global;
+
+	disassemble((const uint8_t *) mem, new_f->bytes.size(), (uint64_t) mem, new_f->comments);
+	return ret;
+}
+
 static value_ptr _call_fun(function &f, scope_ptr s, value_ptr fn, ast_node_ptr node)
 {
 	if (node->type != AST_BRACKETS)
@@ -75,112 +118,58 @@ static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
 	if (brackets_node->type != AST_BRACKETS)
 		throw compile_error(brackets_node, "expected (<expression>...)");
 
-	auto code_node = node->binop.rhs;
 	auto args_node = brackets_node->unop;
 
-	// TODO: abstract away ABI details
-	machine_register args_regs[] = {
-		RDI, RSI, RDX, RCX, R8, R9,
-	};
-	unsigned int current_arg = 0;
-
-	auto new_f = std::make_shared<function>(false);
-	new_f->emit_prologue();
-
-	auto new_scope = std::make_shared<scope>(s);
-
 	std::vector<value_type_ptr> argument_types;
-	for (auto arg_node: traverse<AST_COMMA>(args_node)) {
-		if (arg_node->type != AST_PAIR)
-			throw compile_error(arg_node, "expected <name>: <type> pair");
-
-		auto name_node = arg_node->binop.lhs;
-		if (name_node->type != AST_SYMBOL_NAME)
-			throw compile_error(arg_node, "argument name must be a symbol name");
-
-		// Find the type by evaluating the <type> expression
-		auto type_node = arg_node->binop.rhs;
-		value_ptr arg_type_value = eval(f, s, type_node);
+	for (auto arg_type_node: traverse<AST_COMMA>(args_node)) {
+		value_ptr arg_type_value = eval(f, s, arg_type_node);
 		if (arg_type_value->storage_type != VALUE_GLOBAL)
-			throw compile_error(type_node, "argument type must be known at compile time");
+			throw compile_error(arg_type_node, "argument type must be known at compile time");
 		if (arg_type_value->type != builtin_type_type)
-			throw compile_error(type_node, "argument type must be an instance of a type");
+			throw compile_error(arg_type_node, "argument type must be an instance of a type");
 		auto arg_type = *(value_type_ptr *) arg_type_value->global.host_address;
 
 		argument_types.push_back(arg_type);
-
-		// Define arguments as local values
-		value_ptr arg_value = new_f->alloc_local_value(arg_type);
-		new_scope->define(node, name_node->literal_string, arg_value);
-
-		// TODO: use multiple regs or pass on stack
-		if (arg_type->size > sizeof(unsigned long))
-			throw compile_error(arg_node, "argument too big to fit in register");
-
-		// TODO: pass args on stack if there are too many to fit in registers
-		if (current_arg >= sizeof(args_regs) / sizeof(*args_regs))
-			throw compile_error(arg_node, "too many arguments");
-
-		new_f->emit_move(args_regs[current_arg++], arg_value);
 	}
 
-	// v is the return value of the compiled expression
-	auto v = compile(*new_f, new_scope, code_node);
-	auto v_type = v->type;
-
-	// TODO: use multiple regs or pass on stack
-	if (v_type->size > sizeof(unsigned long))
-		throw compile_error(code_node, "return value too big to fit in register");
-
-	if (v_type->size)
-		new_f->emit_move(v, RAX);
-
-	new_f->emit_epilogue();
-
-	// Now that we know the function's return type, we can finalize
-	// the signature and either find or create a type to represent
-	// the function signature.
-	//.push_back(v_type);
+	auto ret_type_node = node->binop.rhs;
+	auto ret_type_value = eval(f, s, ret_type_node);
+	if (ret_type_value->storage_type != VALUE_GLOBAL)
+		throw compile_error(ret_type_node, "return type must be known at compile time");
+	if (ret_type_value->type != builtin_type_type)
+		throw compile_error(ret_type_node, "return type must be an instance of a type");
+	auto ret_type = *(value_type_ptr *) ret_type_value->global.host_address;
 
 	// We memoise function types so that two functions with the same
 	// signature always get the same type
 	static std::map<std::pair<std::vector<value_type_ptr>, value_type_ptr>, value_type_ptr> signature_cache;
 
 	// TODO: This is a *bit* ugly
-	auto signature = std::make_pair(argument_types, v_type);
+	auto signature = std::make_pair(argument_types, ret_type);
 
-	value_type_ptr ret_type;
+	value_type_ptr type;
 	auto it = signature_cache.find(signature);
 	if (it == signature_cache.end()) {
 		// Create new type for this signature
-		ret_type = std::make_shared<value_type>();
-		ret_type->alignment = 8;
-		ret_type->size = 8;
-		ret_type->constructor = nullptr;
-		ret_type->argument_types = argument_types;
-		ret_type->return_type = v_type;
-		ret_type->call = _call_fun;
+		type = std::make_shared<value_type>();
+		type->alignment = 8;
+		type->size = 8;
+		type->constructor = nullptr;
+		type->argument_types = argument_types;
+		type->return_type = ret_type;
+		type->constructor = _construct_fun;
+		type->call = _call_fun;
 
 		signature_cache[signature] = ret_type;
 	} else {
-		ret_type = it->second;
+		type = it->second;
 	}
 
-	// We need this to keep the new function from getting freed when this
-	// function returns.
-	// TODO: Another solution?
-	static std::set<function_ptr> functions;
-	functions.insert(new_f);
-
-	auto ret = std::make_shared<value>(VALUE_GLOBAL, ret_type);
-	void *mem = map(new_f);
-
-	auto global = new void *;
-	*global = mem;
-	ret->global.host_address = (void *) global;
-
-	disassemble((const uint8_t *) mem, new_f->bytes.size(), (uint64_t) mem, new_f->comments);
-	return ret;
+	// XXX: refcounting
+	auto type_value = std::make_shared<value>(VALUE_GLOBAL, builtin_type_type);
+	auto type_copy = new value_type_ptr(type);
+	type_value->global.host_address = (void *) type_copy;
+	return type_value;
 }
 
 #endif

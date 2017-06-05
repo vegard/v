@@ -62,7 +62,7 @@ static void disassemble(const uint8_t *buf, size_t len, uint64_t pc, const std::
 				printf(" %4s  // %s\n", "", comment.c_str());
 		}
 
-		printf(" %4lu: %s\n", offset, ud_insn_asm(&u));
+		printf(" %4lx: %s\n", offset, ud_insn_asm(&u));
 	}
 
 	printf("\n");

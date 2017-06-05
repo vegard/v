@@ -93,7 +93,7 @@ struct value {
 // Some builtin types
 
 static auto builtin_type_void = std::make_shared<value_type>(value_type{0, 0});
-static auto builtin_type_type = std::make_shared<value_type>(value_type{alignof(value_type), sizeof(value_type)});
+static auto builtin_type_type = std::make_shared<value_type>(value_type{alignof(value_type_ptr), sizeof(value_type_ptr)});
 static auto builtin_type_boolean= std::make_shared<value_type>(value_type{1, 1});
 
 // TODO: "int" is 64-bit for the time being, see copmile(AST_LITERAL_INTEGER) in compile.hh

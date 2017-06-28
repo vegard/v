@@ -112,9 +112,17 @@ static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
 	// Extract parameters and code block from AST
 
 	if (node->type != AST_JUXTAPOSE)
-		throw compile_error(node, "expected 'fun (<expression>) <expression>'");
+		throw compile_error(node, "expected 'fun <expression> (<expression>)'");
 
-	auto brackets_node = node->binop.lhs;
+	auto ret_type_node = node->binop.lhs;
+	auto ret_type_value = eval(f, s, ret_type_node);
+	if (ret_type_value->storage_type != VALUE_GLOBAL)
+		throw compile_error(ret_type_node, "return type must be known at compile time");
+	if (ret_type_value->type != builtin_type_type)
+		throw compile_error(ret_type_node, "return type must be an instance of a type");
+	auto ret_type = *(value_type_ptr *) ret_type_value->global.host_address;
+
+	auto brackets_node = node->binop.rhs;
 	if (brackets_node->type != AST_BRACKETS)
 		throw compile_error(brackets_node, "expected (<expression>...)");
 
@@ -131,14 +139,6 @@ static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
 
 		argument_types.push_back(arg_type);
 	}
-
-	auto ret_type_node = node->binop.rhs;
-	auto ret_type_value = eval(f, s, ret_type_node);
-	if (ret_type_value->storage_type != VALUE_GLOBAL)
-		throw compile_error(ret_type_node, "return type must be known at compile time");
-	if (ret_type_value->type != builtin_type_type)
-		throw compile_error(ret_type_node, "return type must be an instance of a type");
-	auto ret_type = *(value_type_ptr *) ret_type_value->global.host_address;
 
 	// We memoise function types so that two functions with the same
 	// signature always get the same type

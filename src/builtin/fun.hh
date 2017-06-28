@@ -140,30 +140,17 @@ static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
 		argument_types.push_back(arg_type);
 	}
 
-	// We memoise function types so that two functions with the same
-	// signature always get the same type
-	static std::map<std::pair<std::vector<value_type_ptr>, value_type_ptr>, value_type_ptr> signature_cache;
-
-	// TODO: This is a *bit* ugly
-	auto signature = std::make_pair(argument_types, ret_type);
-
 	value_type_ptr type;
-	auto it = signature_cache.find(signature);
-	if (it == signature_cache.end()) {
-		// Create new type for this signature
-		type = std::make_shared<value_type>();
-		type->alignment = 8;
-		type->size = 8;
-		type->constructor = nullptr;
-		type->argument_types = argument_types;
-		type->return_type = ret_type;
-		type->constructor = _construct_fun;
-		type->call = _call_fun;
 
-		signature_cache[signature] = ret_type;
-	} else {
-		type = it->second;
-	}
+	// Create new type for this signature
+	type = std::make_shared<value_type>();
+	type->alignment = 8;
+	type->size = 8;
+	type->constructor = nullptr;
+	type->argument_types = argument_types;
+	type->return_type = ret_type;
+	type->constructor = _construct_fun;
+	type->call = _call_fun;
 
 	// XXX: refcounting
 	auto type_value = std::make_shared<value>(VALUE_GLOBAL, builtin_type_type);

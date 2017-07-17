@@ -27,17 +27,48 @@
 #include "scope.hh"
 #include "value.hh"
 
+// TODO: abstract away ABI details
+static machine_register args_regs[] = {
+	RDI, RSI, RDX, RCX, R8, R9,
+};
+
 // actually compile a function body
 //  - 'type' is the function type (signature)
 //  - 'node' is the function body
 static value_ptr _construct_fun(value_type_ptr type, function &f, scope_ptr s, ast_node_ptr node)
 {
+	if (node->type != AST_JUXTAPOSE)
+		throw compile_error(node, "expected (<argument types>...) <body>");
+
+	auto args_node = node->binop.lhs;
+	if (args_node->type != AST_BRACKETS)
+		throw compile_error(node, "expected (<argument names>...)");
+
+	std::vector<ast_node_ptr> args;
+	for (auto arg_node: traverse<AST_COMMA>(args_node->unop)) {
+		if (arg_node->type != AST_SYMBOL_NAME)
+			throw compile_error(node, "expected symbol for argument name");
+
+		args.push_back(arg_node);
+	}
+
+	if (args.size() != type->argument_types.size())
+		throw compile_error(node, "expected %u arguments; got %u", type->argument_types.size(), args.size());
+
 	auto new_f = std::make_shared<function>(false);
 	new_f->emit_prologue();
 
 	auto new_scope = std::make_shared<scope>(s);
 
-	auto v = compile(*new_f, new_scope, node);
+	for (unsigned int i = 0; i < args.size(); ++i) {
+		auto arg_node = args[i];
+		auto arg_value = f.alloc_local_value(type->argument_types[i]);
+
+		new_scope->define(node, arg_node->symbol_name, arg_value);
+		new_f->emit_move(args_regs[i], arg_value, 0);
+	}
+
+	auto v = compile(*new_f, new_scope, node->binop.rhs);
 	auto v_type = v->type;
 
 	if (v_type != type->return_type)
@@ -77,11 +108,6 @@ static value_ptr _call_fun(function &f, scope_ptr s, value_ptr fn, ast_node_ptr 
 
 	// TODO: save/restore caller save registers
 	auto type = fn->type;
-
-	// TODO: abstract away ABI details
-	machine_register args_regs[] = {
-		RDI, RSI, RDX, RCX, R8, R9,
-	};
 
 	std::vector<std::pair<ast_node_ptr, value_ptr>> args;
 	for (auto arg_node: traverse<AST_COMMA>(node->unop))

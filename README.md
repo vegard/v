@@ -33,3 +33,11 @@ Thanks
     - lots of interesting parsing/compiling blog posts
 - Blaise Boscaccy
     - language design discussions/LLVM help
+
+
+See also
+========
+
+Some projects with similar ideas/goals:
+
+ - [Ante](https://github.com/jfecher/ante)

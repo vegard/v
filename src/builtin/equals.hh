@@ -32,10 +32,21 @@ static value_ptr builtin_macro_equals(function &f, scope_ptr s, ast_node_ptr nod
 	if (lhs->type != rhs->type)
 		throw compile_error(node, "cannot compare values of different types");
 
-	f.emit_compare(lhs, rhs);
+	auto ret = f.alloc_local_value(builtin_type_boolean);
+	f.emit_eq<false>(lhs, rhs, ret);
+	return ret;
+}
 
-	// TODO: actually set the value
-	return std::make_shared<value>(VALUE_LOCAL, builtin_type_boolean);
+static value_ptr builtin_macro_notequals(function &f, scope_ptr s, ast_node_ptr node)
+{
+	auto lhs = compile(f, s, node->binop.lhs);
+	auto rhs = compile(f, s, node->binop.rhs);
+	if (lhs->type != rhs->type)
+		throw compile_error(node, "cannot compare values of different types");
+
+	auto ret = f.alloc_local_value(builtin_type_boolean);
+	f.emit_eq<true>(lhs, rhs, ret);
+	return ret;
 }
 
 #endif

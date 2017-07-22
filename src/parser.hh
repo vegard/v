@@ -466,6 +466,8 @@ ast_node_ptr parser::parse_expr(unsigned int &pos, unsigned int min_precedence)
 		if (!result)
 			result = parse_binop_as_call<PREC_EQUALITY, ASSOC_LEFT, false>("==", "_equals", lhs, i, min_precedence);
 		if (!result)
+			result = parse_binop_as_call<PREC_EQUALITY, ASSOC_LEFT, false>("!=", "_notequals", lhs, i, min_precedence);
+		if (!result)
 			result = parse_binop_as_call<PREC_ASSIGN, ASSOC_LEFT, false>("=", "_assign", lhs, i, min_precedence);
 		if (!result)
 			result = parse_binop<AST_SEMICOLON, PREC_SEMICOLON, ASSOC_RIGHT, true>(";", lhs, i, min_precedence);

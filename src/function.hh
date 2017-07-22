@@ -274,6 +274,28 @@ struct function {
 		emit_cmp_reg_reg(RAX, RBX);
 	}
 
+	template<bool negate = false>
+	void emit_eq(value_ptr source1, value_ptr source2, value_ptr dest)
+	{
+		emit_compare(source1, source2);
+
+		// set[n]e %al
+		emit_byte(0x0f);
+		emit_byte(0x94 + negate);
+		emit_byte(0xc0);
+
+		// bools are size 8 for now, just to simplify things
+		assert(dest->type->size == 8);
+
+		// movzblq %al, %rax
+		emit_byte(0x48);
+		emit_byte(0x0f);
+		emit_byte(0xb6);
+		emit_byte(0xc0);
+
+		emit_move(RAX, dest, 0);
+	}
+
 	void emit_label(label &lab)
 	{
 		lab.addr = bytes.size();
@@ -292,6 +314,19 @@ struct function {
 		emit_byte(0x84);
 		lab.relocations.push_back({ (unsigned int) bytes.size(), 4 });
 		emit_long_placeholder();
+	}
+
+	void emit_jump_if_zero(value_ptr value, label &target)
+	{
+		emit_move(value, 0, RAX);
+
+		// cmp $0x0, %rax
+		emit_byte(0x48);
+		emit_byte(0x83);
+		emit_byte(0xf8);
+		emit_byte(0x00);
+
+		emit_jump_if_zero(target);
 	}
 
 	void emit_call(machine_register target)

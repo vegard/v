@@ -27,6 +27,9 @@
 
 static value_ptr builtin_macro_assign(function &f, scope_ptr s, ast_node_ptr node)
 {
+	if (node->type != AST_JUXTAPOSE)
+		throw compile_error(node, "expected juxtaposition");
+
 	auto rhs = compile(f, s, node->binop.rhs);
 	auto lhs = compile(f, s, node->binop.lhs);
 	if (rhs->type != lhs->type)

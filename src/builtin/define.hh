@@ -27,6 +27,9 @@
 
 static value_ptr builtin_macro_define(function &f, scope_ptr s, ast_node_ptr node)
 {
+	if (node->type != AST_JUXTAPOSE)
+		throw compile_error(node, "expected juxtaposition");
+
 	auto lhs = node->binop.lhs;
 	if (lhs->type != AST_SYMBOL_NAME)
 		throw compile_error(node, "definition of non-symbol");

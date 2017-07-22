@@ -33,6 +33,7 @@ extern "C" {
 #include "builtin/fun.hh"
 #include "builtin/if.hh"
 #include "builtin/u64.hh"
+#include "builtin/while.hh"
 #include "compile.hh"
 #include "document.hh"
 #include "function.hh"
@@ -76,6 +77,7 @@ static function_ptr compile_metaprogram(ast_node_ptr root)
 	// Keywords
 	global_scope->define_builtin_macro("debug", builtin_macro_debug);
 	global_scope->define_builtin_macro("if", builtin_macro_if);
+	global_scope->define_builtin_macro("while", builtin_macro_while);
 	global_scope->define_builtin_macro("fun", builtin_macro_fun);
 
 	global_scope->define_builtin_macro("print", builtin_macro_print);

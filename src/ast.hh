@@ -41,7 +41,6 @@ enum ast_node_type {
 	/* Nullary/unary outfix operators */
 	AST_BRACKETS,
 	AST_SQUARE_BRACKETS,
-	AST_ANGLE_BRACKETS,
 	AST_CURLY_BRACKETS,
 
 	/* Binary infix operators */
@@ -124,7 +123,6 @@ struct ast_node {
 		/* Unary operators */
 		case AST_BRACKETS:
 		case AST_SQUARE_BRACKETS:
-		case AST_ANGLE_BRACKETS:
 		case AST_CURLY_BRACKETS:
 			unop.~ast_node_ptr();
 			break;
@@ -188,9 +186,6 @@ struct ast_node {
 			break;
 		case AST_SQUARE_BRACKETS:
 			dump_unop(fp, indent, "square-brackets");
-			break;
-		case AST_ANGLE_BRACKETS:
-			dump_unop(fp, indent, "angle-brackets");
 			break;
 		case AST_CURLY_BRACKETS:
 			dump_unop(fp, indent, "curly-brackets");

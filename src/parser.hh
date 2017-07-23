@@ -421,8 +421,6 @@ ast_node_ptr parser::parse_expr(unsigned int &pos, unsigned int min_precedence)
 	if (!lhs)
 		lhs = parse_outfix<AST_SQUARE_BRACKETS>("[", "]", i);
 	if (!lhs)
-		lhs = parse_outfix<AST_ANGLE_BRACKETS>("<", ">", i);
-	if (!lhs)
 		lhs = parse_outfix<AST_CURLY_BRACKETS>("{", "}", i);
 
 	/* Unary prefix operators */

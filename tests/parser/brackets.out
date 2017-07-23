@@ -91,29 +91,13 @@
                                                         (semicolon
                                                             (parens)
                                                             (semicolon
-                                                                (angle-brackets
+                                                                (curly-brackets
                                                                     (literal_integer 1)
                                                                 )
-                                                                (semicolon
-                                                                    (angle-brackets
-                                                                        (comma
-                                                                            (literal_integer 1)
-                                                                            (literal_integer 2)
-                                                                        )
-                                                                    )
-                                                                    (semicolon
-                                                                        (parens)
-                                                                        (semicolon
-                                                                            (curly-brackets
-                                                                                (literal_integer 1)
-                                                                            )
-                                                                            (curly-brackets
-                                                                                (comma
-                                                                                    (literal_integer 1)
-                                                                                    (literal_integer 2)
-                                                                                )
-                                                                            )
-                                                                        )
+                                                                (curly-brackets
+                                                                    (comma
+                                                                        (literal_integer 1)
+                                                                        (literal_integer 2)
                                                                     )
                                                                 )
                                                             )

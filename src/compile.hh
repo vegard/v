@@ -190,6 +190,9 @@ static value_ptr compile_semicolon(function_ptr f, scope_ptr s, ast_node_ptr nod
 static value_ptr compile(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	switch (node->type) {
+	case AST_LITERAL_INTEGER:
+		throw compile_error(node, "unexpected integer literal");
+
 	case AST_BRACKETS:
 		return compile_brackets(f, s, node);
 	case AST_CURLY_BRACKETS:

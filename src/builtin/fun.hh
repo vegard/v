@@ -35,7 +35,7 @@ static machine_register args_regs[] = {
 // actually compile a function body
 //  - 'type' is the function type (signature)
 //  - 'node' is the function body
-static value_ptr _construct_fun(value_type_ptr type, function &f, scope_ptr s, ast_node_ptr node)
+static value_ptr _construct_fun(value_type_ptr type, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	if (node->type != AST_JUXTAPOSE)
 		throw compile_error(node, "expected (<argument types>...) <body>");
@@ -62,13 +62,13 @@ static value_ptr _construct_fun(value_type_ptr type, function &f, scope_ptr s, a
 
 	for (unsigned int i = 0; i < args.size(); ++i) {
 		auto arg_node = args[i];
-		auto arg_value = f.alloc_local_value(type->argument_types[i]);
+		auto arg_value = f->alloc_local_value(type->argument_types[i]);
 
 		new_scope->define(node, arg_node->symbol_name, arg_value);
 		new_f->emit_move(args_regs[i], arg_value, 0);
 	}
 
-	auto v = compile(*new_f, new_scope, node->binop.rhs);
+	auto v = compile(new_f, new_scope, node->binop.rhs);
 	auto v_type = v->type;
 
 	if (v_type != type->return_type)
@@ -101,7 +101,7 @@ static value_ptr _construct_fun(value_type_ptr type, function &f, scope_ptr s, a
 	return ret;
 }
 
-static value_ptr _call_fun(function &f, scope_ptr s, value_ptr fn, ast_node_ptr node)
+static value_ptr _call_fun(function_ptr f, scope_ptr s, value_ptr fn, ast_node_ptr node)
 {
 	if (node->type != AST_BRACKETS)
 		throw compile_error(node, "expected parantheses");
@@ -123,17 +123,17 @@ static value_ptr _call_fun(function &f, scope_ptr s, value_ptr fn, ast_node_ptr 
 		if (type->argument_types[i] != arg_value->type)
 			throw compile_error(arg_node, "wrong argument type");
 
-		f.emit_move(arg_value, 0, args_regs[i]);
+		f->emit_move(arg_value, 0, args_regs[i]);
 	}
 
-	f.emit_call(fn);
+	f->emit_call(fn);
 
-	value_ptr ret_value = f.alloc_local_value(type->return_type);
-	f.emit_move(RAX, ret_value, 0);
+	value_ptr ret_value = f->alloc_local_value(type->return_type);
+	f->emit_move(RAX, ret_value, 0);
 	return ret_value;
 }
 
-static value_ptr builtin_macro_fun(function &f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_fun(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	// Extract parameters and code block from AST
 

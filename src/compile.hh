@@ -40,7 +40,7 @@ struct compile_error: std::runtime_error {
 	}
 };
 
-static value_ptr compile(function &f, scope_ptr s, ast_node_ptr node);
+static value_ptr compile(function_ptr f, scope_ptr s, ast_node_ptr node);
 
 static void disassemble(const uint8_t *buf, size_t len, uint64_t pc, const std::map<size_t, std::vector<std::string>> &comments)
 {
@@ -116,11 +116,11 @@ static void run(function_ptr f)
 	munmap(mem, length);
 }
 
-static value_ptr eval(function &f, scope_ptr s, ast_node_ptr node)
+static value_ptr eval(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	auto new_f = std::make_shared<function>(true);
 	new_f->emit_prologue();
-	auto v = compile(*new_f, s, node);
+	auto v = compile(new_f, s, node);
 	new_f->emit_epilogue();
 
 	run(new_f);
@@ -129,19 +129,19 @@ static value_ptr eval(function &f, scope_ptr s, ast_node_ptr node)
 	return v;
 }
 
-static value_ptr compile_brackets(function &f, scope_ptr s, ast_node_ptr node)
+static value_ptr compile_brackets(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	return compile(f, s, node->unop);
 }
 
-static value_ptr compile_curly_brackets(function &f, scope_ptr s, ast_node_ptr node)
+static value_ptr compile_curly_brackets(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	// Curly brackets create a new scope parented to the old one
 	auto new_scope = std::make_shared<scope>(s);
 	return compile(f, new_scope, node->unop);
 }
 
-static value_ptr compile_juxtapose(function &f, scope_ptr s, ast_node_ptr node)
+static value_ptr compile_juxtapose(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	auto lhs = compile(f, s, node->binop.lhs);
 	auto lhs_type = lhs->type;
@@ -149,7 +149,7 @@ static value_ptr compile_juxtapose(function &f, scope_ptr s, ast_node_ptr node)
 		assert(lhs->storage_type == VALUE_GLOBAL);
 
 		// macros are evaluated directly
-		auto fn = (value_ptr (*)(function &, scope_ptr, ast_node_ptr)) lhs->global.host_address;
+		auto fn = (value_ptr (*)(function_ptr, scope_ptr, ast_node_ptr)) lhs->global.host_address;
 		return fn(f, s, node->binop.rhs);
 	}
 
@@ -171,7 +171,7 @@ static value_ptr compile_juxtapose(function &f, scope_ptr s, ast_node_ptr node)
 	throw compile_error(node, "type is not callable");
 }
 
-static value_ptr compile_symbol_name(function &f, scope_ptr s, ast_node_ptr node)
+static value_ptr compile_symbol_name(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	auto ret = s->lookup(node->symbol_name);
 	if (!ret)
@@ -180,14 +180,14 @@ static value_ptr compile_symbol_name(function &f, scope_ptr s, ast_node_ptr node
 	return ret;
 }
 
-static value_ptr compile_semicolon(function &f, scope_ptr s, ast_node_ptr node)
+static value_ptr compile_semicolon(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	// TODO: should we return the result of compiling LHS or void?
 	compile(f, s, node->binop.lhs);
 	return compile(f, s, node->binop.rhs);
 }
 
-static value_ptr compile(function &f, scope_ptr s, ast_node_ptr node)
+static value_ptr compile(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	switch (node->type) {
 	case AST_BRACKETS:

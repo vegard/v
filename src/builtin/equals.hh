@@ -25,27 +25,27 @@
 #include "scope.hh"
 #include "value.hh"
 
-static value_ptr builtin_macro_equals(function &f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_equals(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	auto lhs = compile(f, s, node->binop.lhs);
 	auto rhs = compile(f, s, node->binop.rhs);
 	if (lhs->type != rhs->type)
 		throw compile_error(node, "cannot compare values of different types");
 
-	auto ret = f.alloc_local_value(builtin_type_boolean);
-	f.emit_eq<false>(lhs, rhs, ret);
+	auto ret = f->alloc_local_value(builtin_type_boolean);
+	f->emit_eq<false>(lhs, rhs, ret);
 	return ret;
 }
 
-static value_ptr builtin_macro_notequals(function &f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_notequals(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	auto lhs = compile(f, s, node->binop.lhs);
 	auto rhs = compile(f, s, node->binop.rhs);
 	if (lhs->type != rhs->type)
 		throw compile_error(node, "cannot compare values of different types");
 
-	auto ret = f.alloc_local_value(builtin_type_boolean);
-	f.emit_eq<true>(lhs, rhs, ret);
+	auto ret = f->alloc_local_value(builtin_type_boolean);
+	f->emit_eq<true>(lhs, rhs, ret);
 	return ret;
 }
 

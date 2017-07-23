@@ -32,6 +32,8 @@ struct value;
 typedef std::shared_ptr<value> value_ptr;
 
 struct function;
+typedef std::shared_ptr<function> function_ptr;
+
 struct scope;
 typedef std::shared_ptr<scope> scope_ptr;
 
@@ -44,14 +46,14 @@ struct value_type {
 	unsigned int size;
 
 	// TODO
-	value_ptr (*constructor)(value_type_ptr type, function &f, scope_ptr s, ast_node_ptr node);
+	value_ptr (*constructor)(value_type_ptr, function_ptr, scope_ptr, ast_node_ptr);
 
 	// Operators
 	std::vector<value_type_ptr> argument_types;
 	value_type_ptr return_type;
-	value_ptr (*call)(function &f, scope_ptr s, value_ptr lhs, ast_node_ptr rhs);
+	value_ptr (*call)(function_ptr, scope_ptr, value_ptr, ast_node_ptr);
 
-	value_ptr (*add)(function &f, scope_ptr s, value_ptr lhs, ast_node_ptr node);
+	value_ptr (*add)(function_ptr, scope_ptr, value_ptr, ast_node_ptr);
 };
 
 struct value {

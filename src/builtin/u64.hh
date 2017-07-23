@@ -22,8 +22,8 @@
 #include "compile.hh"
 #include "value.hh"
 
-static value_ptr builtin_type_u64_constructor(value_type_ptr, function &, scope_ptr, ast_node_ptr);
-static value_ptr builtin_type_u64_add(function &f, scope_ptr s, value_ptr lhs, ast_node_ptr node);
+static value_ptr builtin_type_u64_constructor(value_type_ptr, function_ptr, scope_ptr, ast_node_ptr);
+static value_ptr builtin_type_u64_add(function_ptr f, scope_ptr s, value_ptr lhs, ast_node_ptr node);
 
 static auto builtin_type_u64 = std::make_shared<value_type>(value_type {
 	.alignment = 8,
@@ -35,7 +35,7 @@ static auto builtin_type_u64 = std::make_shared<value_type>(value_type {
 	.add = &builtin_type_u64_add,
 });
 
-static value_ptr builtin_type_u64_constructor(value_type_ptr type, function &f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_type_u64_constructor(value_type_ptr type, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	// TODO: support conversion from other integer types?
 	if (node->type != AST_LITERAL_INTEGER)
@@ -52,14 +52,14 @@ static value_ptr builtin_type_u64_constructor(value_type_ptr type, function &f, 
 }
 
 // TODO: maybe this should really be a function rather than a macro
-static value_ptr builtin_type_u64_add(function &f, scope_ptr s, value_ptr lhs, ast_node_ptr node)
+static value_ptr builtin_type_u64_add(function_ptr f, scope_ptr s, value_ptr lhs, ast_node_ptr node)
 {
 	auto rhs = compile(f, s, node->binop.rhs);
 	if (rhs->type != lhs->type)
 		throw compile_error(node->binop.rhs, "expected u64");
 
-	auto ret = f.alloc_local_value(lhs->type);
-	f.emit_add(lhs, rhs, ret);
+	auto ret = f->alloc_local_value(lhs->type);
+	f->emit_add(lhs, rhs, ret);
 	return ret;
 }
 

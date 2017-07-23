@@ -25,7 +25,7 @@
 #include "scope.hh"
 #include "value.hh"
 
-static value_ptr builtin_macro_if(function &f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_if(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	// Extract condition, true block, and false block (if any) from AST
 	//
@@ -79,37 +79,37 @@ static value_ptr builtin_macro_if(function &f, scope_ptr s, ast_node_ptr node)
 		throw compile_error(condition_node, "'if' condition must be boolean");
 
 	label false_label;
-	f.emit_jump_if_zero(false_label);
+	f->emit_jump_if_zero(false_label);
 
 	// "if" block
 	auto true_value = compile(f, s, true_node);
 	if (true_value->type != builtin_type_void) {
-		return_value = f.alloc_local_value(true_value->type);
-		f.emit_move(true_value, return_value);
+		return_value = f->alloc_local_value(true_value->type);
+		f->emit_move(true_value, return_value);
 	}
 
 	label end_label;
-	f.emit_jump(end_label);
+	f->emit_jump(end_label);
 
 	// "else" block
-	f.emit_label(false_label);
+	f->emit_label(false_label);
 	if (false_node) {
 		auto false_value = compile(f, s, false_node);
 		if (false_value->type != true_value->type)
 			throw compile_error(false_node, "'else' block must return the same type as 'if' block");
 		if (false_value->type != builtin_type_void)
-			f.emit_move(false_value, return_value);
+			f->emit_move(false_value, return_value);
 	} else {
 		if (true_value->type != builtin_type_void)
 			throw compile_error(node, "expected 'else' since 'if' block has return value");
 	}
 
 	// next statement
-	f.emit_label(end_label);
+	f->emit_label(end_label);
 
 	// finalize
-	f.link_label(false_label);
-	f.link_label(end_label);
+	f->link_label(false_label);
+	f->link_label(end_label);
 
 	// TODO: just return nullptr instead?
 	if (!return_value) {

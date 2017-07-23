@@ -25,7 +25,7 @@
 #include "scope.hh"
 #include "value.hh"
 
-static value_ptr builtin_macro_eval(function &f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_eval(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	return eval(f, s, node);
 }

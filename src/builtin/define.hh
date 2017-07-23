@@ -25,7 +25,7 @@
 #include "scope.hh"
 #include "value.hh"
 
-static value_ptr builtin_macro_define(function &f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_define(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	if (node->type != AST_JUXTAPOSE)
 		throw compile_error(node, "expected juxtaposition");
@@ -36,7 +36,7 @@ static value_ptr builtin_macro_define(function &f, scope_ptr s, ast_node_ptr nod
 
 	auto rhs = compile(f, s, node->binop.rhs);
 	value_ptr val;
-	if (f.target_jit) {
+	if (f->target_jit) {
 		// For functions that are run at compile-time, we allocate
 		// a new global value. The _name_ is still scoped as usual,
 		// though.
@@ -45,10 +45,10 @@ static value_ptr builtin_macro_define(function &f, scope_ptr s, ast_node_ptr nod
 		val->global.host_address = (void *) global;
 	} else {
 		// Create new local
-		val = f.alloc_local_value(rhs->type);
+		val = f->alloc_local_value(rhs->type);
 	}
 	s->define(node, lhs->symbol_name, val);
-	f.emit_move(rhs, val);
+	f->emit_move(rhs, val);
 
 	return val;
 }

@@ -25,7 +25,7 @@
 #include "scope.hh"
 #include "value.hh"
 
-static value_ptr builtin_macro_assign(function &f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_assign(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	if (node->type != AST_JUXTAPOSE)
 		throw compile_error(node, "expected juxtaposition");
@@ -35,7 +35,7 @@ static value_ptr builtin_macro_assign(function &f, scope_ptr s, ast_node_ptr nod
 	if (rhs->type != lhs->type)
 		throw compile_error(node, "type mismatch");
 
-	f.emit_move(rhs, lhs);
+	f->emit_move(rhs, lhs);
 	return lhs;
 }
 

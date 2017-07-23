@@ -25,9 +25,9 @@
 #include "scope.hh"
 #include "value.hh"
 
-static value_ptr builtin_macro_while(function &f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_while(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
-	f.comment("while");
+	f->comment("while");
 
 	if (node->type != AST_JUXTAPOSE)
 		throw compile_error(node, "expected 'while <expression> <expression>'");
@@ -36,7 +36,7 @@ static value_ptr builtin_macro_while(function &f, scope_ptr s, ast_node_ptr node
 	auto body_node = node->binop.rhs;
 
 	label loop_label;
-	f.emit_label(loop_label);
+	f->emit_label(loop_label);
 
 	// condition
 	auto condition_value = compile(f, s, condition_node);
@@ -44,17 +44,17 @@ static value_ptr builtin_macro_while(function &f, scope_ptr s, ast_node_ptr node
 		throw compile_error(condition_node, "'while' condition must be boolean");
 
 	label done_label;
-	f.emit_jump_if_zero(condition_value, done_label);
+	f->emit_jump_if_zero(condition_value, done_label);
 
 	// body
 	compile(f, s, body_node);
-	f.emit_jump(loop_label);
+	f->emit_jump(loop_label);
 
-	f.emit_label(done_label);
+	f->emit_label(done_label);
 
 	// finalize
-	f.link_label(loop_label);
-	f.link_label(done_label);
+	f->link_label(loop_label);
+	f->link_label(done_label);
 
 	return std::make_shared<value>(VALUE_CONSTANT, builtin_type_void);
 }

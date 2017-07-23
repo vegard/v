@@ -25,7 +25,7 @@
 #include "scope.hh"
 #include "value.hh"
 
-static value_ptr builtin_macro_add(function &f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_add(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	// So this is probably a result of something (x + y), which got
 	// parsed as (juxtapose _add (juxtapose x y)).

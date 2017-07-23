@@ -391,6 +391,23 @@ struct function {
 		emit_move(RAX, dest, 0);
 	}
 
+	void emit_sub(value_ptr source1, value_ptr source2, value_ptr dest)
+	{
+		assert(source1->type->size == dest->type->size);
+		assert(source2->type->size == dest->type->size);
+		// TODO: handle other sizes?
+		assert(dest->type->size == 8);
+
+		comment("sub");
+		emit_move(source1, 0, RAX);
+		emit_move(source2, 0, RBX);
+		// hardcoded: subq %rbx, %rax
+		emit_byte(0x48);
+		emit_byte(0x29);
+		emit_byte(0xd8);
+		emit_move(RAX, dest, 0);
+	}
+
 	void link_label(const label &l)
 	{
 		for (const relocation &r: l.relocations)

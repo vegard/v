@@ -24,6 +24,7 @@
 
 static value_ptr builtin_type_u64_constructor(value_type_ptr, function_ptr, scope_ptr, ast_node_ptr);
 static value_ptr builtin_type_u64_add(function_ptr f, scope_ptr s, value_ptr lhs, ast_node_ptr node);
+static value_ptr builtin_type_u64_subtract(function_ptr f, scope_ptr s, value_ptr lhs, ast_node_ptr node);
 
 static auto builtin_type_u64 = std::make_shared<value_type>(value_type {
 	.alignment = 8,
@@ -33,6 +34,7 @@ static auto builtin_type_u64 = std::make_shared<value_type>(value_type {
 	.return_type = value_type_ptr(),
 	.call = nullptr,
 	.add = &builtin_type_u64_add,
+	.subtract = &builtin_type_u64_subtract,
 });
 
 static value_ptr builtin_type_u64_constructor(value_type_ptr type, function_ptr f, scope_ptr s, ast_node_ptr node)
@@ -63,4 +65,14 @@ static value_ptr builtin_type_u64_add(function_ptr f, scope_ptr s, value_ptr lhs
 	return ret;
 }
 
+static value_ptr builtin_type_u64_subtract(function_ptr f, scope_ptr s, value_ptr lhs, ast_node_ptr node)
+{
+	auto rhs = compile(f, s, node->binop.rhs);
+	if (rhs->type != lhs->type)
+		throw compile_error(node->binop.rhs, "expected u64");
+
+	auto ret = f->alloc_local_value(lhs->type);
+	f->emit_sub(lhs, rhs, ret);
+	return ret;
+}
 #endif

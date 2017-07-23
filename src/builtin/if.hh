@@ -79,7 +79,7 @@ static value_ptr builtin_macro_if(function_ptr f, scope_ptr s, ast_node_ptr node
 		throw compile_error(condition_node, "'if' condition must be boolean");
 
 	label false_label;
-	f->emit_jump_if_zero(false_label);
+	f->emit_jump_if_zero(condition_value, false_label);
 
 	// "if" block
 	auto true_value = compile(f, s, true_node);

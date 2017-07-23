@@ -27,6 +27,9 @@
 
 static value_ptr builtin_macro_equals(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
+	if (node->type != AST_JUXTAPOSE)
+		throw compile_error(node, "expected juxtaposition");
+
 	auto lhs = compile(f, s, node->binop.lhs);
 	auto rhs = compile(f, s, node->binop.rhs);
 	if (lhs->type != rhs->type)
@@ -39,6 +42,9 @@ static value_ptr builtin_macro_equals(function_ptr f, scope_ptr s, ast_node_ptr 
 
 static value_ptr builtin_macro_notequals(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
+	if (node->type != AST_JUXTAPOSE)
+		throw compile_error(node, "expected juxtaposition");
+
 	auto lhs = compile(f, s, node->binop.lhs);
 	auto rhs = compile(f, s, node->binop.rhs);
 	if (lhs->type != rhs->type)

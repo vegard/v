@@ -44,7 +44,9 @@ static value_ptr builtin_macro_add(function_ptr f, scope_ptr s, ast_node_ptr nod
 	// However, this allows operators to be macros, which is a very
 	// powerful feature.
 
-	assert(node->type == AST_JUXTAPOSE);
+	// TODO: bad error message
+	if (node->type != AST_JUXTAPOSE)
+		throw compile_error(node, "expected juxtaposition");
 
 	// TODO: only evaluate the type so we don't evaluate the value twice
 	auto lhs = compile(f, s, node->binop.lhs);

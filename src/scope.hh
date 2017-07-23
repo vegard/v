@@ -89,4 +89,16 @@ struct scope {
 	}
 };
 
+static bool is_parent_of(scope_ptr parent, scope_ptr child)
+{
+	while (child) {
+		if (child == parent)
+			return true;
+
+		child = child->parent;
+	}
+
+	return false;
+}
+
 #endif

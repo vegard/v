@@ -24,6 +24,7 @@
 #include <string>
 
 #include "ast.hh"
+#include "macro.hh"
 #include "value.hh"
 
 struct scope;
@@ -61,11 +62,17 @@ struct scope {
 
 	// Helper for defining builtin macros
 	// NOTE: builtin macros are always global
-	void define_builtin_macro(const std::string name, value_ptr (*fn)(function_ptr, scope_ptr, ast_node_ptr))
+	void define_builtin_macro(const std::string name, macro_ptr m)
 	{
 		auto macro_value = std::make_shared<value>(VALUE_GLOBAL, builtin_type_macro);
-		macro_value->global.host_address = (void *) fn;
+		auto macro_copy = new macro_ptr(m);
+		macro_value->global.host_address = (void *) macro_copy;
 		contents[name] = macro_value;
+	}
+
+	void define_builtin_macro(const std::string name, value_ptr (*fn)(function_ptr, scope_ptr, ast_node_ptr))
+	{
+		return define_builtin_macro(name, std::make_shared<simple_macro>(fn));
 	}
 
 	value_ptr lookup(const std::string name)

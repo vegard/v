@@ -104,6 +104,4 @@ static auto builtin_type_boolean = std::make_shared<value_type>(value_type{8, 8}
 //static value_type builtin_type_int = {alignof(mpz_class), sizeof(mpz_class)};
 static auto builtin_type_int = std::make_shared<value_type>(value_type{8, 8});
 
-static auto builtin_type_macro = std::make_shared<value_type>(value_type{alignof(void *), sizeof(void *)});
-
 #endif

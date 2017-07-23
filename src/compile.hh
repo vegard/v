@@ -149,8 +149,8 @@ static value_ptr compile_juxtapose(function_ptr f, scope_ptr s, ast_node_ptr nod
 		assert(lhs->storage_type == VALUE_GLOBAL);
 
 		// macros are evaluated directly
-		auto fn = (value_ptr (*)(function_ptr, scope_ptr, ast_node_ptr)) lhs->global.host_address;
-		return fn(f, s, node->binop.rhs);
+		auto m = *(macro_ptr *) lhs->global.host_address;
+		return m->invoke(f, s, node->binop.rhs);
 	}
 
 	if (lhs_type == builtin_type_type) {

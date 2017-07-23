@@ -52,6 +52,7 @@ static value_ptr builtin_macro_print(function_ptr f, scope_ptr s, ast_node_ptr n
 	*global = (void *) &_print;
 	print_fn->global.host_address = (void *) global;
 
+	// TODO: save registers
 	auto arg = compile(f, s, node);
 	f->emit_move(arg, 0, RDI);
 	f->emit_call(print_fn);

@@ -274,14 +274,29 @@ struct function {
 		emit_cmp_reg_reg(RAX, RBX);
 	}
 
-	template<bool negate = false>
+	enum {
+		// sete
+		CMP_EQ = 0x94,
+		// setne
+		CMP_NEQ = 0x95,
+		// setb
+		CMP_LESS = 0x92,
+		// setbe
+		CMP_LESS_EQUAL = 0x96,
+		// seta
+		CMP_GREATER = 0x97,
+		// setae
+		CMP_GREATER_EQUAL= 0x93,
+	};
+
+	template<uint8_t opcode>
 	void emit_eq(value_ptr source1, value_ptr source2, value_ptr dest)
 	{
 		emit_compare(source1, source2);
 
 		// set[n]e %al
 		emit_byte(0x0f);
-		emit_byte(0x94 + negate);
+		emit_byte(opcode);
 		emit_byte(0xc0);
 
 		// bools are size 8 for now, just to simplify things

@@ -36,7 +36,7 @@ static value_ptr builtin_macro_equals(function_ptr f, scope_ptr s, ast_node_ptr 
 		throw compile_error(node, "cannot compare values of different types");
 
 	auto ret = f->alloc_local_value(builtin_type_boolean);
-	f->emit_eq<false>(lhs, rhs, ret);
+	f->emit_eq<function::CMP_EQ>(lhs, rhs, ret);
 	return ret;
 }
 
@@ -51,7 +51,7 @@ static value_ptr builtin_macro_notequals(function_ptr f, scope_ptr s, ast_node_p
 		throw compile_error(node, "cannot compare values of different types");
 
 	auto ret = f->alloc_local_value(builtin_type_boolean);
-	f->emit_eq<true>(lhs, rhs, ret);
+	f->emit_eq<function::CMP_NEQ>(lhs, rhs, ret);
 	return ret;
 }
 

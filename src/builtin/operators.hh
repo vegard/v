@@ -25,12 +25,14 @@
 #include "scope.hh"
 #include "value.hh"
 
-static value_ptr builtin_macro_add(function_ptr f, scope_ptr s, ast_node_ptr node)
+template<operator_fn_type value_type::*operator_fn>
+static value_ptr call_operator_fn(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
-	// So this is probably a result of something (x + y), which got
+	// So this is probably a result of something like (x + y), which got
 	// parsed as (juxtapose _add (juxtapose x y)).
+	//
 	// Compiling the "juxtapose" decided we're a macro, and "node" here
-	// refers to the (brackets ...) part.
+	// refers to the (juxtapose x y) part.
 	//
 	// What we'd like to do is to evaluate 'x' to figure out what type
 	// it is. Once we know its type, we can call that type's ->add()
@@ -52,10 +54,41 @@ static value_ptr builtin_macro_add(function_ptr f, scope_ptr s, ast_node_ptr nod
 	auto lhs = compile(f, s, node->binop.lhs);
 	auto lhs_type = lhs->type;
 
-	if (!lhs_type->add)
-		throw compile_error(node, "type doesn't support +");
+	auto callback_fn = (*lhs_type).*operator_fn;
+	if (!callback_fn)
+		throw compile_error(node, "type doesn't support operation");
 
-	return lhs_type->add(f, s, lhs, node);
+	return callback_fn(f, s, lhs, node);
+}
+
+static value_ptr builtin_macro_add(function_ptr f, scope_ptr s, ast_node_ptr node)
+{
+	return call_operator_fn<&value_type::add>(f, s, node);
+}
+
+static value_ptr builtin_macro_subtract(function_ptr f, scope_ptr s, ast_node_ptr node)
+{
+	return call_operator_fn<&value_type::subtract>(f, s, node);
+}
+
+static value_ptr builtin_macro_less(function_ptr f, scope_ptr s, ast_node_ptr node)
+{
+	return call_operator_fn<&value_type::less>(f, s, node);
+}
+
+static value_ptr builtin_macro_less_equal(function_ptr f, scope_ptr s, ast_node_ptr node)
+{
+	return call_operator_fn<&value_type::less_equal>(f, s, node);
+}
+
+static value_ptr builtin_macro_greater(function_ptr f, scope_ptr s, ast_node_ptr node)
+{
+	return call_operator_fn<&value_type::greater>(f, s, node);
+}
+
+static value_ptr builtin_macro_greater_equal(function_ptr f, scope_ptr s, ast_node_ptr node)
+{
+	return call_operator_fn<&value_type::greater_equal>(f, s, node);
 }
 
 #endif

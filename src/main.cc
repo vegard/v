@@ -24,7 +24,6 @@ extern "C" {
 #include <cstdio>
 
 #include "ast.hh"
-#include "builtin/add.hh"
 #include "builtin/assign.hh"
 #include "builtin/debug.hh"
 #include "builtin/define.hh"
@@ -32,6 +31,7 @@ extern "C" {
 #include "builtin/eval.hh"
 #include "builtin/fun.hh"
 #include "builtin/if.hh"
+#include "builtin/operators.hh"
 #include "builtin/u64.hh"
 #include "builtin/while.hh"
 #include "compile.hh"
@@ -74,6 +74,11 @@ static function_ptr compile_metaprogram(ast_node_ptr root)
 	global_scope->define_builtin_macro("_equals", builtin_macro_equals);
 	global_scope->define_builtin_macro("_notequals", builtin_macro_notequals);
 	global_scope->define_builtin_macro("_add", builtin_macro_add);
+	global_scope->define_builtin_macro("_subtract", builtin_macro_subtract);
+	global_scope->define_builtin_macro("_less", builtin_macro_less);
+	global_scope->define_builtin_macro("_less_equal", builtin_macro_less_equal);
+	global_scope->define_builtin_macro("_greater", builtin_macro_greater);
+	global_scope->define_builtin_macro("_greater_equal", builtin_macro_greater_equal);
 
 	// Keywords
 	global_scope->define_builtin_macro("debug", builtin_macro_debug);

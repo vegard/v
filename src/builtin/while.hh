@@ -22,8 +22,38 @@
 #include "ast.hh"
 #include "compile.hh"
 #include "function.hh"
+#include "macro.hh"
 #include "scope.hh"
 #include "value.hh"
+
+struct break_macro: macro {
+	function_ptr f;
+	scope_ptr s;
+	label &done_label;
+
+	break_macro(function_ptr f, scope_ptr s, label &done_label):
+		f(f),
+		s(s),
+		done_label(done_label)
+	{
+	}
+
+	value_ptr invoke(function_ptr f, scope_ptr s, ast_node_ptr node)
+	{
+		if (this->f != f)
+			throw compile_error(node, "'break' used outside defining function");
+
+		// The scope where we are used must be the scope where we
+		// were defined or a child.
+		if (!is_parent_of(this->s, s))
+			throw compile_error(node, "'break' used outside defining scope");
+
+		f->comment("break");
+		f->emit_jump(done_label);
+
+		return std::make_shared<value>(VALUE_CONSTANT, builtin_type_void);
+	}
+};
 
 static value_ptr builtin_macro_while(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
@@ -47,7 +77,10 @@ static value_ptr builtin_macro_while(function_ptr f, scope_ptr s, ast_node_ptr n
 	f->emit_jump_if_zero(condition_value, done_label);
 
 	// body
-	compile(f, s, body_node);
+	auto new_scope = std::make_shared<scope>(s);
+	new_scope->define_builtin_macro("break", std::make_shared<break_macro>(f, new_scope, done_label));
+
+	compile(f, new_scope, body_node);
 	f->emit_jump(loop_label);
 
 	f->emit_label(done_label);

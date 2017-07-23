@@ -83,25 +83,19 @@ static value_ptr builtin_macro_if(function_ptr f, scope_ptr s, ast_node_ptr node
 
 	// "if" block
 	auto true_value = compile(f, s, true_node);
-	if (true_value->type != builtin_type_void) {
+	if (true_value->type != builtin_type_void)
 		return_value = f->alloc_local_value(true_value->type);
-		f->emit_move(true_value, return_value);
-	}
 
 	label end_label;
 	f->emit_jump(end_label);
 
 	// "else" block
 	f->emit_label(false_label);
+	value_ptr false_value;
 	if (false_node) {
-		auto false_value = compile(f, s, false_node);
-		if (false_value->type != true_value->type)
-			throw compile_error(false_node, "'else' block must return the same type as 'if' block");
-		if (false_value->type != builtin_type_void)
+		false_value = compile(f, s, false_node);
+		if (false_value->type != builtin_type_void && false_value->type == true_value->type)
 			f->emit_move(false_value, return_value);
-	} else {
-		if (true_value->type != builtin_type_void)
-			throw compile_error(node, "expected 'else' since 'if' block has return value");
 	}
 
 	// next statement
@@ -111,11 +105,9 @@ static value_ptr builtin_macro_if(function_ptr f, scope_ptr s, ast_node_ptr node
 	f->link_label(false_label);
 	f->link_label(end_label);
 
-	// TODO: just return nullptr instead?
-	if (!return_value) {
+	if (!return_value || !false_value || true_value->type != false_value->type)
 		return_value = std::make_shared<value>(VALUE_CONSTANT, builtin_type_void);
-		//new (&return_value->constant.node) ast_node_ptr;
-	}
+
 	return return_value;
 }
 

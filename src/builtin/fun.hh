@@ -27,6 +27,43 @@
 #include "scope.hh"
 #include "value.hh"
 
+struct return_macro: macro {
+	function_ptr f;
+	scope_ptr s;
+	value_type_ptr return_type;
+
+	return_macro(function_ptr f, scope_ptr s, value_type_ptr return_type):
+		f(f),
+		s(s),
+		return_type(return_type)
+	{
+	}
+
+	value_ptr invoke(function_ptr f, scope_ptr s, ast_node_ptr node)
+	{
+		if (this->f != f)
+			throw compile_error(node, "'return' used outside defining function");
+
+		// The scope where we are used must be the scope where we
+		// were defined or a child.
+		if (!is_parent_of(this->s, s))
+			throw compile_error(node, "'return' used outside defining scope");
+
+		f->comment("return");
+
+		auto v = compile(f, s, node);
+		if (v->type != return_type)
+			throw compile_error(node, "wrong return type for function");
+
+		// TODO: maybe we should jump to a label instead.
+		// TODO: call destructors for scoped variables.
+		f->emit_move(v, 0, RAX);
+		f->emit_return();
+
+		return v;
+	}
+};
+
 // TODO: abstract away ABI details
 static machine_register args_regs[] = {
 	RDI, RSI, RDX, RCX, R8, R9,
@@ -59,6 +96,7 @@ static value_ptr _construct_fun(value_type_ptr type, function_ptr f, scope_ptr s
 	new_f->emit_prologue();
 
 	auto new_scope = std::make_shared<scope>(s);
+	new_scope->define_builtin_macro("return", std::make_shared<return_macro>(new_f, new_scope, type->return_type));
 
 	for (unsigned int i = 0; i < args.size(); ++i) {
 		auto arg_node = args[i];

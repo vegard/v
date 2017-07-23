@@ -62,7 +62,7 @@ static value_ptr _construct_fun(value_type_ptr type, function_ptr f, scope_ptr s
 
 	for (unsigned int i = 0; i < args.size(); ++i) {
 		auto arg_node = args[i];
-		auto arg_value = f->alloc_local_value(type->argument_types[i]);
+		auto arg_value = new_f->alloc_local_value(type->argument_types[i]);
 
 		new_scope->define(node, arg_node->symbol_name, arg_value);
 		new_f->emit_move(args_regs[i], arg_value, 0);

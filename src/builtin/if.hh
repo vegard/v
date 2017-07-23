@@ -83,8 +83,10 @@ static value_ptr builtin_macro_if(function_ptr f, scope_ptr s, ast_node_ptr node
 
 	// "if" block
 	auto true_value = compile(f, s, true_node);
-	if (true_value->type != builtin_type_void)
+	if (true_value->type != builtin_type_void) {
 		return_value = f->alloc_local_value(true_value->type);
+		f->emit_move(true_value, return_value);
+	}
 
 	label end_label;
 	f->emit_jump(end_label);

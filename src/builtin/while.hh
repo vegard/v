@@ -55,6 +55,36 @@ struct break_macro: macro {
 	}
 };
 
+struct continue_macro: macro {
+	function_ptr f;
+	scope_ptr s;
+	label &loop_label;
+
+	continue_macro(function_ptr f, scope_ptr s, label &loop_label):
+		f(f),
+		s(s),
+		loop_label(loop_label)
+	{
+	}
+
+	value_ptr invoke(function_ptr f, scope_ptr s, ast_node_ptr node)
+	{
+		if (this->f != f)
+			throw compile_error(node, "'continue' used outside defining function");
+
+		// The scope where we are used must be the scope where we
+		// were defined or a child.
+		if (!is_parent_of(this->s, s))
+			throw compile_error(node, "'continue' used outside defining scope");
+
+		f->comment("continue");
+		f->emit_jump(loop_label);
+
+		return std::make_shared<value>(VALUE_CONSTANT, builtin_type_void);
+	}
+};
+
+
 static value_ptr builtin_macro_while(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	f->comment("while");
@@ -79,6 +109,7 @@ static value_ptr builtin_macro_while(function_ptr f, scope_ptr s, ast_node_ptr n
 	// body
 	auto new_scope = std::make_shared<scope>(s);
 	new_scope->define_builtin_macro("break", std::make_shared<break_macro>(f, new_scope, done_label));
+	new_scope->define_builtin_macro("continue", std::make_shared<break_macro>(f, new_scope, loop_label));
 
 	compile(f, new_scope, body_node);
 	f->emit_jump(loop_label);

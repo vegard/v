@@ -69,29 +69,10 @@ static machine_register args_regs[] = {
 	RDI, RSI, RDX, RCX, R8, R9,
 };
 
-// actually compile a function body
-//  - 'type' is the function type (signature)
-//  - 'node' is the function body
-static value_ptr _construct_fun(value_type_ptr type, function_ptr f, scope_ptr s, ast_node_ptr node)
+// Low-level helper (for use after data has been extracted from syntax)
+static value_ptr __construct_fun(value_type_ptr type, function_ptr f, scope_ptr s, ast_node_ptr node,
+	std::vector<std::string> &args, ast_node_ptr body_node)
 {
-	if (node->type != AST_JUXTAPOSE)
-		throw compile_error(node, "expected (<argument types>...) <body>");
-
-	auto args_node = node->binop.lhs;
-	if (args_node->type != AST_BRACKETS)
-		throw compile_error(node, "expected (<argument names>...)");
-
-	std::vector<ast_node_ptr> args;
-	for (auto arg_node: traverse<AST_COMMA>(args_node->unop)) {
-		if (arg_node->type != AST_SYMBOL_NAME)
-			throw compile_error(node, "expected symbol for argument name");
-
-		args.push_back(arg_node);
-	}
-
-	if (args.size() != type->argument_types.size())
-		throw compile_error(node, "expected %u arguments; got %u", type->argument_types.size(), args.size());
-
 	auto new_f = std::make_shared<function>(false);
 	new_f->emit_prologue();
 
@@ -99,14 +80,12 @@ static value_ptr _construct_fun(value_type_ptr type, function_ptr f, scope_ptr s
 	new_scope->define_builtin_macro("return", std::make_shared<return_macro>(new_f, new_scope, type->return_type));
 
 	for (unsigned int i = 0; i < args.size(); ++i) {
-		auto arg_node = args[i];
 		auto arg_value = new_f->alloc_local_value(type->argument_types[i]);
-
-		new_scope->define(node, arg_node->symbol_name, arg_value);
+		new_scope->define(node, args[i], arg_value);
 		new_f->emit_move(args_regs[i], arg_value, 0);
 	}
 
-	auto v = compile(new_f, new_scope, node->binop.rhs);
+	auto v = compile(new_f, new_scope, body_node);
 	auto v_type = v->type;
 
 	if (v_type != type->return_type)
@@ -137,6 +116,33 @@ static value_ptr _construct_fun(value_type_ptr type, function_ptr f, scope_ptr s
 
 	disassemble((const uint8_t *) mem, new_f->bytes.size(), (uint64_t) mem, new_f->comments);
 	return ret;
+}
+
+// actually compile a function body
+//  - 'type' is the function type (signature)
+//  - 'node' is the function body
+static value_ptr _construct_fun(value_type_ptr type, function_ptr f, scope_ptr s, ast_node_ptr node)
+{
+	if (node->type != AST_JUXTAPOSE)
+		throw compile_error(node, "expected (<argument types>...) <body>");
+
+	auto args_node = node->binop.lhs;
+	if (args_node->type != AST_BRACKETS)
+		throw compile_error(node, "expected (<argument names>...)");
+
+	std::vector<std::string> args;
+	for (auto arg_node: traverse<AST_COMMA>(args_node->unop)) {
+		if (arg_node->type != AST_SYMBOL_NAME)
+			throw compile_error(node, "expected symbol for argument name");
+
+		args.push_back(arg_node->symbol_name);
+	}
+
+	if (args.size() != type->argument_types.size())
+		throw compile_error(node, "expected %u arguments; got %u", type->argument_types.size(), args.size());
+
+	auto body_node = node->binop.rhs;
+	return __construct_fun(type, f, s, node, args, body_node);
 }
 
 static value_ptr _call_fun(function_ptr f, scope_ptr s, value_ptr fn, ast_node_ptr node)

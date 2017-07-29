@@ -171,6 +171,27 @@ static value_ptr _call_fun(function_ptr f, scope_ptr s, value_ptr fn, ast_node_p
 	return ret_value;
 }
 
+// Low-level helper (for use after data has been extracted from syntax)
+static value_ptr _builtin_macro_fun(function_ptr f, scope_ptr s, value_type_ptr ret_type, std::vector<value_type_ptr> &argument_types)
+{
+	value_type_ptr type;
+
+	// Create new type for this signature
+	type = std::make_shared<value_type>();
+	type->alignment = 8;
+	type->size = 8;
+	type->constructor = _construct_fun;
+	type->argument_types = argument_types;
+	type->return_type = ret_type;
+	type->call = _call_fun;
+
+	// XXX: refcounting
+	auto type_value = std::make_shared<value>(VALUE_GLOBAL, builtin_type_type);
+	auto type_copy = new value_type_ptr(type);
+	type_value->global.host_address = (void *) type_copy;
+	return type_value;
+}
+
 static value_ptr builtin_macro_fun(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	// Extract parameters and code block from AST
@@ -204,23 +225,7 @@ static value_ptr builtin_macro_fun(function_ptr f, scope_ptr s, ast_node_ptr nod
 		argument_types.push_back(arg_type);
 	}
 
-	value_type_ptr type;
-
-	// Create new type for this signature
-	type = std::make_shared<value_type>();
-	type->alignment = 8;
-	type->size = 8;
-	type->constructor = nullptr;
-	type->argument_types = argument_types;
-	type->return_type = ret_type;
-	type->constructor = _construct_fun;
-	type->call = _call_fun;
-
-	// XXX: refcounting
-	auto type_value = std::make_shared<value>(VALUE_GLOBAL, builtin_type_type);
-	auto type_copy = new value_type_ptr(type);
-	type_value->global.host_address = (void *) type_copy;
-	return type_value;
+	return _builtin_macro_fun(f, s, ret_type, argument_types);
 }
 
 #endif

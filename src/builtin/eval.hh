@@ -19,11 +19,11 @@
 #ifndef V_BUILTIN_EVAL_HH
 #define V_BUILTIN_EVAL_HH
 
-#include "ast.hh"
-#include "compile.hh"
-#include "function.hh"
-#include "scope.hh"
-#include "value.hh"
+#include "../ast.hh"
+#include "../compile.hh"
+#include "../function.hh"
+#include "../scope.hh"
+#include "../value.hh"
 
 static value_ptr builtin_macro_eval(function_ptr f, scope_ptr s, ast_node_ptr node)
 {

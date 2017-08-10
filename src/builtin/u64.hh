@@ -19,8 +19,8 @@
 #ifndef V_BUILTIN_U64_H
 #define V_BUILTIN_U64_H
 
-#include "compile.hh"
-#include "value.hh"
+#include "../compile.hh"
+#include "../value.hh"
 
 static value_ptr builtin_type_u64_constructor(value_type_ptr, function_ptr, scope_ptr, ast_node_ptr);
 static value_ptr builtin_type_u64_add(function_ptr f, scope_ptr s, value_ptr lhs, ast_node_ptr node);

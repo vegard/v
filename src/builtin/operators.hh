@@ -19,11 +19,11 @@
 #ifndef V_BUILTIN_ADD_HH
 #define V_BUILTIN_ADD_HH
 
-#include "ast.hh"
-#include "compile.hh"
-#include "function.hh"
-#include "scope.hh"
-#include "value.hh"
+#include "../ast.hh"
+#include "../compile.hh"
+#include "../function.hh"
+#include "../scope.hh"
+#include "../value.hh"
 
 template<operator_fn_type value_type::*operator_fn>
 static value_ptr call_operator_fn(function_ptr f, scope_ptr s, ast_node_ptr node)

@@ -93,7 +93,7 @@ static value_ptr __construct_fun(value_type_ptr type, function_ptr f, scope_ptr 
 
 	// TODO: use multiple regs or pass on stack
 	if (v_type->size > sizeof(unsigned long))
-		throw compile_error(node, "return value too big to fit in register");
+		throw compile_error(node, "return value too big to fit in register (%u bytes)", v_type->size);
 
 	if (v_type->size)
 		new_f->emit_move(v, 0, RAX);

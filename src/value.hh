@@ -21,7 +21,10 @@
 
 enum value_storage_type {
 	VALUE_GLOBAL,
+	// a local (on-stack) value
 	VALUE_LOCAL,
+	// a local (on-stack) pointer to the value itself
+	VALUE_LOCAL_POINTER,
 	VALUE_CONSTANT,
 };
 

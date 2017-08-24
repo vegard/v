@@ -103,6 +103,21 @@ struct function {
 		return result;
 	}
 
+	value_ptr alloc_local_pointer_value(value_type_ptr type)
+	{
+		auto result = std::make_shared<value>(VALUE_LOCAL_POINTER, type);
+
+		unsigned int size = sizeof(void *);
+		unsigned int alignment = alignof(void *);
+
+		// TODO: we could try to rearrange/pack values to avoid wasting stack space
+		unsigned int offset = (next_local_slot + alignment - 1) & ~(alignment - 1);
+		result->local.offset = -offset;
+		next_local_slot = next_local_slot + size;
+
+		return result;
+	}
+
 	void comment(std::string s)
 	{
 		comments[bytes.size()].push_back(s);
@@ -217,6 +232,10 @@ struct function {
 		case VALUE_LOCAL:
 			emit_move_mreg_offset_to_reg(RSP, source->local.offset + source_offset, dest);
 			break;
+		case VALUE_LOCAL_POINTER:
+			// TODO
+			assert(false);
+			break;
 		case VALUE_CONSTANT:
 			emit_move_imm_to_reg(source->constant.u64 >> (8 * source_offset), dest);
 			break;
@@ -234,6 +253,10 @@ struct function {
 		case VALUE_LOCAL:
 			emit_move_reg_to_mreg_offset(source, RSP, dest->local.offset + dest_offset);
 			break;
+		case VALUE_LOCAL_POINTER:
+			emit_move_mreg_offset_to_reg(RSP, dest->local.offset, RBX);
+			emit_move_reg_to_mreg_offset(source, RBX, dest_offset);
+			break;
 		case VALUE_CONSTANT:
 			// TODO
 			assert(false);
@@ -250,6 +273,28 @@ struct function {
 		for (unsigned int i = 0; i < source->type->size; i += 8) {
 			emit_move(source, i, RAX);
 			emit_move(RAX, dest, i);
+		}
+	}
+
+	void emit_move_address(machine_register source, value_ptr dest)
+	{
+		switch (dest->storage_type) {
+		case VALUE_LOCAL_POINTER:
+			emit_move_reg_to_mreg_offset(source, RSP, dest->local.offset);
+			break;
+		default:
+			assert(false);
+		}
+	}
+
+	void emit_move_address(value_ptr source, machine_register dest)
+	{
+		switch (source->storage_type) {
+		case VALUE_LOCAL_POINTER:
+			emit_move_mreg_offset_to_reg(RSP, source->local.offset, dest);
+			break;
+		default:
+			assert(false);
 		}
 	}
 

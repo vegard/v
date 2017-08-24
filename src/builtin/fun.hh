@@ -32,11 +32,15 @@ struct return_macro: macro {
 	function_ptr f;
 	scope_ptr s;
 	value_type_ptr return_type;
+	value_ptr return_value;
+	label &return_label;
 
-	return_macro(function_ptr f, scope_ptr s, value_type_ptr return_type):
+	return_macro(function_ptr f, scope_ptr s, value_type_ptr return_type, value_ptr return_value, label &return_label):
 		f(f),
 		s(s),
-		return_type(return_type)
+		return_type(return_type),
+		return_value(return_value),
+		return_label(return_label)
 	{
 	}
 
@@ -56,11 +60,13 @@ struct return_macro: macro {
 		if (v->type != return_type)
 			throw compile_error(node, "wrong return type for function");
 
-		// TODO: maybe we should jump to a label instead.
-		// TODO: call destructors for scoped variables.
-		f->emit_move(v, 0, RAX);
-		f->emit_return();
+		if (return_value)
+			f->emit_move(v, return_value);
 
+		f->emit_jump(return_label);
+
+		// TODO: if the last "statement" in a function is a return, then we
+		// want that to be the return type/value of the expression.
 		return v;
 	}
 };
@@ -96,10 +102,25 @@ static value_ptr __construct_fun(value_type_ptr type, function_ptr f, scope_ptr 
 	auto new_f = std::make_shared<function>(false);
 	new_f->emit_prologue();
 
+	value_type_ptr return_type = type->return_type;
+	value_ptr return_value;
+	label return_label;
+
 	args_allocator regs;
 
+	// TODO: use multiple regs or pass on stack
+	// AMD64 ABI: return types with non-trivial copy constructors or destructors are
+	// passed through a pointer in the first argument.
+	assert(return_type);
+	if (return_type->size <= sizeof(unsigned long)) {
+		return_value = new_f->alloc_local_value(return_type);
+	} else {
+		return_value = new_f->alloc_local_pointer_value(type->return_type);
+		new_f->emit_move_address(regs.next(node), return_value);
+	}
+
 	auto new_scope = std::make_shared<scope>(s);
-	new_scope->define_builtin_macro("return", std::make_shared<return_macro>(new_f, new_scope, type->return_type));
+	new_scope->define_builtin_macro("return", std::make_shared<return_macro>(new_f, new_scope, return_type, return_value, return_label));
 
 	for (unsigned int i = 0; i < args.size(); ++i) {
 		auto arg_value = new_f->alloc_local_value(type->argument_types[i]);
@@ -109,16 +130,19 @@ static value_ptr __construct_fun(value_type_ptr type, function_ptr f, scope_ptr 
 
 	auto v = compile(new_f, new_scope, body_node);
 	auto v_type = v->type;
-	if (v_type != type->return_type)
+	if (v_type != return_type)
 		throw compile_error(node, "wrong return type for function");
 
-	// TODO: use multiple regs or pass on stack
-	if (v_type->size > sizeof(unsigned long))
-		throw compile_error(node, "return value too big to fit in register (%u bytes)", v_type->size);
+	new_f->emit_move(v, return_value);
 
-	if (v_type->size)
-		new_f->emit_move(v, 0, RAX);
+	new_f->emit_label(return_label);
+	if (return_type->size <= sizeof(unsigned long)) {
+		new_f->emit_move(return_value, 0, RAX);
+	} else {
+		new_f->emit_move_address(return_value, RAX);
+	}
 
+	new_f->link_label(return_label);
 	new_f->emit_epilogue();
 
 	// We need this to keep the new function from getting freed when this

@@ -19,6 +19,7 @@
 #ifndef V_BUILTIN_FUN_HH
 #define V_BUILTIN_FUN_HH
 
+#include <array>
 #include <set>
 
 #include "../ast.hh"
@@ -65,8 +66,27 @@ struct return_macro: macro {
 };
 
 // TODO: abstract away ABI details
-static machine_register args_regs[] = {
+
+static const machine_register regs[] = {
 	RDI, RSI, RDX, RCX, R8, R9,
+};
+
+struct args_allocator {
+	const machine_register *it;
+
+	args_allocator():
+		it(std::cbegin(regs))
+	{
+	}
+
+	machine_register next(ast_node_ptr node)
+	{
+		// TODO: use stack
+		if (it == std::cend(regs))
+			throw compile_error(node, "out of registers");
+
+		return *(it++);
+	}
 };
 
 // Low-level helper (for use after data has been extracted from syntax)
@@ -76,18 +96,19 @@ static value_ptr __construct_fun(value_type_ptr type, function_ptr f, scope_ptr 
 	auto new_f = std::make_shared<function>(false);
 	new_f->emit_prologue();
 
+	args_allocator regs;
+
 	auto new_scope = std::make_shared<scope>(s);
 	new_scope->define_builtin_macro("return", std::make_shared<return_macro>(new_f, new_scope, type->return_type));
 
 	for (unsigned int i = 0; i < args.size(); ++i) {
 		auto arg_value = new_f->alloc_local_value(type->argument_types[i]);
 		new_scope->define(node, args[i], arg_value);
-		new_f->emit_move(args_regs[i], arg_value, 0);
+		new_f->emit_move(regs.next(node), arg_value, 0);
 	}
 
 	auto v = compile(new_f, new_scope, body_node);
 	auto v_type = v->type;
-
 	if (v_type != type->return_type)
 		throw compile_error(node, "wrong return type for function");
 
@@ -160,6 +181,8 @@ static value_ptr _call_fun(function_ptr f, scope_ptr s, value_ptr fn, ast_node_p
 	if (args.size() != type->argument_types.size())
 		throw compile_error(node, "expected %u arguments; got %u", type->argument_types.size(), args.size());
 
+	args_allocator regs;
+
 	for (unsigned int i = 0; i < args.size(); ++i) {
 		auto arg_node = args[i].first;
 		auto arg_value = args[i].second;
@@ -167,7 +190,7 @@ static value_ptr _call_fun(function_ptr f, scope_ptr s, value_ptr fn, ast_node_p
 		if (type->argument_types[i] != arg_value->type)
 			throw compile_error(arg_node, "wrong argument type");
 
-		f->emit_move(arg_value, 0, args_regs[i]);
+		f->emit_move(arg_value, 0, regs.next(arg_node));
 	}
 
 	f->emit_call(fn);

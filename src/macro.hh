@@ -45,8 +45,8 @@ struct macro {
 };
 
 static auto builtin_type_macro = std::make_shared<value_type>(value_type {
-	.alignment = alignof(macro),
-	.size = sizeof(macro),
+	.alignment = alignof(macro_ptr),
+	.size = sizeof(macro_ptr),
 });
 
 // Helper for macros that can be implemented simply as a callback function

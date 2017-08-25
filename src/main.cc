@@ -24,6 +24,7 @@ extern "C" {
 #include <cstdio>
 
 #include "ast.hh"
+#include "builtin.hh"
 #include "builtin/assign.hh"
 #include "builtin/debug.hh"
 #include "builtin/define.hh"
@@ -32,6 +33,7 @@ extern "C" {
 #include "builtin/fun.hh"
 #include "builtin/if.hh"
 #include "builtin/operators.hh"
+#include "builtin/quote.hh"
 #include "builtin/u64.hh"
 #include "builtin/while.hh"
 #include "compile.hh"
@@ -85,6 +87,7 @@ static function_ptr compile_metaprogram(ast_node_ptr root)
 	global_scope->define_builtin_macro("if", builtin_macro_if);
 	global_scope->define_builtin_macro("while", builtin_macro_while);
 	global_scope->define_builtin_macro("fun", builtin_macro_fun);
+	global_scope->define_builtin_macro("quote", builtin_macro_quote);
 
 	global_scope->define_builtin_macro("print", builtin_macro_print);
 

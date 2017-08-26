@@ -225,7 +225,7 @@ static value_ptr _call_fun(function_ptr f, scope_ptr s, value_ptr fn, ast_node_p
 }
 
 // Low-level helper (for use after data has been extracted from syntax)
-static value_ptr _builtin_macro_fun(function_ptr f, scope_ptr s, value_type_ptr ret_type, std::vector<value_type_ptr> &argument_types)
+static value_ptr _builtin_macro_fun(value_type_ptr ret_type, const std::vector<value_type_ptr> &argument_types)
 {
 	value_type_ptr type;
 
@@ -278,7 +278,7 @@ static value_ptr builtin_macro_fun(function_ptr f, scope_ptr s, ast_node_ptr nod
 		argument_types.push_back(arg_type);
 	}
 
-	return _builtin_macro_fun(f, s, ret_type, argument_types);
+	return _builtin_macro_fun(ret_type, argument_types);
 }
 
 #endif

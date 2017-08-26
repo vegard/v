@@ -27,7 +27,7 @@
 
 static value_ptr builtin_macro_eval(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
-	return eval(f, s, node);
+	return eval(s, node);
 }
 
 #endif

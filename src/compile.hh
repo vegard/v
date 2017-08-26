@@ -116,7 +116,7 @@ static void run(function_ptr f)
 	munmap(mem, length);
 }
 
-static value_ptr eval(function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr eval(scope_ptr s, ast_node_ptr node)
 {
 	auto new_f = std::make_shared<function>(true);
 	new_f->emit_prologue();

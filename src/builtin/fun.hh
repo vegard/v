@@ -253,7 +253,7 @@ static value_ptr builtin_macro_fun(function_ptr f, scope_ptr s, ast_node_ptr nod
 		throw compile_error(node, "expected 'fun <expression> (<expression>)'");
 
 	auto ret_type_node = node->binop.lhs;
-	auto ret_type_value = eval(f, s, ret_type_node);
+	auto ret_type_value = eval(s, ret_type_node);
 	if (ret_type_value->storage_type != VALUE_GLOBAL)
 		throw compile_error(ret_type_node, "return type must be known at compile time");
 	if (ret_type_value->type != builtin_type_type)
@@ -268,7 +268,7 @@ static value_ptr builtin_macro_fun(function_ptr f, scope_ptr s, ast_node_ptr nod
 
 	std::vector<value_type_ptr> argument_types;
 	for (auto arg_type_node: traverse<AST_COMMA>(args_node)) {
-		value_ptr arg_type_value = eval(f, s, arg_type_node);
+		value_ptr arg_type_value = eval(s, arg_type_node);
 		if (arg_type_value->storage_type != VALUE_GLOBAL)
 			throw compile_error(arg_type_node, "argument type must be known at compile time");
 		if (arg_type_value->type != builtin_type_type)

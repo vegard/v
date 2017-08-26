@@ -166,7 +166,11 @@ struct function {
 	void emit_prologue()
 	{
 		comment("prologue");
-		// TODO
+
+		// pushq %rbx
+		// We save/restore %rbx because it's a callee saved register and
+		// we use it to store temporary values.
+		emit_byte(0x53);
 	}
 
 	void emit_return()
@@ -178,7 +182,10 @@ struct function {
 	void emit_epilogue()
 	{
 		comment("epilogue");
-		// TODO
+
+		// popq %rbx
+		emit_byte(0x5b);
+
 		emit_return();
 	}
 

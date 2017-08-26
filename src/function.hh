@@ -208,8 +208,23 @@ struct function {
 	{
 		// REX.W (+ REX.B)
 		bytes.push_back(REX | REX_W | (REX_R * (dest >= 8)) | (REX_B * (source >= 8)));
-		// Opcode
+		// Opcode: mov
 		bytes.push_back(0x8b);
+		// Mod-Reg-R/M
+		bytes.push_back(/* Mod */ 0x80 | /* Reg */ ((dest & 7) << 3) | /* R/M */ (source & 7));
+		// SIB
+		if (source == RSP)
+			bytes.push_back(0x24);
+		//bytes.push_back(0x24);
+		emit_long(source_offset);
+	}
+
+	void emit_move_reg_offset_to_reg(machine_register source, unsigned int source_offset, machine_register dest)
+	{
+		// REX.W (+ REX.B)
+		bytes.push_back(REX | REX_W | (REX_R * (dest >= 8)) | (REX_B * (source >= 8)));
+		// Opcode: lea
+		bytes.push_back(0x8d);
 		// Mod-Reg-R/M
 		bytes.push_back(/* Mod */ 0x80 | /* Reg */ ((dest & 7) << 3) | /* R/M */ (source & 7));
 		// SIB
@@ -240,8 +255,8 @@ struct function {
 			emit_move_mreg_offset_to_reg(RSP, source->local.offset + source_offset, dest);
 			break;
 		case VALUE_LOCAL_POINTER:
-			// TODO
-			assert(false);
+			emit_move_mreg_offset_to_reg(RSP, source->local.offset, RBX);
+			emit_move_mreg_offset_to_reg(RBX, source_offset, dest);
 			break;
 		case VALUE_CONSTANT:
 			emit_move_imm_to_reg(source->constant.u64 >> (8 * source_offset), dest);
@@ -297,6 +312,12 @@ struct function {
 	void emit_move_address(value_ptr source, machine_register dest)
 	{
 		switch (source->storage_type) {
+		case VALUE_GLOBAL:
+			emit_move_imm_to_reg((uint64_t) source->global.host_address, dest);
+			break;
+		case VALUE_LOCAL:
+			emit_move_reg_offset_to_reg(RSP, source->local.offset, dest);
+			break;
 		case VALUE_LOCAL_POINTER:
 			emit_move_mreg_offset_to_reg(RSP, source->local.offset, dest);
 			break;

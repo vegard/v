@@ -21,17 +21,11 @@
 
 #include <memory>
 
-struct value;
-typedef std::shared_ptr<value> value_ptr;
-
-struct function;
-typedef std::shared_ptr<function> function_ptr;
-
-struct scope;
-typedef std::shared_ptr<scope> scope_ptr;
-
-struct ast_node;
-typedef std::shared_ptr<ast_node> ast_node_ptr;
+#include "./ast.hh"
+#include "./builtin.hh"
+#include "./function.hh"
+#include "./scope.hh"
+#include "./value.hh"
 
 struct macro;
 typedef std::shared_ptr<macro> macro_ptr;

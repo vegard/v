@@ -124,8 +124,15 @@ static value_ptr __construct_fun(value_type_ptr type, function_ptr f, scope_ptr 
 
 	for (unsigned int i = 0; i < args.size(); ++i) {
 		auto arg_value = new_f->alloc_local_value(type->argument_types[i]);
+		auto arg_type = arg_value->type;
 		new_scope->define(node, args[i], arg_value);
-		new_f->emit_move(regs.next(node), arg_value, 0);
+
+		// TODO: should really use a "non-trivial *structor" flag
+		if (arg_type->size <= sizeof(unsigned long))
+			new_f->emit_move(regs.next(node), arg_value, 0);
+		else
+			// TODO
+			assert(false);
 	}
 
 	auto v = compile(new_f, new_scope, body_node);
@@ -207,21 +214,37 @@ static value_ptr _call_fun(function_ptr f, scope_ptr s, value_ptr fn, ast_node_p
 
 	args_allocator regs;
 
+	auto return_type = type->return_type;
+	auto return_value = f->alloc_local_value(return_type);
+
+	// TODO: should really use a "non-trivial *structor" flag
+	if (return_type->size <= sizeof(unsigned long))
+		;
+	else
+		f->emit_move_address(return_value, regs.next(node));
+
 	for (unsigned int i = 0; i < args.size(); ++i) {
 		auto arg_node = args[i].first;
 		auto arg_value = args[i].second;
 
-		if (type->argument_types[i] != arg_value->type)
+		auto arg_type = arg_value->type;
+		if (arg_type != type->argument_types[i])
 			throw compile_error(arg_node, "wrong argument type");
 
-		f->emit_move(arg_value, 0, regs.next(arg_node));
+		// TODO: should really use a "non-trivial *structor" flag
+		if (arg_type->size <= sizeof(unsigned long))
+			f->emit_move(arg_value, 0, regs.next(arg_node));
+		else
+			f->emit_move_address(arg_value, regs.next(arg_node));
 	}
 
 	f->emit_call(fn);
 
-	value_ptr ret_value = f->alloc_local_value(type->return_type);
-	f->emit_move(RAX, ret_value, 0);
-	return ret_value;
+	// TODO: should really use a "non-trivial *structor" flag
+	if (return_type->size <= sizeof(unsigned long))
+		f->emit_move(RAX, return_value, 0);
+
+	return return_value;
 }
 
 // Low-level helper (for use after data has been extracted from syntax)
@@ -230,9 +253,10 @@ static value_ptr _builtin_macro_fun(value_type_ptr ret_type, const std::vector<v
 	value_type_ptr type;
 
 	// Create new type for this signature
+	// TODO: use sizeof(void (*)())?
 	type = std::make_shared<value_type>();
-	type->alignment = 8;
-	type->size = 8;
+	type->alignment = alignof(void *);
+	type->size = sizeof(void *);
 	type->constructor = _construct_fun;
 	type->argument_types = argument_types;
 	type->return_type = ret_type;

@@ -82,12 +82,17 @@ struct function {
 	std::vector<uint8_t> bytes;
 	std::map<size_t, std::vector<std::string>> comments;
 
+	// offset (into "bytes") where we need to write the final frame size
+	// after we know how many locals we have.
+	unsigned long frame_size_addr;
+
 	unsigned int next_local_slot;
 
 	function(bool target_jit):
 		target_jit(target_jit),
 		// slot 0 is the return address
-		next_local_slot(8)
+		// slot 1 is the saved rbx
+		next_local_slot(16)
 	{
 	}
 
@@ -167,26 +172,49 @@ struct function {
 	{
 		comment("prologue");
 
+		// pushq %rbp
+		emit_byte(0x55);
+
+		// movq %rsp, %rbp
+		emit_byte(0x48);
+		emit_byte(0x89);
+		emit_byte(0xe5);
+
 		// pushq %rbx
 		// We save/restore %rbx because it's a callee saved register and
 		// we use it to store temporary values.
 		emit_byte(0x53);
-	}
 
-	void emit_return()
-	{
-		// retq
-		emit_byte(0xc3);
+		// subq $x, %rsp
+		emit_byte(0x48);
+		emit_byte(0x81);
+		emit_byte(0xec);
+		frame_size_addr = bytes.size();
+		emit_long_placeholder();
+
+		comment("end prologue");
 	}
 
 	void emit_epilogue()
 	{
 		comment("epilogue");
 
+		overwrite_long(frame_size_addr, next_local_slot);
+
+		// addq $x, %rsp
+		emit_byte(0x48);
+		emit_byte(0x81);
+		emit_byte(0xc4);
+		emit_long(next_local_slot);
+
 		// popq %rbx
 		emit_byte(0x5b);
 
-		emit_return();
+		// popq %rbp
+		emit_byte(0x5d);
+
+		// retq
+		emit_byte(0xc3);
 	}
 
 	void emit_move_reg_to_mreg_offset(machine_register source, machine_register dest, unsigned int dest_offset)
@@ -252,10 +280,10 @@ struct function {
 			emit_move_mreg_offset_to_reg(RBX, source_offset, dest);
 			break;
 		case VALUE_LOCAL:
-			emit_move_mreg_offset_to_reg(RSP, source->local.offset + source_offset, dest);
+			emit_move_mreg_offset_to_reg(RBP, source->local.offset + source_offset, dest);
 			break;
 		case VALUE_LOCAL_POINTER:
-			emit_move_mreg_offset_to_reg(RSP, source->local.offset, RBX);
+			emit_move_mreg_offset_to_reg(RBP, source->local.offset, RBX);
 			emit_move_mreg_offset_to_reg(RBX, source_offset, dest);
 			break;
 		case VALUE_CONSTANT:
@@ -273,10 +301,10 @@ struct function {
 			emit_move_reg_to_mreg_offset(source, RBX, dest_offset);
 			break;
 		case VALUE_LOCAL:
-			emit_move_reg_to_mreg_offset(source, RSP, dest->local.offset + dest_offset);
+			emit_move_reg_to_mreg_offset(source, RBP, dest->local.offset + dest_offset);
 			break;
 		case VALUE_LOCAL_POINTER:
-			emit_move_mreg_offset_to_reg(RSP, dest->local.offset, RBX);
+			emit_move_mreg_offset_to_reg(RBP, dest->local.offset, RBX);
 			emit_move_reg_to_mreg_offset(source, RBX, dest_offset);
 			break;
 		case VALUE_CONSTANT:
@@ -302,7 +330,7 @@ struct function {
 	{
 		switch (dest->storage_type) {
 		case VALUE_LOCAL_POINTER:
-			emit_move_reg_to_mreg_offset(source, RSP, dest->local.offset);
+			emit_move_reg_to_mreg_offset(source, RBP, dest->local.offset);
 			break;
 		default:
 			assert(false);
@@ -316,10 +344,10 @@ struct function {
 			emit_move_imm_to_reg((uint64_t) source->global.host_address, dest);
 			break;
 		case VALUE_LOCAL:
-			emit_move_reg_offset_to_reg(RSP, source->local.offset, dest);
+			emit_move_reg_offset_to_reg(RBP, source->local.offset, dest);
 			break;
 		case VALUE_LOCAL_POINTER:
-			emit_move_mreg_offset_to_reg(RSP, source->local.offset, dest);
+			emit_move_mreg_offset_to_reg(RBP, source->local.offset, dest);
 			break;
 		default:
 			assert(false);
@@ -438,7 +466,7 @@ struct function {
 			break;
 		case VALUE_LOCAL:
 			// TODO: optimise
-			emit_move_mreg_offset_to_reg(RSP, target->local.offset, RAX);
+			emit_move_mreg_offset_to_reg(RBP, target->local.offset, RAX);
 			emit_call(RAX);
 			break;
 		default:

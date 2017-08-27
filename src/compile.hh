@@ -121,12 +121,19 @@ static value_ptr eval(scope_ptr s, ast_node_ptr node)
 	auto new_f = std::make_shared<function>(true);
 	new_f->emit_prologue();
 	auto v = compile(new_f, s, node);
+
+	// Make sure we copy the value out to a new global in case the
+	// returned value is a local (which cannot be accessed outside
+	// "new_f" itself).
+	auto ret = std::make_shared<value>(VALUE_GLOBAL, v->type);
+	auto global = new uint8_t[v->type->size];
+	ret->global.host_address = (void *) global;
+	new_f->emit_move(v, ret);
+
 	new_f->emit_epilogue();
 
 	run(new_f);
-
-	// TODO
-	return v;
+	return ret;
 }
 
 static value_ptr compile_brackets(function_ptr f, scope_ptr s, ast_node_ptr node)

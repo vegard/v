@@ -47,9 +47,9 @@ static value_ptr builtin_macro_define(function_ptr f, scope_ptr s, ast_node_ptr 
 		// Create new local
 		val = f->alloc_local_value(rhs->type);
 	}
-	s->define(node, lhs->symbol_name, val);
-	f->emit_move(rhs, val);
 
+	s->define(f, node, lhs->symbol_name, val);
+	f->emit_move(rhs, val);
 	return val;
 }
 

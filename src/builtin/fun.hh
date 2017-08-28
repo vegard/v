@@ -125,7 +125,7 @@ static value_ptr __construct_fun(value_type_ptr type, function_ptr f, scope_ptr 
 	for (unsigned int i = 0; i < args.size(); ++i) {
 		auto arg_value = new_f->alloc_local_value(type->argument_types[i]);
 		auto arg_type = arg_value->type;
-		new_scope->define(node, args[i], arg_value);
+		new_scope->define(new_f, node, args[i], arg_value);
 
 		// TODO: should really use a "non-trivial *structor" flag
 		if (arg_type->size <= sizeof(unsigned long))

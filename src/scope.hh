@@ -24,6 +24,7 @@
 #include <string>
 
 #include "ast.hh"
+#include "compile_error.hh"
 #include "macro.hh"
 #include "value.hh"
 
@@ -33,8 +34,14 @@ typedef std::shared_ptr<scope> scope_ptr;
 // Map symbol names to values.
 // TODO: keep track of _where_ a symbol was defined?
 struct scope {
+	struct entry {
+		function_ptr f;
+		ast_node_ptr node;
+		value_ptr val;
+	};
+
 	scope_ptr parent;
-	std::map<std::string, value_ptr> contents;
+	std::map<std::string, entry> contents;
 
 	scope(scope_ptr parent = nullptr):
 		parent(parent)
@@ -45,9 +52,15 @@ struct scope {
 	{
 	}
 
-	void define(const ast_node_ptr def, const std::string name, value_ptr val)
+	void define(function_ptr f, ast_node_ptr node, const std::string name, value_ptr val)
 	{
-		contents[name] = val;
+		entry e = {
+			.f = f,
+			.node = node,
+			.val = val,
+		};
+
+		contents[name] = e;
 	}
 
 	// Helper for defining builtin types
@@ -57,7 +70,7 @@ struct scope {
 		auto type_value = std::make_shared<value>(VALUE_GLOBAL, builtin_type_type);
 		auto type_copy = new value_type_ptr(type);
 		type_value->global.host_address = (void *) type_copy;
-		contents[name] = type_value;
+		define(nullptr, nullptr, name, type_value);
 	}
 
 	// Helper for defining builtin macros
@@ -67,7 +80,7 @@ struct scope {
 		auto macro_value = std::make_shared<value>(VALUE_GLOBAL, builtin_type_macro);
 		auto macro_copy = new macro_ptr(m);
 		macro_value->global.host_address = (void *) macro_copy;
-		contents[name] = macro_value;
+		define(nullptr, nullptr, name, macro_value);
 	}
 
 	void define_builtin_macro(const std::string name, value_ptr (*fn)(function_ptr, scope_ptr, ast_node_ptr))
@@ -75,15 +88,24 @@ struct scope {
 		return define_builtin_macro(name, std::make_shared<simple_macro>(fn));
 	}
 
-	value_ptr lookup(const std::string name)
+	value_ptr lookup(function_ptr f, ast_node_ptr node, const std::string name)
 	{
 		auto it = contents.find(name);
-		if (it != contents.end())
-			return it->second;
+		if (it != contents.end()) {
+			// We can always access globals
+			auto val = it->second.val;
+			if (val->storage_type == VALUE_GLOBAL || val->storage_type == VALUE_CONSTANT)
+				return val;
+
+			if (it->second.f != f)
+				throw compile_error(node, "cannot access local of different function");
+
+			return val;
+		}
 
 		// Recursively search parent scopes
 		if (parent)
-			return parent->lookup(name);
+			return parent->lookup(f, node, name);
 
 		return nullptr;
 	}

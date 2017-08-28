@@ -22,23 +22,10 @@
 #include "libudis86/extern.h"
 
 #include "ast.hh"
+#include "compile_error.hh"
 #include "format.hh"
 #include "function.hh"
 #include "scope.hh"
-
-struct compile_error: std::runtime_error {
-	unsigned int pos;
-	unsigned int end;
-
-	template<typename... Args>
-	compile_error(const ast_node_ptr &node, const char *fmt, Args... args):
-		std::runtime_error(format(fmt, args...)),
-		pos(node->pos),
-		end(node->end)
-	{
-		assert(end >= pos);
-	}
-};
 
 static value_ptr compile(function_ptr f, scope_ptr s, ast_node_ptr node);
 
@@ -180,7 +167,7 @@ static value_ptr compile_juxtapose(function_ptr f, scope_ptr s, ast_node_ptr nod
 
 static value_ptr compile_symbol_name(function_ptr f, scope_ptr s, ast_node_ptr node)
 {
-	auto ret = s->lookup(node->symbol_name);
+	auto ret = s->lookup(f, node, node->symbol_name);
 	if (!ret)
 		throw compile_error(node, "could not resolve symbol %s", node->symbol_name.c_str());
 

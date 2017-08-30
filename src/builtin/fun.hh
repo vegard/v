@@ -123,16 +123,18 @@ static value_ptr __construct_fun(value_type_ptr type, context_ptr c, function_pt
 	new_scope->define_builtin_macro("return", std::make_shared<return_macro>(new_f, new_scope, return_type, return_value, return_label));
 
 	for (unsigned int i = 0; i < args.size(); ++i) {
-		auto arg_value = new_f->alloc_local_value(type->argument_types[i]);
-		auto arg_type = arg_value->type;
-		new_scope->define(c, new_f, node, args[i], arg_value);
+		auto arg_type = type->argument_types[i];
+		value_ptr arg_value;
 
-		// TODO: should really use a "non-trivial *structor" flag
-		if (arg_type->size <= sizeof(unsigned long))
+		if (arg_type->size <= sizeof(unsigned long)) {
+			arg_value = new_f->alloc_local_value(arg_type);
 			new_f->emit_move(regs.next(node), arg_value, 0);
-		else
-			// TODO
-			assert(false);
+		} else {
+			arg_value = new_f->alloc_local_pointer_value(arg_type);
+			new_f->emit_move_address(regs.next(node), arg_value);
+		}
+
+		new_scope->define(c, new_f, node, args[i], arg_value);
 	}
 
 	auto v = compile(c, new_f, new_scope, body_node);

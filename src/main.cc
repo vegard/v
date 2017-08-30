@@ -56,6 +56,7 @@ static value_ptr builtin_macro_print(context_ptr c, function_ptr f, scope_ptr s,
 
 	// TODO: save registers
 	auto arg = compile(c, f, s, node);
+	assert(arg->type == builtin_type_u64);
 	f->emit_move(arg, 0, RDI);
 	f->emit_call(print_fn);
 

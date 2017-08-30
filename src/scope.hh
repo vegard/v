@@ -116,6 +116,17 @@ struct scope {
 		if (it != contents.end()) {
 			const auto &entry = it->second;
 
+#if 0
+			printf("lookup of %s\n", name.c_str());
+			printf("current context = \n");
+			for (auto tmp = c; tmp; tmp = tmp->parent)
+				printf(" - %p\n", tmp.get());
+			printf("def context = \n");
+			for (auto tmp = entry.c; tmp; tmp = tmp->parent)
+				printf(" - %p\n", tmp.get());
+			printf("\n");
+#endif
+
 			assert(c);
 			while (true) {
 				c = c->parent;

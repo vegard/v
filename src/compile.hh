@@ -206,7 +206,7 @@ static value_ptr compile(context_ptr c, function_ptr f, scope_ptr s, ast_node_pt
 	default:
 		node->dump(stderr);
 		fprintf(stderr, "\n");
-		throw compile_error(node, "internal compiler error: unrecognised AST node type");
+		throw compile_error(node, "internal compiler error: unrecognised AST node type %u", node->type);
 	}
 
 	assert(false);

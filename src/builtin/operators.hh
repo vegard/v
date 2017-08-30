@@ -26,7 +26,7 @@
 #include "../value.hh"
 
 template<operator_fn_type value_type::*operator_fn>
-static value_ptr call_operator_fn(function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr call_operator_fn(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	// So this is probably a result of something like (x + y), which got
 	// parsed as (juxtapose _add (juxtapose x y)).
@@ -51,44 +51,44 @@ static value_ptr call_operator_fn(function_ptr f, scope_ptr s, ast_node_ptr node
 		throw compile_error(node, "expected juxtaposition");
 
 	// TODO: only evaluate the type so we don't evaluate the value twice
-	auto lhs = compile(f, s, node->binop.lhs);
+	auto lhs = compile(c, f, s, node->binop.lhs);
 	auto lhs_type = lhs->type;
 
 	auto callback_fn = (*lhs_type).*operator_fn;
 	if (!callback_fn)
 		throw compile_error(node, "type doesn't support operation");
 
-	return callback_fn(f, s, lhs, node);
+	return callback_fn(c, f, s, lhs, node);
 }
 
-static value_ptr builtin_macro_add(function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_add(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
-	return call_operator_fn<&value_type::add>(f, s, node);
+	return call_operator_fn<&value_type::add>(c, f, s, node);
 }
 
-static value_ptr builtin_macro_subtract(function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_subtract(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
-	return call_operator_fn<&value_type::subtract>(f, s, node);
+	return call_operator_fn<&value_type::subtract>(c, f, s, node);
 }
 
-static value_ptr builtin_macro_less(function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_less(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
-	return call_operator_fn<&value_type::less>(f, s, node);
+	return call_operator_fn<&value_type::less>(c, f, s, node);
 }
 
-static value_ptr builtin_macro_less_equal(function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_less_equal(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
-	return call_operator_fn<&value_type::less_equal>(f, s, node);
+	return call_operator_fn<&value_type::less_equal>(c, f, s, node);
 }
 
-static value_ptr builtin_macro_greater(function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_greater(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
-	return call_operator_fn<&value_type::greater>(f, s, node);
+	return call_operator_fn<&value_type::greater>(c, f, s, node);
 }
 
-static value_ptr builtin_macro_greater_equal(function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_greater_equal(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
-	return call_operator_fn<&value_type::greater_equal>(f, s, node);
+	return call_operator_fn<&value_type::greater_equal>(c, f, s, node);
 }
 
 #endif

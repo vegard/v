@@ -35,7 +35,7 @@ struct macro {
 	{
 	}
 
-	virtual value_ptr invoke(function_ptr ptr, scope_ptr s, ast_node_ptr node) = 0;
+	virtual value_ptr invoke(context_ptr, function_ptr ptr, scope_ptr s, ast_node_ptr node) = 0;
 };
 
 static auto builtin_type_macro = std::make_shared<value_type>(value_type {
@@ -45,9 +45,9 @@ static auto builtin_type_macro = std::make_shared<value_type>(value_type {
 
 // Helper for macros that can be implemented simply as a callback function
 struct simple_macro: macro {
-	value_ptr (*fn)(function_ptr, scope_ptr, ast_node_ptr);
+	value_ptr (*fn)(context_ptr, function_ptr, scope_ptr, ast_node_ptr);
 
-	simple_macro(value_ptr (*fn)(function_ptr, scope_ptr, ast_node_ptr)):
+	simple_macro(value_ptr (*fn)(context_ptr, function_ptr, scope_ptr, ast_node_ptr)):
 		fn(fn)
 	{
 	}
@@ -56,9 +56,9 @@ struct simple_macro: macro {
 	{
 	}
 
-	value_ptr invoke(function_ptr ptr, scope_ptr s, ast_node_ptr node)
+	value_ptr invoke(context_ptr c, function_ptr ptr, scope_ptr s, ast_node_ptr node)
 	{
-		return fn(ptr, s, node);
+		return fn(c, ptr, s, node);
 	}
 };
 

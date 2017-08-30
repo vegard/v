@@ -25,7 +25,7 @@
 #include "../scope.hh"
 #include "../value.hh"
 
-static value_ptr builtin_macro_if(function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_if(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	// Extract condition, true block, and false block (if any) from AST
 	//
@@ -74,7 +74,7 @@ static value_ptr builtin_macro_if(function_ptr f, scope_ptr s, ast_node_ptr node
 	value_ptr return_value;
 
 	// "if" condition
-	auto condition_value = compile(f, s, condition_node);
+	auto condition_value = compile(c, f, s, condition_node);
 	if (condition_value->type != builtin_type_boolean)
 		throw compile_error(condition_node, "'if' condition must be boolean");
 
@@ -82,7 +82,7 @@ static value_ptr builtin_macro_if(function_ptr f, scope_ptr s, ast_node_ptr node
 	f->emit_jump_if_zero(condition_value, false_label);
 
 	// "if" block
-	auto true_value = compile(f, s, true_node);
+	auto true_value = compile(c, f, s, true_node);
 	if (true_value->type != builtin_type_void) {
 		return_value = f->alloc_local_value(true_value->type);
 		f->emit_move(true_value, return_value);
@@ -95,7 +95,7 @@ static value_ptr builtin_macro_if(function_ptr f, scope_ptr s, ast_node_ptr node
 	f->emit_label(false_label);
 	value_ptr false_value;
 	if (false_node) {
-		false_value = compile(f, s, false_node);
+		false_value = compile(c, f, s, false_node);
 		if (false_value->type != builtin_type_void && false_value->type == true_value->type)
 			f->emit_move(false_value, return_value);
 	}

@@ -31,10 +31,31 @@
 struct scope;
 typedef std::shared_ptr<scope> scope_ptr;
 
+// Evaluation context (used to detect when trying to evaluate a symbol which
+// was defined in the same context)
+struct context;
+typedef std::shared_ptr<context> context_ptr;
+
+struct context {
+	context_ptr parent;
+
+	// No default argument for the parent, since that makes it easier
+	// to introduce bugs if you forget it
+	context(context_ptr parent):
+		parent(parent)
+	{
+	}
+
+	~context()
+	{
+	}
+};
+
 // Map symbol names to values.
 // TODO: keep track of _where_ a symbol was defined?
 struct scope {
 	struct entry {
+		context_ptr c;
 		function_ptr f;
 		ast_node_ptr node;
 		value_ptr val;
@@ -52,9 +73,10 @@ struct scope {
 	{
 	}
 
-	void define(function_ptr f, ast_node_ptr node, const std::string name, value_ptr val)
+	void define(context_ptr c, function_ptr f, ast_node_ptr node, const std::string name, value_ptr val)
 	{
 		entry e = {
+			.c = c,
 			.f = f,
 			.node = node,
 			.val = val,
@@ -70,7 +92,7 @@ struct scope {
 		auto type_value = std::make_shared<value>(VALUE_GLOBAL, builtin_type_type);
 		auto type_copy = new value_type_ptr(type);
 		type_value->global.host_address = (void *) type_copy;
-		define(nullptr, nullptr, name, type_value);
+		define(nullptr, nullptr, nullptr, name, type_value);
 	}
 
 	// Helper for defining builtin macros
@@ -80,32 +102,44 @@ struct scope {
 		auto macro_value = std::make_shared<value>(VALUE_GLOBAL, builtin_type_macro);
 		auto macro_copy = new macro_ptr(m);
 		macro_value->global.host_address = (void *) macro_copy;
-		define(nullptr, nullptr, name, macro_value);
+		define(nullptr, nullptr, nullptr, name, macro_value);
 	}
 
-	void define_builtin_macro(const std::string name, value_ptr (*fn)(function_ptr, scope_ptr, ast_node_ptr))
+	void define_builtin_macro(const std::string name, value_ptr (*fn)(context_ptr, function_ptr, scope_ptr, ast_node_ptr))
 	{
 		return define_builtin_macro(name, std::make_shared<simple_macro>(fn));
 	}
 
-	value_ptr lookup(function_ptr f, ast_node_ptr node, const std::string name)
+	value_ptr lookup(context_ptr c, function_ptr f, ast_node_ptr node, const std::string name)
 	{
 		auto it = contents.find(name);
 		if (it != contents.end()) {
+			const auto &entry = it->second;
+
+			assert(c);
+			while (true) {
+				c = c->parent;
+				if (!c)
+					break;
+
+				if (c == entry.c)
+					throw compile_error(node, "cannot access run-time variable %s at compile time", name.c_str());
+			}
+
 			// We can always access globals
-			auto val = it->second.val;
+			auto val = entry.val;
 			if (val->storage_type == VALUE_GLOBAL || val->storage_type == VALUE_CONSTANT)
 				return val;
 
-			if (it->second.f != f)
-				throw compile_error(node, "cannot access local of different function");
+			if (f != entry.f)
+				throw compile_error(node, "cannot access local variable %s of different function", name.c_str());
 
 			return val;
 		}
 
 		// Recursively search parent scopes
 		if (parent)
-			return parent->lookup(f, node, name);
+			return parent->lookup(c, f, node, name);
 
 		return nullptr;
 	}

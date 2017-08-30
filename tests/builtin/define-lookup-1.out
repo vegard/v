@@ -1,0 +1,3 @@
+tests/builtin/define-lookup-1.v:3:0: cannot access run-time variable t at compile time
+t () u64 0;
+^

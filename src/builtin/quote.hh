@@ -26,7 +26,7 @@
 #include "../scope.hh"
 #include "../value.hh"
 
-static value_ptr builtin_macro_quote(function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_quote(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	auto ret = std::make_shared<value>(VALUE_GLOBAL, builtin_type_ast_node);
 	auto global = new ast_node_ptr(node);

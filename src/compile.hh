@@ -27,7 +27,7 @@
 #include "function.hh"
 #include "scope.hh"
 
-static value_ptr compile(function_ptr f, scope_ptr s, ast_node_ptr node);
+static value_ptr compile(context_ptr, function_ptr f, scope_ptr s, ast_node_ptr node);
 
 static void disassemble(const uint8_t *buf, size_t len, uint64_t pc, const std::map<size_t, std::vector<std::string>> &comments)
 {
@@ -103,11 +103,12 @@ static void run(function_ptr f)
 	munmap(mem, length);
 }
 
-static value_ptr eval(scope_ptr s, ast_node_ptr node)
+static value_ptr eval(context_ptr c, scope_ptr s, ast_node_ptr node)
 {
+	auto new_c = std::make_shared<context>(c);
 	auto new_f = std::make_shared<function>(true);
 	new_f->emit_prologue();
-	auto v = compile(new_f, s, node);
+	auto v = compile(new_c, new_f, s, node);
 
 	// Make sure we copy the value out to a new global in case the
 	// returned value is a local (which cannot be accessed outside
@@ -123,81 +124,85 @@ static value_ptr eval(scope_ptr s, ast_node_ptr node)
 	return ret;
 }
 
-static value_ptr compile_brackets(function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr compile_brackets(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
-	return compile(f, s, node->unop);
+	return compile(c, f, s, node->unop);
 }
 
-static value_ptr compile_curly_brackets(function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr compile_curly_brackets(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	// Curly brackets create a new scope parented to the old one
 	auto new_scope = std::make_shared<scope>(s);
-	return compile(f, new_scope, node->unop);
+	return compile(c, f, new_scope, node->unop);
 }
 
-static value_ptr compile_juxtapose(function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr compile_juxtapose(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
-	auto lhs = compile(f, s, node->binop.lhs);
+	auto lhs = compile(c, f, s, node->binop.lhs);
 	auto lhs_type = lhs->type;
 	if (lhs_type == builtin_type_macro) {
-		assert(lhs->storage_type == VALUE_GLOBAL);
-
 		// macros are evaluated directly
-		auto m = *(macro_ptr *) lhs->global.host_address;
-		return m->invoke(f, s, node->binop.rhs);
+		auto val = eval(c, s, node->binop.lhs);
+		assert(val->storage_type == VALUE_GLOBAL);
+		assert(val->type == lhs_type);
+
+		auto m = *(macro_ptr *) val->global.host_address;
+		return m->invoke(c, f, s, node->binop.rhs);
 	}
 
 	if (lhs_type == builtin_type_type) {
-		assert(lhs->storage_type == VALUE_GLOBAL);
+		auto val = eval(c, s, node->binop.lhs);
+		assert(val->storage_type == VALUE_GLOBAL);
+		assert(val->type == lhs_type);
 
 		// call type's constructor
-		auto type = *(value_type_ptr *) lhs->global.host_address;
+		auto type = *(value_type_ptr *) val->global.host_address;
 		if (!type->constructor)
 			throw compile_error(node, "type doesn't have a constructor");
 
 		// TODO: functions as constructors
-		return type->constructor(type, f, s, node->binop.rhs);
+		return type->constructor(type, c, f, s, node->binop.rhs);
 	}
 
 	if (lhs_type->call)
-		return lhs_type->call(f, s, lhs, node->binop.rhs);
+		return lhs_type->call(c, f, s, lhs, node->binop.rhs);
 
 	throw compile_error(node, "type is not callable");
 }
 
-static value_ptr compile_symbol_name(function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr compile_symbol_name(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
-	auto ret = s->lookup(f, node, node->symbol_name);
+	auto ret = s->lookup(c, f, node, node->symbol_name);
 	if (!ret)
 		throw compile_error(node, "could not resolve symbol %s", node->symbol_name.c_str());
 
 	return ret;
 }
 
-static value_ptr compile_semicolon(function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr compile_semicolon(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	// TODO: should we return the result of compiling LHS or void?
-	compile(f, s, node->binop.lhs);
-	return compile(f, s, node->binop.rhs);
+	compile(c, f, s, node->binop.lhs);
+	return compile(c, f, s, node->binop.rhs);
 }
 
-static value_ptr compile(function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr compile(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	switch (node->type) {
 	case AST_LITERAL_INTEGER:
 		throw compile_error(node, "unexpected integer literal");
 
 	case AST_BRACKETS:
-		return compile_brackets(f, s, node);
+		return compile_brackets(c, f, s, node);
 	case AST_CURLY_BRACKETS:
-		return compile_curly_brackets(f, s, node);
+		return compile_curly_brackets(c, f, s, node);
 
 	case AST_JUXTAPOSE:
-		return compile_juxtapose(f, s, node);
+		return compile_juxtapose(c, f, s, node);
 	case AST_SYMBOL_NAME:
-		return compile_symbol_name(f, s, node);
+		return compile_symbol_name(c, f, s, node);
 	case AST_SEMICOLON:
-		return compile_semicolon(f, s, node);
+		return compile_semicolon(c, f, s, node);
 	default:
 		node->dump(stderr);
 		fprintf(stderr, "\n");

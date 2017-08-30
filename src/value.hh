@@ -34,6 +34,9 @@ typedef std::shared_ptr<value_type> value_type_ptr;
 struct value;
 typedef std::shared_ptr<value> value_ptr;
 
+struct context;
+typedef std::shared_ptr<context> context_ptr;
+
 struct function;
 typedef std::shared_ptr<function> function_ptr;
 
@@ -43,7 +46,7 @@ typedef std::shared_ptr<scope> scope_ptr;
 struct ast_node;
 typedef std::shared_ptr<ast_node> ast_node_ptr;
 
-typedef value_ptr (*operator_fn_type)(function_ptr, scope_ptr, value_ptr, ast_node_ptr);
+typedef value_ptr (*operator_fn_type)(context_ptr, function_ptr, scope_ptr, value_ptr, ast_node_ptr);
 
 struct value_type {
 	// TODO
@@ -51,12 +54,12 @@ struct value_type {
 	unsigned int size;
 
 	// TODO
-	value_ptr (*constructor)(value_type_ptr, function_ptr, scope_ptr, ast_node_ptr);
+	value_ptr (*constructor)(value_type_ptr, context_ptr, function_ptr, scope_ptr, ast_node_ptr);
 
 	// Operators
 	std::vector<value_type_ptr> argument_types;
 	value_type_ptr return_type;
-	value_ptr (*call)(function_ptr, scope_ptr, value_ptr, ast_node_ptr);
+	value_ptr (*call)(context_ptr, function_ptr, scope_ptr, value_ptr, ast_node_ptr);
 
 	operator_fn_type add;
 	operator_fn_type subtract;

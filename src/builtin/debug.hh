@@ -25,7 +25,7 @@
 #include "../scope.hh"
 #include "../value.hh"
 
-static value_ptr builtin_macro_debug(function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_debug(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	// TODO: need context so we can print line numbers and stuff too
 	node->dump();

@@ -38,7 +38,7 @@ struct break_macro: macro {
 	{
 	}
 
-	value_ptr invoke(function_ptr f, scope_ptr s, ast_node_ptr node)
+	value_ptr invoke(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 	{
 		if (this->f != f)
 			throw compile_error(node, "'break' used outside defining function");
@@ -67,7 +67,7 @@ struct continue_macro: macro {
 	{
 	}
 
-	value_ptr invoke(function_ptr f, scope_ptr s, ast_node_ptr node)
+	value_ptr invoke(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 	{
 		if (this->f != f)
 			throw compile_error(node, "'continue' used outside defining function");
@@ -85,7 +85,7 @@ struct continue_macro: macro {
 };
 
 
-static value_ptr builtin_macro_while(function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_while(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	f->comment("while");
 
@@ -99,7 +99,7 @@ static value_ptr builtin_macro_while(function_ptr f, scope_ptr s, ast_node_ptr n
 	f->emit_label(loop_label);
 
 	// condition
-	auto condition_value = compile(f, s, condition_node);
+	auto condition_value = compile(c, f, s, condition_node);
 	if (condition_value->type != builtin_type_boolean)
 		throw compile_error(condition_node, "'while' condition must be boolean");
 
@@ -111,7 +111,7 @@ static value_ptr builtin_macro_while(function_ptr f, scope_ptr s, ast_node_ptr n
 	new_scope->define_builtin_macro("break", std::make_shared<break_macro>(f, new_scope, done_label));
 	new_scope->define_builtin_macro("continue", std::make_shared<break_macro>(f, new_scope, loop_label));
 
-	compile(f, new_scope, body_node);
+	compile(c, f, new_scope, body_node);
 	f->emit_jump(loop_label);
 
 	f->emit_label(done_label);

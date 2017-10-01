@@ -262,7 +262,7 @@ static value_ptr _builtin_macro_fun(value_type_ptr ret_type, const std::vector<v
 	type->constructor = _construct_fun;
 	type->argument_types = argument_types;
 	type->return_type = ret_type;
-	type->call = _call_fun;
+	type->members["_call"] = _call_fun;
 
 	// XXX: refcounting
 	auto type_value = std::make_shared<value>(VALUE_GLOBAL, builtin_type_type);

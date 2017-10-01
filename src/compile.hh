@@ -184,8 +184,9 @@ static value_ptr compile_juxtapose(context_ptr c, function_ptr f, scope_ptr s, a
 		return type->constructor(type, c, f, s, node->binop.rhs);
 	}
 
-	if (lhs_type->call)
-		return lhs_type->call(c, f, s, lhs, node->binop.rhs);
+	auto it = lhs_type->members.find("_call");
+	if (it != lhs_type->members.end())
+		return it->second(c, f, s, lhs, node->binop.rhs);
 
 	throw compile_error(node, "type is not callable");
 }

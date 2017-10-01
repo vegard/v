@@ -136,6 +136,26 @@ static value_ptr compile_curly_brackets(context_ptr c, function_ptr f, scope_ptr
 	return compile(c, f, new_scope, node->unop);
 }
 
+static value_ptr compile_member(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+{
+	assert(node->type == AST_MEMBER);
+
+	auto lhs = compile(c, f, s, node->binop.lhs);
+	auto lhs_type = lhs->type;
+
+	auto rhs_node = node->binop.rhs;
+	if (rhs_node->type != AST_SYMBOL_NAME)
+		// TODO: say which AST node type we got instead of a symbol name
+		throw compile_error(node, "member name must be a symbol");
+
+	auto it = lhs_type->members.find(rhs_node->literal_string);
+	if (it == lhs_type->members.end())
+		throw compile_error(node, "unknown member: %s", rhs_node->literal_string.c_str());
+
+	auto callback_fn = it->second;
+	return callback_fn(c, f, s, lhs, node);
+}
+
 static value_ptr compile_juxtapose(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	auto lhs = compile(c, f, s, node->binop.lhs);
@@ -197,6 +217,8 @@ static value_ptr compile(context_ptr c, function_ptr f, scope_ptr s, ast_node_pt
 	case AST_CURLY_BRACKETS:
 		return compile_curly_brackets(c, f, s, node);
 
+	case AST_MEMBER:
+		return compile_member(c, f, s, node);
 	case AST_JUXTAPOSE:
 		return compile_juxtapose(c, f, s, node);
 	case AST_SYMBOL_NAME:

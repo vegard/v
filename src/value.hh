@@ -61,6 +61,9 @@ struct value_type {
 	value_type_ptr return_type;
 	value_ptr (*call)(context_ptr, function_ptr, scope_ptr, value_ptr, ast_node_ptr);
 
+	// Members
+	std::map<std::string, operator_fn_type> members;
+
 	operator_fn_type add;
 	operator_fn_type subtract;
 

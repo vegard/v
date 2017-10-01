@@ -62,4 +62,28 @@ struct simple_macro: macro {
 	}
 };
 
+// Helper for macros that operate on a (compile-time) value.
+// This is used for example when compiling (x + y); here, 'x' is first
+// compiled (so we can get its type), then an '_add' macro is called with
+// 'x' as a value and 'y' as an unevaluated AST node.
+struct val_macro: macro {
+	value_ptr (*fn)(context_ptr, function_ptr, scope_ptr, value_ptr, ast_node_ptr);
+	value_ptr val;
+
+	val_macro(value_ptr (*fn)(context_ptr, function_ptr, scope_ptr, value_ptr, ast_node_ptr), value_ptr val):
+		fn(fn),
+		val(val)
+	{
+	}
+
+	~val_macro()
+	{
+	}
+
+	value_ptr invoke(context_ptr c, function_ptr ptr, scope_ptr s, ast_node_ptr node)
+	{
+		return fn(c, ptr, s, val, node);
+	}
+};
+
 #endif

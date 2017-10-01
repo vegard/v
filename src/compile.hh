@@ -152,8 +152,20 @@ static value_ptr compile_member(context_ptr c, function_ptr f, scope_ptr s, ast_
 	if (it == lhs_type->members.end())
 		throw compile_error(node, "unknown member: %s", rhs_node->literal_string.c_str());
 
+#if 1 // this should get moved so that lhs_type->members[] maps directly to a macro
 	auto callback_fn = it->second;
-	return callback_fn(c, f, s, lhs, node);
+
+	auto m = std::make_shared<val_macro>(callback_fn, lhs);
+
+	auto macro_value = std::make_shared<value>(VALUE_GLOBAL, builtin_type_macro);
+	auto macro_copy = new macro_ptr(m);
+	macro_value->global.host_address = (void *) macro_copy;
+
+	return macro_value;
+#else
+	auto callback_fn = it->second;
+	return val_macro(callback_fn, lhs);
+#endif
 }
 
 static value_ptr compile_juxtapose(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)

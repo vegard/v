@@ -63,14 +63,6 @@ struct value_type {
 
 	// Members
 	std::map<std::string, operator_fn_type> members;
-
-	operator_fn_type add;
-	operator_fn_type subtract;
-
-	operator_fn_type less;
-	operator_fn_type less_equal;
-	operator_fn_type greater;
-	operator_fn_type greater_equal;
 };
 
 struct value {

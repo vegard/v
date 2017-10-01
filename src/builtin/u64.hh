@@ -34,9 +34,11 @@ static auto builtin_type_u64 = std::make_shared<value_type>(value_type {
 	.argument_types = std::vector<value_type_ptr>(),
 	.return_type = value_type_ptr(),
 	.call = nullptr,
-	.add = &builtin_type_u64_add,
-	.subtract = &builtin_type_u64_subtract,
-	.less = &builtin_type_u64_less,
+	.members = std::map<std::string, operator_fn_type>({
+		{"_add", &builtin_type_u64_add},
+		{"_subtract", &builtin_type_u64_subtract},
+		{"_less", &builtin_type_u64_less},
+	}),
 });
 
 static value_ptr builtin_type_u64_constructor(value_type_ptr type, context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)

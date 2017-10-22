@@ -15,7 +15,6 @@ Getting started
 
 Building:
 
-    git submodule update --init
     ./configure.sh
     ./make.sh
 

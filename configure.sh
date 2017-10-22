@@ -12,4 +12,5 @@ udis86_prefix=$PWD/udis86-install
 	cd udis86
 	./autogen.sh
 	./configure --enable-static=yes --enable-shared=no --prefix="${udis86_prefix}"
+	make install
 )

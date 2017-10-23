@@ -49,6 +49,12 @@ static void _print(uint64_t x)
 
 static value_ptr builtin_macro_print(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
+#if 0
+	printf("print: ");
+	node->dump(stdout);
+	printf("\n");
+#endif
+
 	auto print_fn = std::make_shared<value>(c, VALUE_GLOBAL, builtin_type_u64);
 	auto global = new void *;
 	*global = (void *) &_print;

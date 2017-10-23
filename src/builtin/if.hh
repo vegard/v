@@ -108,7 +108,7 @@ static value_ptr builtin_macro_if(context_ptr c, function_ptr f, scope_ptr s, as
 	f->link_label(end_label);
 
 	if (!return_value || !false_value || true_value->type != false_value->type)
-		return_value = std::make_shared<value>(nullptr, VALUE_CONSTANT, builtin_type_void);
+		return_value = builtin_value_void;
 
 	return return_value;
 }

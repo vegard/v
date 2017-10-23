@@ -68,7 +68,7 @@ static value_ptr builtin_macro_print(context_ptr c, function_ptr f, scope_ptr s,
 	f->emit_move(arg, 0, RDI);
 	f->emit_call(print_fn);
 
-	return std::make_shared<value>(nullptr, VALUE_CONSTANT, builtin_type_void);
+	return builtin_value_void;
 }
 
 static function_ptr compile_metaprogram(ast_node_ptr root)

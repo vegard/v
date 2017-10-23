@@ -51,7 +51,7 @@ struct break_macro: macro {
 		f->comment("break");
 		f->emit_jump(done_label);
 
-		return std::make_shared<value>(nullptr, VALUE_CONSTANT, builtin_type_void);
+		return builtin_value_void;
 	}
 };
 
@@ -80,7 +80,7 @@ struct continue_macro: macro {
 		f->comment("continue");
 		f->emit_jump(loop_label);
 
-		return std::make_shared<value>(nullptr, VALUE_CONSTANT, builtin_type_void);
+		return builtin_value_void;
 	}
 };
 
@@ -120,7 +120,7 @@ static value_ptr builtin_macro_while(context_ptr c, function_ptr f, scope_ptr s,
 	f->link_label(loop_label);
 	f->link_label(done_label);
 
-	return std::make_shared<value>(nullptr, VALUE_CONSTANT, builtin_type_void);
+	return builtin_value_void;
 }
 
 #endif

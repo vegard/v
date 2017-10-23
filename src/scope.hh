@@ -55,7 +55,6 @@ struct context {
 // TODO: keep track of _where_ a symbol was defined?
 struct scope {
 	struct entry {
-		context_ptr c;
 		function_ptr f;
 		ast_node_ptr node;
 		value_ptr val;
@@ -73,10 +72,9 @@ struct scope {
 	{
 	}
 
-	void define(context_ptr c, function_ptr f, ast_node_ptr node, const std::string name, value_ptr val)
+	void define(function_ptr f, ast_node_ptr node, const std::string name, value_ptr val)
 	{
 		entry e = {
-			.c = c,
 			.f = f,
 			.node = node,
 			.val = val,
@@ -89,20 +87,20 @@ struct scope {
 	// NOTE: builtin types are always global
 	void define_builtin_type(const std::string name, value_type_ptr type)
 	{
-		auto type_value = std::make_shared<value>(VALUE_GLOBAL, builtin_type_type);
+		auto type_value = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_type);
 		auto type_copy = new value_type_ptr(type);
 		type_value->global.host_address = (void *) type_copy;
-		define(nullptr, nullptr, nullptr, name, type_value);
+		define(nullptr, nullptr, name, type_value);
 	}
 
 	// Helper for defining builtin macros
 	// NOTE: builtin macros are always global
 	void define_builtin_macro(const std::string name, macro_ptr m)
 	{
-		auto macro_value = std::make_shared<value>(VALUE_GLOBAL, builtin_type_macro);
+		auto macro_value = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_macro);
 		auto macro_copy = new macro_ptr(m);
 		macro_value->global.host_address = (void *) macro_copy;
-		define(nullptr, nullptr, nullptr, name, macro_value);
+		define(nullptr, nullptr, name, macro_value);
 	}
 
 	void define_builtin_macro(const std::string name, value_ptr (*fn)(context_ptr, function_ptr, scope_ptr, ast_node_ptr))
@@ -110,32 +108,11 @@ struct scope {
 		return define_builtin_macro(name, std::make_shared<simple_macro>(fn));
 	}
 
-	value_ptr lookup(context_ptr c, function_ptr f, ast_node_ptr node, const std::string name)
+	value_ptr lookup(function_ptr f, ast_node_ptr node, const std::string name)
 	{
 		auto it = contents.find(name);
 		if (it != contents.end()) {
 			const auto &entry = it->second;
-
-#if 0
-			printf("lookup of %s\n", name.c_str());
-			printf("current context = \n");
-			for (auto tmp = c; tmp; tmp = tmp->parent)
-				printf(" - %p\n", tmp.get());
-			printf("def context = \n");
-			for (auto tmp = entry.c; tmp; tmp = tmp->parent)
-				printf(" - %p\n", tmp.get());
-			printf("\n");
-#endif
-
-			assert(c);
-			while (true) {
-				c = c->parent;
-				if (!c)
-					break;
-
-				if (c == entry.c)
-					throw compile_error(node, "cannot access run-time variable %s at compile time", name.c_str());
-			}
 
 			// We can always access globals
 			auto val = entry.val;
@@ -150,7 +127,7 @@ struct scope {
 
 		// Recursively search parent scopes
 		if (parent)
-			return parent->lookup(c, f, node, name);
+			return parent->lookup(f, node, name);
 
 		return nullptr;
 	}
@@ -166,6 +143,35 @@ static bool is_parent_of(scope_ptr parent, scope_ptr child)
 	}
 
 	return false;
+}
+
+static void use_value(context_ptr c, ast_node_ptr node, value_ptr val)
+{
+#if 0
+	printf("use: ");
+	node->dump(stdout);
+	printf("\n");
+
+	printf("current context: \n");
+	for (auto tmp = c; tmp; tmp = tmp->parent)
+		printf(" - %p\n", tmp.get());
+
+	printf("def context: \n");
+	for (auto tmp = val->context; tmp; tmp = tmp->parent)
+		printf(" - %p\n", tmp.get());
+	printf("\n");
+#endif
+
+	assert(c);
+	while (true) {
+		c = c->parent;
+		if (!c)
+			break;
+
+		if (c == val->context)
+			// TODO: val->node
+			throw compile_error(node, "cannot access value at compile time");
+	}
 }
 
 #endif

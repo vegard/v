@@ -84,7 +84,7 @@ static value_ptr builtin_macro_if(context_ptr c, function_ptr f, scope_ptr s, as
 	// "if" block
 	auto true_value = compile(c, f, s, true_node);
 	if (true_value->type != builtin_type_void) {
-		return_value = f->alloc_local_value(true_value->type);
+		return_value = f->alloc_local_value(c, true_value->type);
 		f->emit_move(true_value, return_value);
 	}
 
@@ -108,7 +108,7 @@ static value_ptr builtin_macro_if(context_ptr c, function_ptr f, scope_ptr s, as
 	f->link_label(end_label);
 
 	if (!return_value || !false_value || true_value->type != false_value->type)
-		return_value = std::make_shared<value>(VALUE_CONSTANT, builtin_type_void);
+		return_value = std::make_shared<value>(nullptr, VALUE_CONSTANT, builtin_type_void);
 
 	return return_value;
 }

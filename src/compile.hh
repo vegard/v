@@ -113,7 +113,7 @@ static value_ptr eval(context_ptr c, scope_ptr s, ast_node_ptr node)
 	// Make sure we copy the value out to a new global in case the
 	// returned value is a local (which cannot be accessed outside
 	// "new_f" itself).
-	auto ret = std::make_shared<value>(VALUE_GLOBAL, v->type);
+	auto ret = std::make_shared<value>(c, VALUE_GLOBAL, v->type);
 	auto global = new uint8_t[v->type->size];
 	ret->global.host_address = (void *) global;
 	new_f->emit_move(v, ret);
@@ -157,7 +157,7 @@ static value_ptr compile_member(context_ptr c, function_ptr f, scope_ptr s, ast_
 
 	auto m = std::make_shared<val_macro>(callback_fn, lhs);
 
-	auto macro_value = std::make_shared<value>(VALUE_GLOBAL, builtin_type_macro);
+	auto macro_value = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_macro);
 	auto macro_copy = new macro_ptr(m);
 	macro_value->global.host_address = (void *) macro_copy;
 
@@ -170,42 +170,45 @@ static value_ptr compile_member(context_ptr c, function_ptr f, scope_ptr s, ast_
 
 static value_ptr compile_juxtapose(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
-	auto lhs = compile(c, f, s, node->binop.lhs);
+	assert(node->type == AST_JUXTAPOSE);
+
+	auto lhs_node = node->binop.lhs;
+	auto rhs_node = node->binop.rhs;
+	auto lhs = compile(c, f, s, lhs_node);
 	auto lhs_type = lhs->type;
+
 	if (lhs_type == builtin_type_macro) {
 		// macros are evaluated directly
-		auto val = eval(c, s, node->binop.lhs);
-		assert(val->storage_type == VALUE_GLOBAL);
-		assert(val->type == lhs_type);
+		auto new_c = std::make_shared<context>(c);
+		use_value(new_c, lhs_node, lhs);
+		assert(lhs->storage_type == VALUE_GLOBAL);
 
-		auto m = *(macro_ptr *) val->global.host_address;
-		return m->invoke(c, f, s, node->binop.rhs);
-	}
-
-	if (lhs_type == builtin_type_type) {
-		auto val = eval(c, s, node->binop.lhs);
-		assert(val->storage_type == VALUE_GLOBAL);
-		assert(val->type == lhs_type);
+		auto m = *(macro_ptr *) lhs->global.host_address;
+		return m->invoke(c, f, s, rhs_node);
+	} else if (lhs_type == builtin_type_type) {
+		auto new_c = std::make_shared<context>(c);
+		use_value(new_c, lhs_node, lhs);
+		assert(lhs->storage_type == VALUE_GLOBAL);
 
 		// call type's constructor
-		auto type = *(value_type_ptr *) val->global.host_address;
+		auto type = *(value_type_ptr *) lhs->global.host_address;
 		if (!type->constructor)
 			throw compile_error(node, "type doesn't have a constructor");
 
 		// TODO: functions as constructors
-		return type->constructor(type, c, f, s, node->binop.rhs);
+		return type->constructor(type, c, f, s, rhs_node);
 	}
 
 	auto it = lhs_type->members.find("_call");
 	if (it != lhs_type->members.end())
-		return it->second(c, f, s, lhs, node->binop.rhs);
+		return it->second(c, f, s, lhs, rhs_node);
 
 	throw compile_error(node, "type is not callable");
 }
 
 static value_ptr compile_symbol_name(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
-	auto ret = s->lookup(c, f, node, node->symbol_name);
+	auto ret = s->lookup(f, node, node->symbol_name);
 	if (!ret)
 		throw compile_error(node, "could not resolve symbol %s", node->symbol_name.c_str());
 

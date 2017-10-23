@@ -113,9 +113,9 @@ static value_ptr __construct_fun(value_type_ptr type, context_ptr c, function_pt
 	// passed through a pointer in the first argument.
 	assert(return_type);
 	if (return_type->size <= sizeof(unsigned long)) {
-		return_value = new_f->alloc_local_value(return_type);
+		return_value = new_f->alloc_local_value(c, return_type);
 	} else {
-		return_value = new_f->alloc_local_pointer_value(type->return_type);
+		return_value = new_f->alloc_local_pointer_value(c, type->return_type);
 		new_f->emit_move_address(regs.next(node), return_value);
 	}
 
@@ -127,14 +127,14 @@ static value_ptr __construct_fun(value_type_ptr type, context_ptr c, function_pt
 		value_ptr arg_value;
 
 		if (arg_type->size <= sizeof(unsigned long)) {
-			arg_value = new_f->alloc_local_value(arg_type);
+			arg_value = new_f->alloc_local_value(c, arg_type);
 			new_f->emit_move(regs.next(node), arg_value, 0);
 		} else {
-			arg_value = new_f->alloc_local_pointer_value(arg_type);
+			arg_value = new_f->alloc_local_pointer_value(c, arg_type);
 			new_f->emit_move_address(regs.next(node), arg_value);
 		}
 
-		new_scope->define(c, new_f, node, args[i], arg_value);
+		new_scope->define(new_f, node, args[i], arg_value);
 	}
 
 	auto v = compile(c, new_f, new_scope, body_node);
@@ -160,7 +160,7 @@ static value_ptr __construct_fun(value_type_ptr type, context_ptr c, function_pt
 	static std::set<function_ptr> functions;
 	functions.insert(new_f);
 
-	auto ret = std::make_shared<value>(VALUE_GLOBAL, type);
+	auto ret = std::make_shared<value>(nullptr, VALUE_GLOBAL, type);
 	void *mem = map(new_f);
 
 	// XXX: why the indirection? I forgot why I did it this way.
@@ -217,7 +217,7 @@ static value_ptr _call_fun(context_ptr c, function_ptr f, scope_ptr s, value_ptr
 	args_allocator regs;
 
 	auto return_type = type->return_type;
-	auto return_value = f->alloc_local_value(return_type);
+	auto return_value = f->alloc_local_value(c, return_type);
 
 	// TODO: should really use a "non-trivial *structor" flag
 	if (return_type->size <= sizeof(unsigned long))
@@ -250,7 +250,7 @@ static value_ptr _call_fun(context_ptr c, function_ptr f, scope_ptr s, value_ptr
 }
 
 // Low-level helper (for use after data has been extracted from syntax)
-static value_ptr _builtin_macro_fun(value_type_ptr ret_type, const std::vector<value_type_ptr> &argument_types)
+static value_ptr _builtin_macro_fun(context_ptr c, value_type_ptr ret_type, const std::vector<value_type_ptr> &argument_types)
 {
 	value_type_ptr type;
 
@@ -265,7 +265,7 @@ static value_ptr _builtin_macro_fun(value_type_ptr ret_type, const std::vector<v
 	type->members["_call"] = _call_fun;
 
 	// XXX: refcounting
-	auto type_value = std::make_shared<value>(VALUE_GLOBAL, builtin_type_type);
+	auto type_value = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_type);
 	auto type_copy = new value_type_ptr(type);
 	type_value->global.host_address = (void *) type_copy;
 	return type_value;
@@ -304,7 +304,7 @@ static value_ptr builtin_macro_fun(context_ptr c, function_ptr f, scope_ptr s, a
 		argument_types.push_back(arg_type);
 	}
 
-	return _builtin_macro_fun(ret_type, argument_types);
+	return _builtin_macro_fun(c, ret_type, argument_types);
 }
 
 #endif

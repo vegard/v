@@ -65,6 +65,8 @@ struct value_type {
 };
 
 struct value {
+	context_ptr context;
+
 	value_storage_type storage_type;
 
 	union {
@@ -89,7 +91,8 @@ struct value {
 	{
 	}
 
-	value(value_storage_type storage_type, value_type_ptr type):
+	value(context_ptr context, value_storage_type storage_type, value_type_ptr type):
+		context(context),
 		storage_type(storage_type),
 		type(type)
 	{

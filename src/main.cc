@@ -49,7 +49,7 @@ static void _print(uint64_t x)
 
 static value_ptr builtin_macro_print(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
-	auto print_fn = std::make_shared<value>(VALUE_GLOBAL, builtin_type_u64);
+	auto print_fn = std::make_shared<value>(c, VALUE_GLOBAL, builtin_type_u64);
 	auto global = new void *;
 	*global = (void *) &_print;
 	print_fn->global.host_address = (void *) global;
@@ -57,10 +57,12 @@ static value_ptr builtin_macro_print(context_ptr c, function_ptr f, scope_ptr s,
 	// TODO: save registers
 	auto arg = compile(c, f, s, node);
 	assert(arg->type == builtin_type_u64);
+
+	use_value(c, node, arg);
 	f->emit_move(arg, 0, RDI);
 	f->emit_call(print_fn);
 
-	return std::make_shared<value>(VALUE_CONSTANT, builtin_type_void);
+	return std::make_shared<value>(nullptr, VALUE_CONSTANT, builtin_type_void);
 }
 
 static function_ptr compile_metaprogram(ast_node_ptr root)

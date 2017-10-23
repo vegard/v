@@ -31,7 +31,7 @@ static value_ptr builtin_macro_debug(context_ptr c, function_ptr f, scope_ptr s,
 	node->dump();
 	printf("\n");
 
-	return std::make_shared<value>(VALUE_CONSTANT, builtin_type_void);
+	return std::make_shared<value>(nullptr, VALUE_CONSTANT, builtin_type_void);
 }
 
 #endif

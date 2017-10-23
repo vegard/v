@@ -96,9 +96,9 @@ struct function {
 	{
 	}
 
-	value_ptr alloc_local_value(value_type_ptr type)
+	value_ptr alloc_local_value(context_ptr c, value_type_ptr type)
 	{
-		auto result = std::make_shared<value>(VALUE_LOCAL, type);
+		auto result = std::make_shared<value>(c, VALUE_LOCAL, type);
 
 		// TODO: we could try to rearrange/pack values to avoid wasting stack space
 		unsigned int offset = (next_local_slot + type->alignment - 1) & ~(type->alignment - 1);
@@ -108,9 +108,9 @@ struct function {
 		return result;
 	}
 
-	value_ptr alloc_local_pointer_value(value_type_ptr type)
+	value_ptr alloc_local_pointer_value(context_ptr c, value_type_ptr type)
 	{
-		auto result = std::make_shared<value>(VALUE_LOCAL_POINTER, type);
+		auto result = std::make_shared<value>(c, VALUE_LOCAL_POINTER, type);
 
 		unsigned int size = sizeof(void *);
 		unsigned int alignment = alignof(void *);

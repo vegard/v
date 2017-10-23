@@ -40,15 +40,15 @@ static value_ptr builtin_macro_define(context_ptr c, function_ptr f, scope_ptr s
 		// For functions that are run at compile-time, we allocate
 		// a new global value. The _name_ is still scoped as usual,
 		// though.
-		val = std::make_shared<value>(VALUE_GLOBAL, rhs->type);
+		val = std::make_shared<value>(c, VALUE_GLOBAL, rhs->type);
 		auto global = new uint8_t[rhs->type->size];
 		val->global.host_address = (void *) global;
 	} else {
 		// Create new local
-		val = f->alloc_local_value(rhs->type);
+		val = f->alloc_local_value(c, rhs->type);
 	}
 
-	s->define(c, f, node, lhs->symbol_name, val);
+	s->define(f, node, lhs->symbol_name, val);
 	f->emit_move(rhs, val);
 	return val;
 }

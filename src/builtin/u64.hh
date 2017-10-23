@@ -46,7 +46,7 @@ static value_ptr builtin_type_u64_constructor(value_type_ptr type, context_ptr c
 	if (node->type != AST_LITERAL_INTEGER)
 		throw compile_error(node, "expected literal integer");
 
-	auto ret = std::make_shared<value>(VALUE_GLOBAL, builtin_type_u64);
+	auto ret = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_u64);
 	if (!node->literal_integer.fits_ulong_p())
 		throw compile_error(node, "literal integer is too large to fit in u64");
 
@@ -63,7 +63,7 @@ static value_ptr builtin_type_u64_add(context_ptr c, function_ptr f, scope_ptr s
 	if (rhs->type != lhs->type)
 		throw compile_error(node->binop.rhs, "expected u64");
 
-	auto ret = f->alloc_local_value(lhs->type);
+	auto ret = f->alloc_local_value(c, lhs->type);
 	f->emit_add(lhs, rhs, ret);
 	return ret;
 }
@@ -74,7 +74,7 @@ static value_ptr builtin_type_u64_subtract(context_ptr c, function_ptr f, scope_
 	if (rhs->type != lhs->type)
 		throw compile_error(node->binop.rhs, "expected u64");
 
-	auto ret = f->alloc_local_value(lhs->type);
+	auto ret = f->alloc_local_value(c, lhs->type);
 	f->emit_sub(lhs, rhs, ret);
 	return ret;
 }
@@ -85,7 +85,7 @@ static value_ptr builtin_type_u64_less(context_ptr c, function_ptr f, scope_ptr 
 	if (rhs->type != lhs->type)
 		throw compile_error(node->binop.rhs, "expected u64");
 
-	auto ret = f->alloc_local_value(builtin_type_boolean);
+	auto ret = f->alloc_local_value(c, builtin_type_boolean);
 	f->emit_eq<function::CMP_LESS>(lhs, rhs, ret);
 	return ret;
 }

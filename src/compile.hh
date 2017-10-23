@@ -105,6 +105,12 @@ static void run(function_ptr f)
 
 static value_ptr eval(context_ptr c, scope_ptr s, ast_node_ptr node)
 {
+#if 0
+	printf("eval: ");
+	node->dump(stdout);
+	printf("\n");
+#endif
+
 	auto new_c = std::make_shared<context>(c);
 	auto new_f = std::make_shared<function>(true);
 	new_f->emit_prologue();

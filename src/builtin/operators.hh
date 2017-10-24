@@ -57,8 +57,7 @@ static value_ptr call_operator_fn(context_ptr c, function_ptr f, scope_ptr s, co
 	if (it == lhs_type->members.end())
 		throw compile_error(node, "unknown member: %s", member);
 
-	auto callback_fn = it->second;
-	return callback_fn(c, f, s, lhs, node);
+	return it->second->invoke(c, f, s, lhs, node);
 }
 
 static value_ptr builtin_macro_add(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)

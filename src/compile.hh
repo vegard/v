@@ -158,20 +158,7 @@ static value_ptr compile_member(context_ptr c, function_ptr f, scope_ptr s, ast_
 	if (it == lhs_type->members.end())
 		throw compile_error(node, "unknown member: %s", rhs_node->literal_string.c_str());
 
-#if 1 // this should get moved so that lhs_type->members[] maps directly to a macro
-	auto callback_fn = it->second;
-
-	auto m = std::make_shared<val_macro>(callback_fn, lhs);
-
-	auto macro_value = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_macro);
-	auto macro_copy = new macro_ptr(m);
-	macro_value->global.host_address = (void *) macro_copy;
-
-	return macro_value;
-#else
-	auto callback_fn = it->second;
-	return val_macro(callback_fn, lhs);
-#endif
+	return it->second->invoke(c, f, s, lhs, rhs_node);
 }
 
 static value_ptr compile_juxtapose(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
@@ -207,7 +194,7 @@ static value_ptr compile_juxtapose(context_ptr c, function_ptr f, scope_ptr s, a
 
 	auto it = lhs_type->members.find("_call");
 	if (it != lhs_type->members.end())
-		return it->second(c, f, s, lhs, rhs_node);
+		return it->second->invoke(c, f, s, lhs, rhs_node);
 
 	throw compile_error(node, "type is not callable");
 }

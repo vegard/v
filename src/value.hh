@@ -48,6 +48,30 @@ typedef std::shared_ptr<ast_node> ast_node_ptr;
 
 typedef value_ptr (*operator_fn_type)(context_ptr, function_ptr, scope_ptr, value_ptr, ast_node_ptr);
 
+struct member {
+	virtual ~member()
+	{
+	}
+
+	virtual value_ptr invoke(context_ptr c, function_ptr f, scope_ptr s, value_ptr lhs, ast_node_ptr rhs_node) = 0;
+};
+
+struct callback_member: member {
+	value_ptr (*fn)(context_ptr, function_ptr, scope_ptr, value_ptr, ast_node_ptr);
+
+	callback_member(value_ptr (*fn)(context_ptr, function_ptr, scope_ptr, value_ptr, ast_node_ptr)):
+		fn(fn)
+	{
+	}
+
+	value_ptr invoke(context_ptr c, function_ptr f, scope_ptr s, value_ptr v, ast_node_ptr node)
+	{
+		return fn(c, f, s, v, node);
+	}
+};
+
+typedef std::shared_ptr<member> member_ptr;
+
 struct value_type {
 	// TODO
 	unsigned int alignment;
@@ -61,7 +85,7 @@ struct value_type {
 	value_type_ptr return_type;
 
 	// Members
-	std::map<std::string, operator_fn_type> members;
+	std::map<std::string, member_ptr> members;
 };
 
 struct value {

@@ -75,14 +75,44 @@ static value_ptr builtin_macro_print(context_ptr c, function_ptr f, scope_ptr s,
 	return builtin_value_void;
 }
 
+struct namespace_member: member {
+	value_ptr val;
+
+	namespace_member(value_type_ptr type)
+	{
+		val = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_type);
+		val->global.host_address = (void *) new value_type_ptr(type);
+	}
+
+	value_ptr invoke(context_ptr c, function_ptr f, scope_ptr s, value_ptr v, ast_node_ptr node)
+	{
+		return val;
+	}
+};
+
+static auto builtin_value_namespace_lang = std::make_shared<value>(nullptr, VALUE_CONSTANT,
+	std::make_shared<value_type>(value_type {
+		.alignment = 0,
+		.size = 0,
+		.constructor = nullptr,
+		.argument_types = std::vector<value_type_ptr>(),
+		.return_type = nullptr,
+		.members = std::map<std::string, member_ptr>({
+			{"macro", std::make_shared<namespace_member>(builtin_type_macro)},
+			{"value", std::make_shared<namespace_member>(builtin_type_value)},
+		}),
+	})
+);
+
 static function_ptr compile_metaprogram(ast_node_ptr root)
 {
 	auto global_scope = std::make_shared<scope>();
 
+	// Namespaces
+	global_scope->define_builtin_namespace("lang", builtin_value_namespace_lang);
+
 	// Types
 	global_scope->define_builtin_type("u64", builtin_type_u64);
-	global_scope->define_builtin_type("macro", builtin_type_macro);
-	global_scope->define_builtin_type("value", builtin_type_value);
 
 	// Operators
 	global_scope->define_builtin_macro("_eval", builtin_macro_eval);

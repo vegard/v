@@ -108,6 +108,11 @@ struct scope {
 		return define_builtin_macro(name, std::make_shared<simple_macro>(fn));
 	}
 
+	void define_builtin_namespace(const std::string name, value_ptr val)
+	{
+		define(nullptr, nullptr, name, val);
+	}
+
 	value_ptr lookup(function_ptr f, ast_node_ptr node, const std::string name)
 	{
 		auto it = contents.find(name);

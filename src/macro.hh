@@ -38,9 +38,12 @@ struct macro {
 	virtual value_ptr invoke(context_ptr, function_ptr ptr, scope_ptr s, ast_node_ptr node) = 0;
 };
 
+static value_ptr builtin_type_macro_constructor(value_type_ptr type, context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node);
+
 static auto builtin_type_macro = std::make_shared<value_type>(value_type {
 	.alignment = alignof(macro_ptr),
 	.size = sizeof(macro_ptr),
+	.constructor = &builtin_type_macro_constructor,
 });
 
 // Helper for macros that can be implemented simply as a callback function

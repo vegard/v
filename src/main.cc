@@ -32,14 +32,17 @@ extern "C" {
 #include "builtin/eval.hh"
 #include "builtin/fun.hh"
 #include "builtin/if.hh"
+#include "builtin/macro.hh"
 #include "builtin/operators.hh"
 #include "builtin/quote.hh"
 #include "builtin/struct.hh"
 #include "builtin/u64.hh"
+#include "builtin/value.hh"
 #include "builtin/while.hh"
 #include "compile.hh"
 #include "document.hh"
 #include "function.hh"
+#include "macro.hh"
 #include "scope.hh"
 #include "value.hh"
 
@@ -78,6 +81,8 @@ static function_ptr compile_metaprogram(ast_node_ptr root)
 
 	// Types
 	global_scope->define_builtin_type("u64", builtin_type_u64);
+	global_scope->define_builtin_type("macro", builtin_type_macro);
+	global_scope->define_builtin_type("value", builtin_type_value);
 
 	// Operators
 	global_scope->define_builtin_macro("_eval", builtin_macro_eval);

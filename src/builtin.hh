@@ -25,6 +25,11 @@
 #include "./scope.hh"
 #include "./value.hh"
 
+static auto builtin_type_context = std::make_shared<value_type>(value_type {
+	.alignment = alignof(context_ptr),
+	.size = sizeof(context_ptr),
+});
+
 static auto builtin_type_function = std::make_shared<value_type>(value_type {
 	.alignment = alignof(function_ptr),
 	.size = sizeof(function_ptr),

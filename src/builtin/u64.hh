@@ -22,6 +22,24 @@
 #include "../compile.hh"
 #include "../value.hh"
 
+struct macrofy_callback_member: member {
+	value_ptr (*fn)(context_ptr, function_ptr, scope_ptr, value_ptr, ast_node_ptr);
+
+	macrofy_callback_member(value_ptr (*fn)(context_ptr, function_ptr, scope_ptr, value_ptr, ast_node_ptr)):
+		fn(fn)
+	{
+	}
+
+	value_ptr invoke(context_ptr c, function_ptr f, scope_ptr s, value_ptr v, ast_node_ptr node)
+	{
+		auto m = std::make_shared<val_macro>(fn, v);
+		auto macro_value = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_macro);
+		auto macro_copy = new macro_ptr(m);
+		macro_value->global.host_address = (void *) macro_copy;
+		return macro_value;
+	}
+};
+
 static value_ptr builtin_type_u64_constructor(value_type_ptr, context_ptr, function_ptr, scope_ptr, ast_node_ptr);
 static value_ptr builtin_type_u64_add(context_ptr, function_ptr f, scope_ptr s, value_ptr lhs, ast_node_ptr node);
 static value_ptr builtin_type_u64_subtract(context_ptr, function_ptr f, scope_ptr s, value_ptr lhs, ast_node_ptr node);
@@ -34,9 +52,9 @@ static auto builtin_type_u64 = std::make_shared<value_type>(value_type {
 	.argument_types = std::vector<value_type_ptr>(),
 	.return_type = value_type_ptr(),
 	.members = std::map<std::string, member_ptr>({
-		{"_add", std::make_shared<callback_member>(&builtin_type_u64_add)},
-		{"_subtract", std::make_shared<callback_member>(&builtin_type_u64_subtract)},
-		{"_less", std::make_shared<callback_member>(&builtin_type_u64_less)},
+		{"_add", std::make_shared<macrofy_callback_member>(&builtin_type_u64_add)},
+		{"_subtract", std::make_shared<macrofy_callback_member>(&builtin_type_u64_subtract)},
+		{"_less", std::make_shared<macrofy_callback_member>(&builtin_type_u64_less)},
 	}),
 });
 
@@ -59,9 +77,9 @@ static value_ptr builtin_type_u64_constructor(value_type_ptr type, context_ptr c
 // TODO: maybe this should really be a function rather than a macro
 static value_ptr builtin_type_u64_add(context_ptr c, function_ptr f, scope_ptr s, value_ptr lhs, ast_node_ptr node)
 {
-	auto rhs = compile(c, f, s, node->binop.rhs);
+	auto rhs = compile(c, f, s, node);
 	if (rhs->type != lhs->type)
-		throw compile_error(node->binop.rhs, "expected u64");
+		throw compile_error(node, "expected u64");
 
 	auto ret = f->alloc_local_value(c, lhs->type);
 	f->emit_add(lhs, rhs, ret);
@@ -70,9 +88,9 @@ static value_ptr builtin_type_u64_add(context_ptr c, function_ptr f, scope_ptr s
 
 static value_ptr builtin_type_u64_subtract(context_ptr c, function_ptr f, scope_ptr s, value_ptr lhs, ast_node_ptr node)
 {
-	auto rhs = compile(c, f, s, node->binop.rhs);
+	auto rhs = compile(c, f, s, node);
 	if (rhs->type != lhs->type)
-		throw compile_error(node->binop.rhs, "expected u64");
+		throw compile_error(node, "expected u64");
 
 	auto ret = f->alloc_local_value(c, lhs->type);
 	f->emit_sub(lhs, rhs, ret);
@@ -81,9 +99,9 @@ static value_ptr builtin_type_u64_subtract(context_ptr c, function_ptr f, scope_
 
 static value_ptr builtin_type_u64_less(context_ptr c, function_ptr f, scope_ptr s, value_ptr lhs, ast_node_ptr node)
 {
-	auto rhs = compile(c, f, s, node->binop.rhs);
+	auto rhs = compile(c, f, s, node);
 	if (rhs->type != lhs->type)
-		throw compile_error(node->binop.rhs, "expected u64");
+		throw compile_error(node, "expected u64");
 
 	auto ret = f->alloc_local_value(c, builtin_type_boolean);
 	f->emit_eq<function::CMP_LESS>(lhs, rhs, ret);

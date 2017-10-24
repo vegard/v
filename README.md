@@ -39,4 +39,5 @@ See also
 
 Some projects with similar ideas/goals:
 
- - [Ante](https://github.com/jfecher/ante)
+ - [Ante](https://github.com/jfecher/ante) by Jake Fecher
+ - [Zig](http://ziglang.org/) by [Andrew Kelley](https://twitter.com/andy_kelley)

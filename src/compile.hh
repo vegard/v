@@ -161,13 +161,8 @@ static value_ptr compile_member(context_ptr c, function_ptr f, scope_ptr s, ast_
 	return it->second->invoke(c, f, s, lhs, rhs_node);
 }
 
-static value_ptr compile_juxtapose(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr _compile_juxtapose(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr lhs_node, value_ptr lhs, ast_node_ptr rhs_node)
 {
-	assert(node->type == AST_JUXTAPOSE);
-
-	auto lhs_node = node->binop.lhs;
-	auto rhs_node = node->binop.rhs;
-	auto lhs = compile(c, f, s, lhs_node);
 	auto lhs_type = lhs->type;
 
 	if (lhs_type == builtin_type_macro) {
@@ -186,7 +181,7 @@ static value_ptr compile_juxtapose(context_ptr c, function_ptr f, scope_ptr s, a
 		// call type's constructor
 		auto type = *(value_type_ptr *) lhs->global.host_address;
 		if (!type->constructor)
-			throw compile_error(node, "type doesn't have a constructor");
+			throw compile_error(lhs_node, "type doesn't have a constructor");
 
 		// TODO: functions as constructors
 		return type->constructor(type, c, f, s, rhs_node);
@@ -196,7 +191,17 @@ static value_ptr compile_juxtapose(context_ptr c, function_ptr f, scope_ptr s, a
 	if (it != lhs_type->members.end())
 		return it->second->invoke(c, f, s, lhs, rhs_node);
 
-	throw compile_error(node, "type is not callable");
+	throw compile_error(lhs_node, "type is not callable");
+}
+
+static value_ptr compile_juxtapose(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+{
+	assert(node->type == AST_JUXTAPOSE);
+
+	auto lhs_node = node->binop.lhs;
+	auto rhs_node = node->binop.rhs;
+	auto lhs = compile(c, f, s, lhs_node);
+	return _compile_juxtapose(c, f, s, lhs_node, lhs, rhs_node);
 }
 
 static value_ptr compile_symbol_name(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)

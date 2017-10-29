@@ -80,7 +80,9 @@ struct function {
 
 	std::shared_ptr<value> return_value;
 	std::vector<uint8_t> bytes;
-	std::map<size_t, std::vector<std::string>> comments;
+
+	unsigned int indentation;
+	std::map<size_t, std::vector<std::pair<unsigned int, std::string>>> comments;
 
 	// offset (into "bytes") where we need to write the final frame size
 	// after we know how many locals we have.
@@ -90,6 +92,7 @@ struct function {
 
 	function(bool target_jit):
 		target_jit(target_jit),
+		indentation(0),
 		// slot 0 is the return address
 		// slot 1 is the saved rbx
 		next_local_slot(16)
@@ -123,9 +126,20 @@ struct function {
 		return result;
 	}
 
+	// Helpers for indenting code + comments
+	void enter()
+	{
+		++indentation;
+	}
+
+	void leave()
+	{
+		--indentation;
+	}
+
 	void comment(std::string s)
 	{
-		comments[bytes.size()].push_back(s);
+		comments[bytes.size()].push_back(std::make_pair(indentation, s));
 	}
 
 	void emit_byte(uint8_t v)
@@ -515,5 +529,25 @@ struct function {
 			overwrite_long(r.addr, l.addr - (r.addr + r.offset));
 	}
 };
+
+struct function_block {
+	function_ptr &f;
+
+	function_block(function_ptr &f, std::string name):
+		f(f)
+	{
+		f->comment(format("%s() {", name.c_str()));
+		f->enter();
+	}
+
+	~function_block()
+	{
+		f->leave();
+		f->comment("}");
+	}
+};
+
+#define function_enter(f) \
+	function_block __function_enter(f, __FUNCTION__)
 
 #endif

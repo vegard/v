@@ -29,7 +29,7 @@
 
 static value_ptr compile(context_ptr, function_ptr f, scope_ptr s, ast_node_ptr node);
 
-static void disassemble(const uint8_t *buf, size_t len, uint64_t pc, const std::map<size_t, std::vector<std::string>> &comments)
+static void disassemble(const uint8_t *buf, size_t len, uint64_t pc, const std::map<size_t, std::vector<std::pair<unsigned int, std::string>>> &comments)
 {
 	ud_t u;
 	ud_init(&u);
@@ -41,18 +41,22 @@ static void disassemble(const uint8_t *buf, size_t len, uint64_t pc, const std::
 #if 0
 	printf("Disassembly at 0x%08lx:\n", pc);
 
+	unsigned int indentation = 0;
 	while (ud_disassemble(&u)) {
 		uint64_t offset = ud_insn_off(&u) - pc;
 		auto comments_it = comments.find(offset);
 		if (comments_it != comments.end()) {
-			for (const auto &comment: comments_it->second)
-				printf(" %4s  // %s\n", "", comment.c_str());
+			for (const auto &comment: comments_it->second) {
+				indentation = comment.first;
+				const auto &str = comment.second;
+				printf("\e[33m%4s//%*.s %s\n", "", 2 * indentation, "", str.c_str());
+			}
 		}
 
-		printf(" %4lx: %s\n", offset, ud_insn_asm(&u));
+		printf("\e[0m %4lx: %*.s%s\n", offset, 2 * indentation, "", ud_insn_asm(&u));
 	}
 
-	printf("\n");
+	printf("\e[0m\n");
 #endif
 }
 
@@ -222,6 +226,8 @@ static value_ptr compile_semicolon(context_ptr c, function_ptr f, scope_ptr s, a
 
 static value_ptr compile(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
+	function_enter(f);
+
 	switch (node->type) {
 	case AST_LITERAL_INTEGER:
 		throw compile_error(node, "unexpected integer literal");

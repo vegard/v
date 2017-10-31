@@ -21,9 +21,11 @@
 
 #include <memory>
 
+#include "./compile.hh"
 #include "./function.hh"
 #include "./scope.hh"
 #include "./value.hh"
+#include "builtin/u64.hh"
 
 static auto builtin_type_context = std::make_shared<value_type>(value_type {
 	.alignment = alignof(context_ptr),
@@ -35,9 +37,18 @@ static auto builtin_type_function = std::make_shared<value_type>(value_type {
 	.size = sizeof(function_ptr),
 });
 
+static value_ptr builtin_type_scope_constructor(value_type_ptr, context_ptr, function_ptr, scope_ptr, ast_node_ptr);
+static value_ptr builtin_type_scope_define(context_ptr, function_ptr, scope_ptr, value_ptr, ast_node_ptr);
+
 static auto builtin_type_scope = std::make_shared<value_type>(value_type {
 	.alignment = alignof(scope_ptr),
 	.size = sizeof(scope_ptr),
+	.constructor = &builtin_type_scope_constructor,
+	.argument_types = std::vector<value_type_ptr>(),
+	.return_type = nullptr,
+	.members = std::map<std::string, member_ptr>({
+		{"define", std::make_shared<macrofy_callback_member>(builtin_type_scope_define)},
+	}),
 });
 
 static auto builtin_type_ast_node = std::make_shared<value_type>(value_type {

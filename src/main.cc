@@ -26,6 +26,8 @@ extern "C" {
 #include "ast.hh"
 #include "builtin.hh"
 #include "builtin/assign.hh"
+#include "builtin/scope.hh"
+#include "builtin/compile.hh"
 #include "builtin/debug.hh"
 #include "builtin/define.hh"
 #include "builtin/equals.hh"
@@ -99,6 +101,7 @@ static auto builtin_value_namespace_lang = std::make_shared<value>(nullptr, VALU
 		.return_type = nullptr,
 		.members = std::map<std::string, member_ptr>({
 			{"macro", std::make_shared<namespace_member>(builtin_type_macro)},
+			{"scope", std::make_shared<namespace_member>(builtin_type_scope)},
 			{"value", std::make_shared<namespace_member>(builtin_type_value)},
 		}),
 	})

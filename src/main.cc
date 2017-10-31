@@ -143,6 +143,7 @@ static function_ptr compile_metaprogram(ast_node_ptr root)
 	// Functions
 	// XXX: move eval and compile to 'lang' namespace
 	global_scope->define_builtin_macro("eval", builtin_function_eval);
+	global_scope->define_builtin_macro("compile", builtin_function_compile);
 
 	auto c = std::make_shared<context>(nullptr);
 	auto f = std::make_shared<function>(true);

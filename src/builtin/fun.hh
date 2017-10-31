@@ -217,7 +217,11 @@ static value_ptr _call_fun(context_ptr c, function_ptr f, scope_ptr s, value_ptr
 	args_allocator regs;
 
 	auto return_type = type->return_type;
-	auto return_value = f->alloc_local_value(c, return_type);
+	value_ptr return_value;
+	if (return_type == builtin_type_void)
+		return_value = builtin_value_void;
+	else
+		return_value = f->alloc_local_value(c, return_type);
 
 	// TODO: should really use a "non-trivial *structor" flag
 	if (return_type->size <= sizeof(unsigned long))
@@ -243,7 +247,7 @@ static value_ptr _call_fun(context_ptr c, function_ptr f, scope_ptr s, value_ptr
 	f->emit_call(fn);
 
 	// TODO: should really use a "non-trivial *structor" flag
-	if (return_type->size <= sizeof(unsigned long))
+	if (return_type->size > 0 && return_type->size <= sizeof(unsigned long))
 		f->emit_move(RAX, return_value, 0);
 
 	return return_value;

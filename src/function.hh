@@ -101,10 +101,15 @@ struct function {
 
 	value_ptr alloc_local_value(context_ptr c, value_type_ptr type)
 	{
+		assert(type != builtin_type_void);
+		assert(type->size > 0);
+		assert(type->alignment > 0);
+
 		auto result = std::make_shared<value>(c, VALUE_LOCAL, type);
 
 		// TODO: we could try to rearrange/pack values to avoid wasting stack space
 		unsigned int offset = (next_local_slot + type->alignment - 1) & ~(type->alignment - 1);
+		assert(offset > 0);
 		result->local.offset = -offset;
 		next_local_slot = next_local_slot + type->size;
 
@@ -113,6 +118,10 @@ struct function {
 
 	value_ptr alloc_local_pointer_value(context_ptr c, value_type_ptr type)
 	{
+		assert(type != builtin_type_void);
+		assert(type->size > 0);
+		assert(type->alignment > 0);
+
 		auto result = std::make_shared<value>(c, VALUE_LOCAL_POINTER, type);
 
 		unsigned int size = sizeof(void *);
@@ -120,6 +129,7 @@ struct function {
 
 		// TODO: we could try to rearrange/pack values to avoid wasting stack space
 		unsigned int offset = (next_local_slot + alignment - 1) & ~(alignment - 1);
+		assert(offset > 0);
 		result->local.offset = -offset;
 		next_local_slot = next_local_slot + size;
 

@@ -289,7 +289,7 @@ struct function {
 	void emit_move_imm_to_reg(uint64_t source, machine_register dest)
 	{
 		// REX_W (+ REX.B)
-		bytes.push_back(REX | REX_W | (REX_R * (dest >= 8)));
+		bytes.push_back(REX | REX_W | (REX_B * (dest >= 8)));
 		// Opcode
 		bytes.push_back(0xb8 | (dest & 7));
 		emit_quad(source);

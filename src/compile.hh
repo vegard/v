@@ -123,7 +123,7 @@ static value_ptr eval(context_ptr c, scope_ptr s, ast_node_ptr node)
 	// Make sure we copy the value out to a new global in case the
 	// returned value is a local (which cannot be accessed outside
 	// "new_f" itself).
-	auto ret = std::make_shared<value>(c, VALUE_GLOBAL, v->type);
+	auto ret = std::make_shared<value>(new_c, VALUE_GLOBAL, v->type);
 	auto global = new uint8_t[v->type->size];
 	ret->global.host_address = (void *) global;
 	new_f->emit_move(v, ret);

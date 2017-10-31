@@ -108,7 +108,7 @@ struct function {
 		auto result = std::make_shared<value>(c, VALUE_LOCAL, type);
 
 		// TODO: we could try to rearrange/pack values to avoid wasting stack space
-		unsigned int offset = (next_local_slot + type->alignment - 1) & ~(type->alignment - 1);
+		unsigned int offset = (next_local_slot + type->size + type->alignment - 1) & ~(type->alignment - 1);
 		assert(offset > 0);
 		result->local.offset = -offset;
 		next_local_slot = next_local_slot + type->size;
@@ -128,7 +128,7 @@ struct function {
 		unsigned int alignment = alignof(void *);
 
 		// TODO: we could try to rearrange/pack values to avoid wasting stack space
-		unsigned int offset = (next_local_slot + alignment - 1) & ~(alignment - 1);
+		unsigned int offset = (next_local_slot + size + alignment - 1) & ~(alignment - 1);
 		assert(offset > 0);
 		result->local.offset = -offset;
 		next_local_slot = next_local_slot + size;

@@ -14,3 +14,9 @@ do
 	echo $file
 	diff -U100 ${file%.v}.out <(./v $file) || true
 done
+
+for file in tests/integration/*.v
+do
+	echo $file
+	diff -U100 ${file%.v}.out <(./v $file) || true
+done

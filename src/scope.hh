@@ -80,6 +80,23 @@ struct scope {
 			.val = val,
 		};
 
+		if (f) {
+			switch (val->storage_type) {
+			case VALUE_GLOBAL:
+				f->comment(format("define global var %s", name.c_str()));
+				break;
+			case VALUE_LOCAL:
+				f->comment(format("define local var %s", name.c_str()));
+				break;
+			case VALUE_LOCAL_POINTER:
+				f->comment(format("define local pointer var %s", name.c_str()));
+				break;
+			case VALUE_CONSTANT:
+				f->comment(format("define constant var %s", name.c_str()));
+				break;
+			}
+		}
+
 		contents[name] = e;
 	}
 

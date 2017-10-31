@@ -199,17 +199,12 @@ static value_ptr _construct_fun(value_type_ptr type, context_ptr c, function_ptr
 	return __construct_fun(type, c, f, s, node, args, body_node);
 }
 
-static value_ptr _call_fun(context_ptr c, function_ptr f, scope_ptr s, value_ptr fn, ast_node_ptr node)
+// Low-level helper (for use after data has been extracted from syntax)
+static value_ptr __call_fun(context_ptr c, function_ptr f, scope_ptr s, value_ptr fn, ast_node_ptr node, std::vector<std::pair<ast_node_ptr, value_ptr>> args)
 {
-	if (node->type != AST_BRACKETS)
-		throw compile_error(node, "expected parantheses");
 
 	// TODO: save/restore caller save registers
 	auto type = fn->type;
-
-	std::vector<std::pair<ast_node_ptr, value_ptr>> args;
-	for (auto arg_node: traverse<AST_COMMA>(node->unop))
-		args.push_back(std::make_pair(arg_node, compile(c, f, s, arg_node)));
 
 	if (args.size() != type->argument_types.size())
 		throw compile_error(node, "expected %u arguments; got %u", type->argument_types.size(), args.size());
@@ -251,6 +246,18 @@ static value_ptr _call_fun(context_ptr c, function_ptr f, scope_ptr s, value_ptr
 		f->emit_move(RAX, return_value, 0);
 
 	return return_value;
+}
+
+static value_ptr _call_fun(context_ptr c, function_ptr f, scope_ptr s, value_ptr fn, ast_node_ptr node)
+{
+	if (node->type != AST_BRACKETS)
+		throw compile_error(node, "expected parantheses");
+
+	std::vector<std::pair<ast_node_ptr, value_ptr>> args;
+	for (auto arg_node: traverse<AST_COMMA>(node->unop))
+		args.push_back(std::make_pair(arg_node, compile(c, f, s, arg_node)));
+
+	return __call_fun(c, f, s, fn, node, args);
 }
 
 // Low-level helper (for use after data has been extracted from syntax)

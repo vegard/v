@@ -125,7 +125,7 @@ struct scope {
 				return val;
 
 			if (f != entry.f)
-				throw compile_error(node, "cannot access local variable %s of different function", name.c_str());
+				throw compile_error(node, "cannot access local variable of different function");
 
 			return val;
 		}

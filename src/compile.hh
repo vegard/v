@@ -111,9 +111,9 @@ static void run(function_ptr f)
 static value_ptr eval(context_ptr c, scope_ptr s, ast_node_ptr node)
 {
 #if 0
-	printf("eval: ");
-	node->dump(stdout);
-	printf("\n");
+	std::cout << "eval: ";
+	serializer().serialize(std::cout, node);
+	std::cout << std::endl;
 #endif
 
 	auto new_c = std::make_shared<context>(c);
@@ -227,7 +227,7 @@ static value_ptr compile_semicolon(context_ptr c, function_ptr f, scope_ptr s, a
 
 static value_ptr compile(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
-	function_enter(f);
+	function_enter(f, abbreviate(node));
 
 	switch (node->type) {
 	case AST_LITERAL_INTEGER:
@@ -247,9 +247,7 @@ static value_ptr compile(context_ptr c, function_ptr f, scope_ptr s, ast_node_pt
 	case AST_SEMICOLON:
 		return compile_semicolon(c, f, s, node);
 	default:
-		node->dump(stderr);
-		fprintf(stderr, "\n");
-		throw compile_error(node, "internal compiler error: unrecognised AST node type %u", node->type);
+		throw compile_error(node, "internal compiler error: unrecognised AST node type $: $", node->type, abbreviate(node));
 	}
 
 	assert(false);

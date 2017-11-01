@@ -23,8 +23,11 @@
 #include <cctype>
 #include <cstdlib>
 #include <cstring>
+#include <iostream>
+#include <iterator>
 #include <memory>
 #include <stdexcept>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -138,77 +141,133 @@ struct ast_node {
 			break;
 		}
 	}
+};
 
-	void dump_unop(FILE *fp, unsigned int indent, const char *name)
+struct serializer {
+	unsigned int max_depth;
+	unsigned int indentation;
+	bool line_breaks;
+
+	serializer():
+		max_depth(0),
+		indentation(4),
+		line_breaks(true)
 	{
-		if (unop) {
-			fprintf(fp, "%*s(%s\n", indent, "", name);
-			unop->dump(fp, indent + 4);
-			fprintf(fp, "\n");
-			fprintf(fp, "%*s)", indent, "");
+	}
+
+	void line_break(std::ostream &os, const char *space = " ")
+	{
+		if (line_breaks)
+			os << "\n";
+		else
+			os << space;
+	}
+
+	void indent(std::ostream &os, unsigned int depth)
+	{
+		std::fill_n(std::ostream_iterator<char>(os), depth * indentation, ' ');
+	}
+
+	void unop(std::ostream &os, const ast_node_ptr &node, unsigned int depth, const char *name)
+	{
+		if (node->unop) {
+			indent(os, depth);
+			os << "(" << name;
+			line_break(os);
+			serialize(os, node->unop, depth + 1);
+			line_break(os);
+			indent(os, depth);
+			os << ")";
 		} else {
-			fprintf(fp, "%*s(parens)", indent, "");
+			indent(os, depth);
+			os << "(parens)";
 		}
 	}
 
-	void dump_binop(FILE *fp, unsigned int indent, const char *name)
+	void binop(std::ostream &os, const ast_node_ptr &node, unsigned int depth, const char *name)
 	{
-		assert(binop.lhs);
-		assert(binop.rhs);
+		assert(node->binop.lhs);
+		assert(node->binop.rhs);
 
-		fprintf(fp, "%*s(%s\n", indent, "", name);
-		binop.lhs->dump(fp, indent + 4);
-		fprintf(fp, "\n");
-		binop.rhs->dump(fp, indent + 4);
-		fprintf(fp, "\n");
-		fprintf(fp, "%*s)", indent, "");
+		indent(os, depth);
+		os << "(" << name;
+		line_break(os);
+		serialize(os, node->binop.lhs, depth + 1);
+		line_break(os);
+		serialize(os, node->binop.rhs, depth + 1);
+		line_break(os, "");
+		indent(os, depth);
+		os << ")";
 	}
 
-	void dump(FILE *fp = stdout, unsigned int indent = 0)
+	void serialize(std::ostream &os, const ast_node_ptr &node, unsigned int depth = 0)
 	{
-		switch (type) {
+		if (max_depth && depth >= max_depth) {
+			os << "...";
+			return;
+		}
+
+		switch (node->type) {
 		case AST_UNKNOWN:
-			fprintf(fp, "%*s(unknown)", indent, "");
+			os << "(unknown)";
 			break;
 
 		case AST_LITERAL_INTEGER:
-			fprintf(fp, "%*s(literal_integer %s)", indent, "", literal_integer.get_str().c_str());
+			indent(os, depth);
+			os << "(literal_integer " << node->literal_integer.get_str() << ")";
 			break;
 		case AST_LITERAL_STRING:
-			fprintf(fp, "%*s(literal_string \"%s\")", indent, "", literal_string.c_str());
+			indent(os, depth);
+			os << "(literal_string \"" << node->literal_string << "\")";
 			break;
 		case AST_SYMBOL_NAME:
-			fprintf(fp, "%*s(symbol_name %s)", indent, "", symbol_name.c_str());
+			indent(os, depth);
+			os << "(symbol_name " << node->symbol_name << ")";
 			break;
 
 		case AST_BRACKETS:
-			dump_unop(fp, indent, "brackets");
+			unop(os, node, depth, "brackets");
 			break;
 		case AST_SQUARE_BRACKETS:
-			dump_unop(fp, indent, "square-brackets");
+			unop(os, node, depth, "square-brackets");
 			break;
 		case AST_CURLY_BRACKETS:
-			dump_unop(fp, indent, "curly-brackets");
+			unop(os, node, depth, "curly-brackets");
 			break;
 
 		case AST_MEMBER:
-			dump_binop(fp, indent, "member");
+			binop(os, node, depth, "member");
 			break;
 		case AST_PAIR:
-			dump_binop(fp, indent, "pair");
+			binop(os, node, depth, "pair");
 			break;
 		case AST_JUXTAPOSE:
-			dump_binop(fp, indent, "juxtapose");
+			binop(os, node, depth, "juxtapose");
 			break;
 		case AST_COMMA:
-			dump_binop(fp, indent, "comma");
+			binop(os, node, depth, "comma");
 			break;
 		case AST_SEMICOLON:
-			dump_binop(fp, indent, "semicolon");
+			binop(os, node, depth, "semicolon");
 			break;
 		}
 	}
 };
+
+// Create a "one-line" abbreviation of the serialized AST node, useful
+// for debugging where you just want to show a part of the tree (e.g. the
+// node and its children, but not grandchildren).
+std::string abbreviate(const ast_node_ptr &node)
+{
+	serializer s;
+	s.max_depth = 2;
+	s.indentation = 0;
+	s.line_breaks = false;
+
+	std::ostringstream ss;
+	s.serialize(ss, node);
+	return ss.str();
+}
 
 template<ast_node_type type>
 struct traverse {

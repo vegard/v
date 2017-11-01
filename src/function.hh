@@ -543,10 +543,10 @@ struct function {
 struct function_block {
 	function_ptr &f;
 
-	function_block(function_ptr &f, std::string name):
+	function_block(function_ptr &f, std::string name, std::string args = ""):
 		f(f)
 	{
-		f->comment(format("$() {", name));
+		f->comment(format("$($) {", name, args));
 		f->enter();
 	}
 
@@ -557,7 +557,7 @@ struct function_block {
 	}
 };
 
-#define function_enter(f) \
-	function_block __function_enter(f, __FUNCTION__)
+#define function_enter(f, args...) \
+	function_block __function_enter(f, __FUNCTION__, ##args)
 
 #endif

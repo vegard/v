@@ -55,7 +55,7 @@ static value_ptr call_operator_fn(context_ptr c, function_ptr f, scope_ptr s, co
 
 	auto it = lhs_type->members.find(member);
 	if (it == lhs_type->members.end())
-		throw compile_error(node, "unknown member: %s", member);
+		throw compile_error(node, "unknown member '$'", member);
 
 	value_ptr val = it->second->invoke(c, f, s, lhs, node->binop.rhs);
 	return _compile_juxtapose(c, f, s, node, val, node->binop.rhs);

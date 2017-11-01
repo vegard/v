@@ -44,6 +44,7 @@ extern "C" {
 #include "compile.hh"
 #include "document.hh"
 #include "function.hh"
+#include "globals.hh"
 #include "macro.hh"
 #include "scope.hh"
 #include "value.hh"
@@ -172,6 +173,8 @@ int main(int argc, char *argv[])
 				do_dump_binary = true;
 			else if (!strcmp(argv[i], "--no-run"))
 				do_run = false;
+			else if (!strcmp(argv[i], "--disassemble"))
+				global_disassemble = true;
 			else
 				error(EXIT_FAILURE, 0, "Unrecognised option: %s", argv[i]);
 		} else {

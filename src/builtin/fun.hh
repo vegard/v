@@ -168,7 +168,9 @@ static value_ptr __construct_fun(value_type_ptr type, context_ptr c, function_pt
 	*global = mem;
 	ret->global.host_address = (void *) global;
 
-	disassemble((const uint8_t *) mem, new_f->bytes.size(), (uint64_t) mem, new_f->comments);
+	if (global_disassemble)
+		disassemble((const uint8_t *) mem, new_f->bytes.size(), (uint64_t) mem, new_f->comments);
+
 	return ret;
 }
 

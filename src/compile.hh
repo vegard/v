@@ -25,6 +25,7 @@
 #include "compile_error.hh"
 #include "format.hh"
 #include "function.hh"
+#include "globals.hh"
 #include "scope.hh"
 
 static value_ptr compile(context_ptr, function_ptr f, scope_ptr s, ast_node_ptr node);
@@ -38,7 +39,6 @@ static void disassemble(const uint8_t *buf, size_t len, uint64_t pc, const std::
 	ud_set_pc(&u, pc);
 	ud_set_syntax(&u, UD_SYN_ATT);
 
-#if 0
 	printf("Disassembly at 0x%08lx:\n", pc);
 
 	unsigned int indentation = 0;
@@ -57,7 +57,6 @@ static void disassemble(const uint8_t *buf, size_t len, uint64_t pc, const std::
 	}
 
 	printf("\e[0m\n");
-#endif
 }
 
 static void *map(function_ptr f)
@@ -82,7 +81,9 @@ static void *map(function_ptr f)
 static void run(function_ptr f)
 {
 	void *mem = map(f);
-	disassemble((const uint8_t *) mem, f->bytes.size(), (uint64_t) mem, f->comments);
+
+	if (global_disassemble)
+		disassemble((const uint8_t *) mem, f->bytes.size(), (uint64_t) mem, f->comments);
 
 	// TODO: ABI
 	auto ret = f->return_value;

@@ -19,23 +19,42 @@
 #ifndef V_FORMAT_HH
 #define V_FORMAT_HH
 
-#include <cstdarg>
-#include <cstdio>
 #include <stdexcept>
+#include <sstream>
+#include <string>
 
-// This is a wrapper around sprintf() that returns std::string
-static std::string format(const char *format, ...)
+void format(std::ostringstream &ss, const char *s)
 {
-	va_list ap;
-	va_start(ap, format);
-	char *str;
-	if (vasprintf(&str, format, ap) == -1)
-		throw std::runtime_error("vasprintf() failed");
-	va_end(ap);
+	while (*s) {
+		if (*s == '$')
+			throw std::runtime_error("too few arguments provided to format");
 
-	std::string ret(str);
-	free(str);
-	return ret;
+		ss << *s++;
+	}
+}
+
+template<typename t, typename... Args>
+void format(std::ostringstream &ss, const char *s, t &value, Args... args)
+{
+	while (*s) {
+		if (*s == '$') {
+			ss << value;
+			format(ss, ++s, args...);
+			return;
+		}
+
+		ss << *s++;
+	}
+
+	throw std::runtime_error("too many arguments provided to format");
+}
+
+template<typename... Args>
+std::string format(const char *s, Args... args)
+{
+	std::ostringstream ss;
+	format(ss, s, args...);
+	return ss.str();
 }
 
 #endif

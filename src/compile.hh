@@ -67,7 +67,7 @@ static void *map(function_ptr f)
 		PROT_READ | PROT_WRITE | PROT_EXEC,
 		MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 	if (mem == MAP_FAILED)
-		throw std::runtime_error(format("mmap() failed: %s", strerror(errno)));
+		throw std::runtime_error(format("mmap() failed: $", strerror(errno)));
 
 	memcpy(mem, &f->bytes[0], f->bytes.size());
 

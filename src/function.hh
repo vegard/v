@@ -546,7 +546,7 @@ struct function_block {
 	function_block(function_ptr &f, std::string name):
 		f(f)
 	{
-		f->comment(format("%s() {", name.c_str()));
+		f->comment(format("$() {", name));
 		f->enter();
 	}
 

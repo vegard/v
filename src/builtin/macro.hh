@@ -37,17 +37,17 @@ struct user_macro: macro {
 		assert(fn_value->storage_type == VALUE_GLOBAL);
 	}
 
-	value_ptr invoke(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+	value_ptr invoke(const compile_state &state, ast_node_ptr node)
 	{
 		assert(fn_value->storage_type == VALUE_GLOBAL);
 		auto fn = *(user_macro_fn_type *) fn_value->global.host_address;
 
 		// XXX: why the indirection? I forgot why I did it this way.
-		return (*fn)(c, f, s, node);
+		return (*fn)(state.context, state.function, state.scope, node);
 	}
 };
 
-static value_ptr builtin_type_macro_constructor(value_type_ptr type, context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_type_macro_constructor(value_type_ptr type, const compile_state &state, ast_node_ptr node)
 {
 	static std::vector<value_type_ptr> argument_types = {
 		builtin_type_context,
@@ -56,7 +56,7 @@ static value_ptr builtin_type_macro_constructor(value_type_ptr type, context_ptr
 		builtin_type_ast_node,
 	};
 
-	static auto macro_fun_type_value = _builtin_macro_fun(c, builtin_type_value, argument_types);
+	static auto macro_fun_type_value = _builtin_macro_fun(state.context, builtin_type_value, argument_types);
 	static auto macro_fun_type = *(value_type_ptr *) macro_fun_type_value->global.host_address;
 
 	std::vector<std::string> args;
@@ -65,7 +65,7 @@ static value_ptr builtin_type_macro_constructor(value_type_ptr type, context_ptr
 	args.push_back("scope");
 	args.push_back("node");
 
-	auto macro_fun = __construct_fun(macro_fun_type, c, f, s, node, args, node);
+	auto macro_fun = __construct_fun(macro_fun_type, state, node, args, node);
 
 	auto m = std::make_shared<user_macro>(macro_fun);
 

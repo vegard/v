@@ -120,7 +120,7 @@ struct scope {
 		define(nullptr, nullptr, name, macro_value);
 	}
 
-	void define_builtin_macro(const std::string name, value_ptr (*fn)(context_ptr, function_ptr, scope_ptr, ast_node_ptr))
+	void define_builtin_macro(const std::string name, value_ptr (*fn)(const compile_state &, ast_node_ptr))
 	{
 		return define_builtin_macro(name, std::make_shared<simple_macro>(fn));
 	}

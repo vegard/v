@@ -25,33 +25,33 @@
 #include "../scope.hh"
 #include "../value.hh"
 
-static value_ptr builtin_macro_equals(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_equals(const compile_state &state, ast_node_ptr node)
 {
 	if (node->type != AST_JUXTAPOSE)
 		throw compile_error(node, "expected juxtaposition");
 
-	auto lhs = compile(c, f, s, node->binop.lhs);
-	auto rhs = compile(c, f, s, node->binop.rhs);
+	auto lhs = compile(state, node->binop.lhs);
+	auto rhs = compile(state, node->binop.rhs);
 	if (lhs->type != rhs->type)
 		throw compile_error(node, "cannot compare values of different types");
 
-	auto ret = f->alloc_local_value(c, builtin_type_boolean);
-	f->emit_eq<function::CMP_EQ>(lhs, rhs, ret);
+	auto ret = state.function->alloc_local_value(state.context, builtin_type_boolean);
+	state.function->emit_eq<function::CMP_EQ>(lhs, rhs, ret);
 	return ret;
 }
 
-static value_ptr builtin_macro_notequals(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_notequals(const compile_state &state, ast_node_ptr node)
 {
 	if (node->type != AST_JUXTAPOSE)
 		throw compile_error(node, "expected juxtaposition");
 
-	auto lhs = compile(c, f, s, node->binop.lhs);
-	auto rhs = compile(c, f, s, node->binop.rhs);
+	auto lhs = compile(state, node->binop.lhs);
+	auto rhs = compile(state, node->binop.rhs);
 	if (lhs->type != rhs->type)
 		throw compile_error(node, "cannot compare values of different types");
 
-	auto ret = f->alloc_local_value(c, builtin_type_boolean);
-	f->emit_eq<function::CMP_NEQ>(lhs, rhs, ret);
+	auto ret = state.function->alloc_local_value(state.context, builtin_type_boolean);
+	state.function->emit_eq<function::CMP_NEQ>(lhs, rhs, ret);
 	return ret;
 }
 

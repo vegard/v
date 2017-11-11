@@ -21,7 +21,7 @@
 
 #include "../compile.hh"
 
-static value_ptr builtin_macro_value_constructor(value_type_ptr type, context_ptr, function_ptr f, scope_ptr s, ast_node_ptr node);
+static value_ptr builtin_macro_value_constructor(value_type_ptr type, const compile_state &state, ast_node_ptr node);
 
 static auto builtin_type_value = std::make_shared<value_type>(value_type {
 	.alignment = alignof(value_ptr),
@@ -31,9 +31,9 @@ static auto builtin_type_value = std::make_shared<value_type>(value_type {
 
 // "value" is a macro that evaluates an expression and returns a "value_ptr"
 // rather than the value itself (is this the same as "compile"?)
-static value_ptr builtin_macro_value_constructor(value_type_ptr type, context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_value_constructor(value_type_ptr type, const compile_state &state, ast_node_ptr node)
 {
-	auto v = compile(c, f, s, node);
+	auto v = compile(state, node);
 
 	auto value_value = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_value);
 	auto value_copy = new value_ptr(v);

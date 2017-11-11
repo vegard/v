@@ -44,26 +44,26 @@ struct return_macro: macro {
 	{
 	}
 
-	value_ptr invoke(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+	value_ptr invoke(const compile_state &state, ast_node_ptr node)
 	{
-		if (this->f != f)
+		if (state.function != this->f)
 			throw compile_error(node, "'return' used outside defining function");
 
 		// The scope where we are used must be the scope where we
 		// were defined or a child.
-		if (!is_parent_of(this->s, s))
+		if (!is_parent_of(this->s, state.scope))
 			throw compile_error(node, "'return' used outside defining scope");
 
 		f->comment("return");
 
-		auto v = compile(c, f, s, node);
+		auto v = compile(state, node);
 		if (v->type != return_type)
 			throw compile_error(node, "wrong return type for function");
 
 		if (return_value)
-			f->emit_move(v, return_value);
+			state.function->emit_move(v, return_value);
 
-		f->emit_jump(return_label);
+		state.function->emit_jump(return_label);
 
 		// TODO: if the last "statement" in a function is a return, then we
 		// want that to be the return type/value of the expression.
@@ -96,9 +96,11 @@ struct args_allocator {
 };
 
 // Low-level helper (for use after data has been extracted from syntax)
-static value_ptr __construct_fun(value_type_ptr type, context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node,
+static value_ptr __construct_fun(value_type_ptr type, const compile_state &state, ast_node_ptr node,
 	std::vector<std::string> &args, ast_node_ptr body_node)
 {
+	auto c = state.context;
+
 	auto new_f = std::make_shared<function>(false);
 	new_f->emit_prologue();
 
@@ -119,7 +121,7 @@ static value_ptr __construct_fun(value_type_ptr type, context_ptr c, function_pt
 		new_f->emit_move_address(regs.next(node), return_value);
 	}
 
-	auto new_scope = std::make_shared<scope>(s);
+	auto new_scope = std::make_shared<scope>(state.scope);
 	new_scope->define_builtin_macro("return", std::make_shared<return_macro>(new_f, new_scope, return_type, return_value, return_label));
 
 	for (unsigned int i = 0; i < args.size(); ++i) {
@@ -137,7 +139,7 @@ static value_ptr __construct_fun(value_type_ptr type, context_ptr c, function_pt
 		new_scope->define(new_f, node, args[i], arg_value);
 	}
 
-	auto v = compile(c, new_f, new_scope, body_node);
+	auto v = compile(compile_state(c, new_f, new_scope), body_node);
 	auto v_type = v->type;
 	if (v_type != return_type)
 		throw compile_error(node, "wrong return type for function");
@@ -177,7 +179,7 @@ static value_ptr __construct_fun(value_type_ptr type, context_ptr c, function_pt
 // actually compile a function body
 //  - 'type' is the function type (signature)
 //  - 'node' is the function body
-static value_ptr _construct_fun(value_type_ptr type, context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr _construct_fun(value_type_ptr type, const compile_state &state, ast_node_ptr node)
 {
 	if (node->type != AST_JUXTAPOSE)
 		throw compile_error(node, "expected (<argument types>...) <body>");
@@ -198,12 +200,13 @@ static value_ptr _construct_fun(value_type_ptr type, context_ptr c, function_ptr
 		throw compile_error(node, "expected %u arguments; got %u", type->argument_types.size(), args.size());
 
 	auto body_node = node->binop.rhs;
-	return __construct_fun(type, c, f, s, node, args, body_node);
+	return __construct_fun(type, state, node, args, body_node);
 }
 
 // Low-level helper (for use after data has been extracted from syntax)
-static value_ptr __call_fun(context_ptr c, function_ptr f, scope_ptr s, value_ptr fn, ast_node_ptr node, std::vector<std::pair<ast_node_ptr, value_ptr>> args)
+static value_ptr __call_fun(const compile_state &state, value_ptr fn, ast_node_ptr node, std::vector<std::pair<ast_node_ptr, value_ptr>> args)
 {
+	auto f = state.function;
 
 	// TODO: save/restore caller save registers
 	auto type = fn->type;
@@ -218,7 +221,7 @@ static value_ptr __call_fun(context_ptr c, function_ptr f, scope_ptr s, value_pt
 	if (return_type == builtin_type_void)
 		return_value = builtin_value_void;
 	else
-		return_value = f->alloc_local_value(c, return_type);
+		return_value = f->alloc_local_value(state.context, return_type);
 
 	// TODO: should really use a "non-trivial *structor" flag
 	if (return_type->size <= sizeof(unsigned long))
@@ -250,16 +253,16 @@ static value_ptr __call_fun(context_ptr c, function_ptr f, scope_ptr s, value_pt
 	return return_value;
 }
 
-static value_ptr _call_fun(context_ptr c, function_ptr f, scope_ptr s, value_ptr fn, ast_node_ptr node)
+static value_ptr _call_fun(const compile_state &state, value_ptr fn, ast_node_ptr node)
 {
 	if (node->type != AST_BRACKETS)
 		throw compile_error(node, "expected parantheses");
 
 	std::vector<std::pair<ast_node_ptr, value_ptr>> args;
 	for (auto arg_node: traverse<AST_COMMA>(node->unop))
-		args.push_back(std::make_pair(arg_node, compile(c, f, s, arg_node)));
+		args.push_back(std::make_pair(arg_node, compile(state, arg_node)));
 
-	return __call_fun(c, f, s, fn, node, args);
+	return __call_fun(state, fn, node, args);
 }
 
 // Low-level helper (for use after data has been extracted from syntax)
@@ -284,7 +287,7 @@ static value_ptr _builtin_macro_fun(context_ptr c, value_type_ptr ret_type, cons
 	return type_value;
 }
 
-static value_ptr builtin_macro_fun(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_fun(const compile_state &state, ast_node_ptr node)
 {
 	// Extract parameters and code block from AST
 
@@ -292,7 +295,7 @@ static value_ptr builtin_macro_fun(context_ptr c, function_ptr f, scope_ptr s, a
 		throw compile_error(node, "expected 'fun <expression> (<expression>)'");
 
 	auto ret_type_node = node->binop.lhs;
-	auto ret_type_value = eval(c, s, ret_type_node);
+	auto ret_type_value = eval(state, ret_type_node);
 	if (ret_type_value->storage_type != VALUE_GLOBAL)
 		throw compile_error(ret_type_node, "return type must be known at compile time");
 	if (ret_type_value->type != builtin_type_type)
@@ -307,7 +310,7 @@ static value_ptr builtin_macro_fun(context_ptr c, function_ptr f, scope_ptr s, a
 
 	std::vector<value_type_ptr> argument_types;
 	for (auto arg_type_node: traverse<AST_COMMA>(args_node)) {
-		value_ptr arg_type_value = eval(c, s, arg_type_node);
+		value_ptr arg_type_value = eval(state, arg_type_node);
 		if (arg_type_value->storage_type != VALUE_GLOBAL)
 			throw compile_error(arg_type_node, "argument type must be known at compile time");
 		if (arg_type_value->type != builtin_type_type)
@@ -317,7 +320,7 @@ static value_ptr builtin_macro_fun(context_ptr c, function_ptr f, scope_ptr s, a
 		argument_types.push_back(arg_type);
 	}
 
-	return _builtin_macro_fun(c, ret_type, argument_types);
+	return _builtin_macro_fun(state.context, ret_type, argument_types);
 }
 
 #endif

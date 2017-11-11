@@ -32,15 +32,15 @@ static void _scope_constructor(scope_ptr &this_scope, scope_ptr parent)
 	new (&this_scope) scope_ptr(std::make_shared<scope>(parent));
 }
 
-static value_ptr builtin_type_scope_constructor(value_type_ptr type, context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_type_scope_constructor(value_type_ptr type, const compile_state &state, ast_node_ptr node)
 {
 	// XXX: make wrapping functions easier
 
-	auto this_val = f->alloc_local_value(c, builtin_type_scope);
+	auto this_val = state.function->alloc_local_value(state.context, builtin_type_scope);
 
 	std::vector<std::pair<ast_node_ptr, value_ptr>> args;
 	args.push_back(std::make_pair(node, this_val));
-	args.push_back(std::make_pair(node, compile(c, f, s, node)));
+	args.push_back(std::make_pair(node, compile(state, node)));
 
 	assert(type == builtin_type_scope);
 
@@ -58,7 +58,7 @@ static value_ptr builtin_type_scope_constructor(value_type_ptr type, context_ptr
 	*global = (void *) &_scope_constructor;
 	val->global.host_address = global;
 
-	__call_fun(c, f, s, val, node, args);
+	__call_fun(state, val, node, args);
 	return this_val;
 }
 
@@ -70,7 +70,7 @@ static void _scope_define(scope_ptr this_scope, function_ptr f, ast_node_ptr nam
 	this_scope->define(f, name, name->literal_string, value);
 }
 
-static value_ptr builtin_type_scope_define(context_ptr c, function_ptr f, scope_ptr s, value_ptr this_scope, ast_node_ptr node)
+static value_ptr builtin_type_scope_define(const compile_state &state, value_ptr this_scope, ast_node_ptr node)
 {
 	// XXX: make wrapping functions easier
 
@@ -80,7 +80,7 @@ static value_ptr builtin_type_scope_define(context_ptr c, function_ptr f, scope_
 	std::vector<std::pair<ast_node_ptr, value_ptr>> args;
 	args.push_back(std::make_pair(node, this_scope));
 	for (auto arg_node: traverse<AST_COMMA>(node->unop))
-		args.push_back(std::make_pair(arg_node, compile(c, f, s, arg_node)));
+		args.push_back(std::make_pair(arg_node, compile(state, arg_node)));
 
 	assert(this_scope->type == builtin_type_scope);
 
@@ -100,7 +100,7 @@ static value_ptr builtin_type_scope_define(context_ptr c, function_ptr f, scope_
 	*global = (void *) &_scope_define;
 	val->global.host_address = global;
 
-	return __call_fun(c, f, s, val, node, args);
+	return __call_fun(state, val, node, args);
 }
 
 #endif

@@ -47,9 +47,9 @@ struct struct_field: member {
 	{
 	}
 
-	value_ptr invoke(context_ptr c, function_ptr f, scope_ptr s, value_ptr v, ast_node_ptr node)
+	value_ptr invoke(const compile_state &state, value_ptr v, ast_node_ptr node)
 	{
-		auto ret_value = std::make_shared<value>(c, v->storage_type, field_type);
+		auto ret_value = std::make_shared<value>(state.context, v->storage_type, field_type);
 		switch (v->storage_type) {
 		case VALUE_GLOBAL:
 			ret_value->global.host_address = (void *) ((unsigned long) v->global.host_address + offset);
@@ -71,14 +71,14 @@ struct struct_field: member {
 	}
 };
 
-static value_ptr _struct_constructor(value_type_ptr v, context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr _struct_constructor(value_type_ptr v, const compile_state &state, ast_node_ptr node)
 {
 	// TODO: zero value
 	// TODO: move allocation out!
-	return f->alloc_local_value(c, v);
+	return state.function->alloc_local_value(state.context, v);
 }
 
-static value_ptr builtin_macro_struct(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_struct(const compile_state &state, ast_node_ptr node)
 {
 	if (node->type != AST_CURLY_BRACKETS)
 		throw compile_error(node, "expected { ... }");
@@ -101,7 +101,7 @@ static value_ptr builtin_macro_struct(context_ptr c, function_ptr f, scope_ptr s
 		auto field_name = name_node->literal_string;
 
 		auto type_node = member_node->binop.rhs;
-		auto type_value = eval(c, s, type_node);
+		auto type_value = eval(state, type_node);
 		assert(type_value->storage_type == VALUE_GLOBAL);
 		assert(type_value->type == builtin_type_type);
 
@@ -123,7 +123,7 @@ static value_ptr builtin_macro_struct(context_ptr c, function_ptr f, scope_ptr s
 	type->size = (offset + type->alignment - 1) & ~(type->alignment - 1);
 
 	// XXX: refcounting
-	auto type_value = std::make_shared<value>(c, VALUE_GLOBAL, builtin_type_type);
+	auto type_value = std::make_shared<value>(state.context, VALUE_GLOBAL, builtin_type_type);
 	auto type_copy = new value_type_ptr(type);
 	type_value->global.host_address = (void *) type_copy;
 	return type_value;

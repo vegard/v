@@ -54,20 +54,20 @@ static void _print(uint64_t x)
 	printf("%lu\n", x);
 }
 
-static value_ptr builtin_macro_print(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_print(const compile_state &state, ast_node_ptr node)
 {
-	auto print_fn = std::make_shared<value>(c, VALUE_GLOBAL, builtin_type_u64);
+	auto print_fn = std::make_shared<value>(state.context, VALUE_GLOBAL, builtin_type_u64);
 	auto global = new void *;
 	*global = (void *) &_print;
 	print_fn->global.host_address = (void *) global;
 
 	// TODO: save registers
-	auto arg = compile(c, f, s, node);
+	auto arg = compile(state, node);
 	assert(arg->type == builtin_type_u64);
 
-	use_value(c, node, arg);
-	f->emit_move(arg, 0, RDI);
-	f->emit_call(print_fn);
+	use_value(state.context, node, arg);
+	state.function->emit_move(arg, 0, RDI);
+	state.function->emit_call(print_fn);
 
 	return builtin_value_void;
 }
@@ -81,7 +81,7 @@ struct namespace_member: member {
 		val->global.host_address = (void *) new value_type_ptr(type);
 	}
 
-	value_ptr invoke(context_ptr c, function_ptr f, scope_ptr s, value_ptr v, ast_node_ptr node)
+	value_ptr invoke(const compile_state &state, value_ptr v, ast_node_ptr node)
 	{
 		return val;
 	}
@@ -143,7 +143,7 @@ static function_ptr compile_metaprogram(ast_node_ptr root)
 	auto c = std::make_shared<context>(nullptr);
 	auto f = std::make_shared<function>(true);
 	f->emit_prologue();
-	compile(c, f, global_scope, root);
+	compile(compile_state(c, f, global_scope), root);
 	f->emit_epilogue();
 
 	return f;

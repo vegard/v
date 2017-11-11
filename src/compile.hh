@@ -27,6 +27,7 @@
 #include "function.hh"
 #include "globals.hh"
 #include "scope.hh"
+#include "value.hh"
 
 // This is a badly named; for the future I'd like to rename 'context' to
 // something else and then rename this to 'compile_context'
@@ -194,7 +195,7 @@ static value_ptr compile_member(const compile_state &state, ast_node_ptr node)
 	if (it == lhs_type->members.end())
 		throw compile_error(node, "unknown member: %s", rhs_node->literal_string.c_str());
 
-	return it->second->invoke(state.context, state.function, state.scope, lhs, rhs_node);
+	return it->second->invoke(state, lhs, rhs_node);
 }
 
 static value_ptr _compile_juxtapose(const compile_state &state, ast_node_ptr lhs_node, value_ptr lhs, ast_node_ptr rhs_node)
@@ -208,7 +209,7 @@ static value_ptr _compile_juxtapose(const compile_state &state, ast_node_ptr lhs
 		assert(lhs->storage_type == VALUE_GLOBAL);
 
 		auto m = *(macro_ptr *) lhs->global.host_address;
-		return m->invoke(state.context, state.function, state.scope, rhs_node);
+		return m->invoke(state, rhs_node);
 	} else if (lhs_type == builtin_type_type) {
 		auto new_c = std::make_shared<context>(state.context);
 		use_value(new_c, lhs_node, lhs);
@@ -220,12 +221,12 @@ static value_ptr _compile_juxtapose(const compile_state &state, ast_node_ptr lhs
 			throw compile_error(lhs_node, "type doesn't have a constructor");
 
 		// TODO: functions as constructors
-		return type->constructor(type, state.context, state.function, state.scope, rhs_node);
+		return type->constructor(type, state, rhs_node);
 	}
 
 	auto it = lhs_type->members.find("_call");
 	if (it != lhs_type->members.end())
-		return it->second->invoke(state.context, state.function, state.scope, lhs, rhs_node);
+		return it->second->invoke(state, lhs, rhs_node);
 
 	throw compile_error(lhs_node, "type is not callable");
 }
@@ -283,21 +284,6 @@ static value_ptr compile(const compile_state &state, ast_node_ptr node)
 
 	assert(false);
 	return nullptr;
-}
-
-// XXX: Temporary overloaded wrapper for compile() until we can convert all
-// other callsites to use compile_state directly.
-static value_ptr compile(context_ptr &c, function_ptr &f, scope_ptr &s, ast_node_ptr &node)
-{
-	return compile(compile_state(c, f, s), node);
-}
-
-// XXX: Temporary overloaded wrapper for eval() until we can convert all
-// other callsites to use compile_state directly.
-static value_ptr eval(context_ptr &c, scope_ptr &s, ast_node_ptr node)
-{
-	function_ptr f(nullptr);
-	return eval(compile_state(c, f, s), node);
 }
 
 #endif

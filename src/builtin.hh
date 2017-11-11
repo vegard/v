@@ -37,8 +37,8 @@ static auto builtin_type_function = std::make_shared<value_type>(value_type {
 	.size = sizeof(function_ptr),
 });
 
-static value_ptr builtin_type_scope_constructor(value_type_ptr, context_ptr, function_ptr, scope_ptr, ast_node_ptr);
-static value_ptr builtin_type_scope_define(context_ptr, function_ptr, scope_ptr, value_ptr, ast_node_ptr);
+static value_ptr builtin_type_scope_constructor(value_type_ptr, const compile_state &, ast_node_ptr);
+static value_ptr builtin_type_scope_define(const compile_state &, value_ptr, ast_node_ptr);
 
 static auto builtin_type_scope = std::make_shared<value_type>(value_type {
 	.alignment = alignof(scope_ptr),

@@ -25,17 +25,18 @@
 #include "../scope.hh"
 #include "../value.hh"
 
-static value_ptr builtin_macro_eval(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_eval(const compile_state &state, ast_node_ptr node)
 {
-	return eval(c, s, node);
+	return eval(state, node);
 }
 
 static value_ptr _eval(context_ptr c, scope_ptr s, ast_node_ptr node)
 {
-	return eval(c, s, node);
+	function_ptr f(nullptr);
+	return eval(compile_state(c, f, s), node);
 }
 
-static value_ptr builtin_function_eval(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_function_eval(const compile_state &state, ast_node_ptr node)
 {
 	// XXX: make wrapping functions easier
 
@@ -56,7 +57,7 @@ static value_ptr builtin_function_eval(context_ptr c, function_ptr f, scope_ptr 
 	*global = (void *) &_eval;
 	val->global.host_address = global;
 
-	return _call_fun(c, f, s, val, node);
+	return _call_fun(state, val, node);
 }
 
 #endif

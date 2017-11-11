@@ -25,7 +25,7 @@
 #include "../scope.hh"
 #include "../value.hh"
 
-static value_ptr builtin_macro_define(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_macro_define(const compile_state &state, ast_node_ptr node)
 {
 	if (node->type != AST_JUXTAPOSE)
 		throw compile_error(node, "expected juxtaposition");
@@ -34,22 +34,22 @@ static value_ptr builtin_macro_define(context_ptr c, function_ptr f, scope_ptr s
 	if (lhs->type != AST_SYMBOL_NAME)
 		throw compile_error(node, "definition of non-symbol");
 
-	auto rhs = compile(c, f, s, node->binop.rhs);
+	auto rhs = compile(state, node->binop.rhs);
 	value_ptr val;
-	if (f->target_jit) {
+	if (state.function->target_jit) {
 		// For functions that are run at compile-time, we allocate
 		// a new global value. The _name_ is still scoped as usual,
 		// though.
-		val = std::make_shared<value>(c, VALUE_GLOBAL, rhs->type);
+		val = std::make_shared<value>(state.context, VALUE_GLOBAL, rhs->type);
 		auto global = new uint8_t[rhs->type->size];
 		val->global.host_address = (void *) global;
 	} else {
 		// Create new local
-		val = f->alloc_local_value(c, rhs->type);
+		val = state.function->alloc_local_value(state.context, rhs->type);
 	}
 
-	s->define(f, node, lhs->symbol_name, val);
-	f->emit_move(rhs, val);
+	state.scope->define(state.function, node, lhs->symbol_name, val);
+	state.function->emit_move(rhs, val);
 	return val;
 }
 

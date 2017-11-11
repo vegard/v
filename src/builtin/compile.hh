@@ -29,10 +29,10 @@
 static value_ptr _compile(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	//asm volatile ("int3");
-	return compile(c, f, s, node);
+	return compile(compile_state(c, f, s), node);
 }
 
-static value_ptr builtin_function_compile(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr builtin_function_compile(const compile_state &state, ast_node_ptr node)
 {
 	// XXX: make wrapping functions easier
 	assert(node->type == AST_BRACKETS);
@@ -53,7 +53,7 @@ static value_ptr builtin_function_compile(context_ptr c, function_ptr f, scope_p
 	*global = (void *) &_compile;
 	val->global.host_address = global;
 
-	return _call_fun(c, f, s, val, node);
+	return _call_fun(state, val, node);
 }
 
 #endif

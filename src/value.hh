@@ -46,6 +46,8 @@ typedef std::shared_ptr<scope> scope_ptr;
 struct ast_node;
 typedef std::shared_ptr<ast_node> ast_node_ptr;
 
+struct compile_state;
+
 typedef value_ptr (*operator_fn_type)(context_ptr, function_ptr, scope_ptr, value_ptr, ast_node_ptr);
 
 struct member {
@@ -53,20 +55,20 @@ struct member {
 	{
 	}
 
-	virtual value_ptr invoke(context_ptr c, function_ptr f, scope_ptr s, value_ptr lhs, ast_node_ptr rhs_node) = 0;
+	virtual value_ptr invoke(const compile_state &state, value_ptr lhs, ast_node_ptr rhs_node) = 0;
 };
 
 struct callback_member: member {
-	value_ptr (*fn)(context_ptr, function_ptr, scope_ptr, value_ptr, ast_node_ptr);
+	value_ptr (*fn)(const compile_state &state, value_ptr, ast_node_ptr);
 
-	callback_member(value_ptr (*fn)(context_ptr, function_ptr, scope_ptr, value_ptr, ast_node_ptr)):
+	callback_member(value_ptr (*fn)(const compile_state &, value_ptr, ast_node_ptr)):
 		fn(fn)
 	{
 	}
 
-	value_ptr invoke(context_ptr c, function_ptr f, scope_ptr s, value_ptr v, ast_node_ptr node)
+	value_ptr invoke(const compile_state &state, value_ptr v, ast_node_ptr node)
 	{
-		return fn(c, f, s, v, node);
+		return fn(state, v, node);
 	}
 };
 
@@ -78,7 +80,7 @@ struct value_type {
 	unsigned int size;
 
 	// TODO
-	value_ptr (*constructor)(value_type_ptr, context_ptr, function_ptr, scope_ptr, ast_node_ptr);
+	value_ptr (*constructor)(value_type_ptr, const compile_state &, ast_node_ptr);
 
 	// Operators
 	std::vector<value_type_ptr> argument_types;

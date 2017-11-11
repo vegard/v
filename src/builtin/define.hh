@@ -28,11 +28,11 @@
 static value_ptr builtin_macro_define(const compile_state &state, ast_node_ptr node)
 {
 	if (node->type != AST_JUXTAPOSE)
-		throw compile_error(node, "expected juxtaposition");
+		state.error(node, "expected juxtaposition");
 
 	auto lhs = node->binop.lhs;
 	if (lhs->type != AST_SYMBOL_NAME)
-		throw compile_error(node, "definition of non-symbol");
+		state.error(node, "definition of non-symbol");
 
 	auto rhs = compile(state, node->binop.rhs);
 	value_ptr val;

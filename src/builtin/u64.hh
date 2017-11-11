@@ -62,11 +62,11 @@ static value_ptr builtin_type_u64_constructor(value_type_ptr, const compile_stat
 {
 	// TODO: support conversion from other integer types?
 	if (node->type != AST_LITERAL_INTEGER)
-		throw compile_error(node, "expected literal integer");
+		state.error(node, "expected literal integer");
 
 	auto ret = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_u64);
 	if (!node->literal_integer.fits_ulong_p())
-		throw compile_error(node, "literal integer is too large to fit in u64");
+		state.error(node, "literal integer is too large to fit in u64");
 
 	auto global = new uint64_t;
 	*global = node->literal_integer.get_si();
@@ -79,7 +79,7 @@ static value_ptr builtin_type_u64_add(const compile_state &state, value_ptr lhs,
 {
 	auto rhs = compile(state, node);
 	if (rhs->type != lhs->type)
-		throw compile_error(node, "expected u64");
+		state.error(node, "expected u64");
 
 	auto ret = state.function->alloc_local_value(state.context, lhs->type);
 	state.function->emit_add(lhs, rhs, ret);
@@ -90,7 +90,7 @@ static value_ptr builtin_type_u64_subtract(const compile_state &state, value_ptr
 {
 	auto rhs = compile(state, node);
 	if (rhs->type != lhs->type)
-		throw compile_error(node, "expected u64");
+		state.error(node, "expected u64");
 
 	auto ret = state.function->alloc_local_value(state.context, lhs->type);
 	state.function->emit_sub(lhs, rhs, ret);
@@ -101,7 +101,7 @@ static value_ptr builtin_type_u64_less(const compile_state &state, value_ptr lhs
 {
 	auto rhs = compile(state, node);
 	if (rhs->type != lhs->type)
-		throw compile_error(node, "expected u64");
+		state.error(node, "expected u64");
 
 	auto ret = state.function->alloc_local_value(state.context, builtin_type_boolean);
 	state.function->emit_eq<function::CMP_LESS>(lhs, rhs, ret);

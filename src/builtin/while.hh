@@ -41,12 +41,12 @@ struct break_macro: macro {
 	value_ptr invoke(const compile_state &state, ast_node_ptr node)
 	{
 		if (state.function != this->f)
-			throw compile_error(node, "'break' used outside defining function");
+			state.error(node, "'break' used outside defining function");
 
 		// The scope where we are used must be the scope where we
 		// were defined or a child.
 		if (!is_parent_of(this->s, state.scope))
-			throw compile_error(node, "'break' used outside defining scope");
+			state.error(node, "'break' used outside defining scope");
 
 		state.function->comment("break");
 		state.function->emit_jump(done_label);
@@ -67,18 +67,18 @@ struct continue_macro: macro {
 	{
 	}
 
-	value_ptr invoke(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+	value_ptr invoke(const compile_state &state, ast_node_ptr node)
 	{
-		if (this->f != f)
-			throw compile_error(node, "'continue' used outside defining function");
+		if (state.function != this->f)
+			state.error(node, "'continue' used outside defining function");
 
 		// The scope where we are used must be the scope where we
 		// were defined or a child.
-		if (!is_parent_of(this->s, s))
-			throw compile_error(node, "'continue' used outside defining scope");
+		if (!is_parent_of(this->s, state.scope))
+			state.error(node, "'continue' used outside defining scope");
 
-		f->comment("continue");
-		f->emit_jump(loop_label);
+		state.function->comment("continue");
+		state.function->emit_jump(loop_label);
 
 		return builtin_value_void;
 	}
@@ -93,7 +93,7 @@ static value_ptr builtin_macro_while(const compile_state &state, ast_node_ptr no
 	f->comment("while");
 
 	if (node->type != AST_JUXTAPOSE)
-		throw compile_error(node, "expected 'while <expression> <expression>'");
+		state.error(node, "expected 'while <expression> <expression>'");
 
 	auto condition_node = node->binop.lhs;
 	auto body_node = node->binop.rhs;
@@ -104,7 +104,7 @@ static value_ptr builtin_macro_while(const compile_state &state, ast_node_ptr no
 	// condition
 	auto condition_value = compile(state, condition_node);
 	if (condition_value->type != builtin_type_boolean)
-		throw compile_error(condition_node, "'while' condition must be boolean");
+		state.error(condition_node, "'while' condition must be boolean");
 
 	label done_label;
 	f->emit_jump_if_zero(condition_value, done_label);

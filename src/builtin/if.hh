@@ -49,7 +49,7 @@ static value_ptr builtin_macro_if(const compile_state &state, ast_node_ptr node)
 	auto f = state.function;
 
 	if (node->type != AST_JUXTAPOSE)
-		throw compile_error(node, "expected 'if <expression> <expression>'");
+		state.error(node, "expected 'if <expression> <expression>'");
 
 	ast_node_ptr condition_node = node->binop.lhs;
 	ast_node_ptr true_node;
@@ -61,11 +61,11 @@ static value_ptr builtin_macro_if(const compile_state &state, ast_node_ptr node)
 
 		rhs = rhs->binop.rhs;
 		if (rhs->type != AST_JUXTAPOSE)
-			throw compile_error(rhs, "expected 'else <expression>'");
+			state.error(rhs, "expected 'else <expression>'");
 
 		auto else_node = rhs->binop.lhs;
 		if (else_node->type != AST_SYMBOL_NAME || else_node->symbol_name != "else")
-			throw compile_error(else_node, "expected 'else'");
+			state.error(else_node, "expected 'else'");
 
 		false_node = rhs->binop.rhs;
 	} else {
@@ -79,7 +79,7 @@ static value_ptr builtin_macro_if(const compile_state &state, ast_node_ptr node)
 	// "if" condition
 	auto condition_value = compile(state, condition_node);
 	if (condition_value->type != builtin_type_boolean)
-		throw compile_error(condition_node, "'if' condition must be boolean");
+		state.error(condition_node, "'if' condition must be boolean");
 
 	label false_label;
 	f->emit_jump_if_zero(condition_value, false_label);

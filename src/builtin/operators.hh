@@ -47,7 +47,7 @@ static value_ptr call_operator_fn(const compile_state &state, const char *member
 
 	// TODO: bad error message
 	if (node->type != AST_JUXTAPOSE)
-		throw compile_error(node, "expected juxtaposition");
+		state.error(node, "expected juxtaposition");
 
 	// TODO: only evaluate the type so we don't evaluate the value twice
 	auto lhs = compile(state, node->binop.lhs);
@@ -55,7 +55,7 @@ static value_ptr call_operator_fn(const compile_state &state, const char *member
 
 	auto it = lhs_type->members.find(member);
 	if (it == lhs_type->members.end())
-		throw compile_error(node, "unknown member '$'", member);
+		state.error(node, "unknown member '$'", member);
 
 	value_ptr val = it->second->invoke(state, lhs, node->binop.rhs);
 	return _compile_juxtapose(state, node, val, node->binop.rhs);

@@ -28,12 +28,12 @@
 static value_ptr builtin_macro_equals(const compile_state &state, ast_node_ptr node)
 {
 	if (node->type != AST_JUXTAPOSE)
-		throw compile_error(node, "expected juxtaposition");
+		state.error(node, "expected juxtaposition");
 
 	auto lhs = compile(state, node->binop.lhs);
 	auto rhs = compile(state, node->binop.rhs);
 	if (lhs->type != rhs->type)
-		throw compile_error(node, "cannot compare values of different types");
+		state.error(node, "cannot compare values of different types");
 
 	auto ret = state.function->alloc_local_value(state.context, builtin_type_boolean);
 	state.function->emit_eq<function::CMP_EQ>(lhs, rhs, ret);
@@ -43,12 +43,12 @@ static value_ptr builtin_macro_equals(const compile_state &state, ast_node_ptr n
 static value_ptr builtin_macro_notequals(const compile_state &state, ast_node_ptr node)
 {
 	if (node->type != AST_JUXTAPOSE)
-		throw compile_error(node, "expected juxtaposition");
+		state.error(node, "expected juxtaposition");
 
 	auto lhs = compile(state, node->binop.lhs);
 	auto rhs = compile(state, node->binop.rhs);
 	if (lhs->type != rhs->type)
-		throw compile_error(node, "cannot compare values of different types");
+		state.error(node, "cannot compare values of different types");
 
 	auto ret = state.function->alloc_local_value(state.context, builtin_type_boolean);
 	state.function->emit_eq<function::CMP_NEQ>(lhs, rhs, ret);

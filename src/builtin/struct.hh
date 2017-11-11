@@ -81,7 +81,7 @@ static value_ptr _struct_constructor(value_type_ptr v, const compile_state &stat
 static value_ptr builtin_macro_struct(const compile_state &state, ast_node_ptr node)
 {
 	if (node->type != AST_CURLY_BRACKETS)
-		throw compile_error(node, "expected { ... }");
+		state.error(node, "expected { ... }");
 
 	auto type = std::make_shared<value_type>();
 	// TODO: We can get away with smaller alignment for small structs
@@ -92,11 +92,11 @@ static value_ptr builtin_macro_struct(const compile_state &state, ast_node_ptr n
 	unsigned int offset = 0;
 	for (auto member_node: traverse<AST_SEMICOLON>(node->unop)) {
 		if (member_node->type != AST_PAIR)
-			throw compile_error(member_node, "expected pair");
+			state.error(member_node, "expected pair");
 
 		auto name_node = member_node->binop.lhs;
 		if (name_node->type != AST_SYMBOL_NAME)
-			throw compile_error(name_node, "expected symbol for member name");
+			state.error(name_node, "expected symbol for member name");
 
 		auto field_name = name_node->literal_string;
 

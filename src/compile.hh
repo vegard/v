@@ -57,6 +57,12 @@ struct compile_state {
 		ret.function = new_function;
 		return ret;
 	}
+
+	template<typename... Args>
+	void __attribute__((noreturn)) error(const ast_node_ptr &node, const char *fmt, Args... args) const
+	{
+		throw compile_error(node, fmt, args...);
+	}
 };
 
 static value_ptr compile(const compile_state &state, ast_node_ptr node);
@@ -189,11 +195,11 @@ static value_ptr compile_member(const compile_state &state, ast_node_ptr node)
 	auto rhs_node = node->binop.rhs;
 	if (rhs_node->type != AST_SYMBOL_NAME)
 		// TODO: say which AST node type we got instead of a symbol name
-		throw compile_error(node, "member name must be a symbol");
+		state.error(node, "member name must be a symbol");
 
 	auto it = lhs_type->members.find(rhs_node->literal_string);
 	if (it == lhs_type->members.end())
-		throw compile_error(node, "unknown member: %s", rhs_node->literal_string.c_str());
+		state.error(node, "unknown member: %s", rhs_node->literal_string.c_str());
 
 	return it->second->invoke(state, lhs, rhs_node);
 }
@@ -218,7 +224,7 @@ static value_ptr _compile_juxtapose(const compile_state &state, ast_node_ptr lhs
 		// call type's constructor
 		auto type = *(value_type_ptr *) lhs->global.host_address;
 		if (!type->constructor)
-			throw compile_error(lhs_node, "type doesn't have a constructor");
+			state.error(lhs_node, "type doesn't have a constructor");
 
 		// TODO: functions as constructors
 		return type->constructor(type, state, rhs_node);
@@ -228,7 +234,7 @@ static value_ptr _compile_juxtapose(const compile_state &state, ast_node_ptr lhs
 	if (it != lhs_type->members.end())
 		return it->second->invoke(state, lhs, rhs_node);
 
-	throw compile_error(lhs_node, "type is not callable");
+	state.error(lhs_node, "type is not callable");
 }
 
 static value_ptr compile_juxtapose(const compile_state &state, ast_node_ptr node)
@@ -245,7 +251,7 @@ static value_ptr compile_symbol_name(const compile_state &state, ast_node_ptr no
 {
 	auto ret = state.scope->lookup(state.function, node, node->symbol_name);
 	if (!ret)
-		throw compile_error(node, "could not resolve symbol %s", node->symbol_name.c_str());
+		state.error(node, "could not resolve symbol %s", node->symbol_name.c_str());
 
 	return ret;
 }
@@ -263,7 +269,7 @@ static value_ptr compile(const compile_state &state, ast_node_ptr node)
 
 	switch (node->type) {
 	case AST_LITERAL_INTEGER:
-		throw compile_error(node, "unexpected integer literal");
+		state.error(node, "unexpected integer literal");
 
 	case AST_BRACKETS:
 		return compile_brackets(state, node);
@@ -279,7 +285,7 @@ static value_ptr compile(const compile_state &state, ast_node_ptr node)
 	case AST_SEMICOLON:
 		return compile_semicolon(state, node);
 	default:
-		throw compile_error(node, "internal compiler error: unrecognised AST node type $: $", node->type, abbreviate(node));
+		state.error(node, "internal compiler error: unrecognised AST node type $: $", node->type, abbreviate(node));
 	}
 
 	assert(false);

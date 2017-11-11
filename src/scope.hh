@@ -130,28 +130,19 @@ struct scope {
 		define(nullptr, nullptr, name, val);
 	}
 
-	value_ptr lookup(function_ptr f, ast_node_ptr node, const std::string name)
+	bool lookup(const std::string name, entry &result)
 	{
 		auto it = contents.find(name);
 		if (it != contents.end()) {
-			const auto &entry = it->second;
-
-			// We can always access globals
-			auto val = entry.val;
-			if (val->storage_type == VALUE_GLOBAL || val->storage_type == VALUE_CONSTANT)
-				return val;
-
-			if (f != entry.f)
-				throw compile_error(node, "cannot access local variable of different function");
-
-			return val;
+			result = it->second;
+			return true;
 		}
 
 		// Recursively search parent scopes
 		if (parent)
-			return parent->lookup(f, node, name);
+			return parent->lookup(name, result);
 
-		return nullptr;
+		return false;
 	}
 };
 

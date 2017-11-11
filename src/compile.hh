@@ -71,6 +71,23 @@ struct compile_state {
 		throw compile_error(node, fmt, args...);
 	}
 
+	value_ptr lookup(const ast_node_ptr &node, const std::string name) const
+	{
+		scope::entry e;
+		if (!scope->lookup(name, e))
+			return nullptr;
+
+		// We can always access globals
+		auto val = e.val;
+		if (val->storage_type == VALUE_GLOBAL || val->storage_type == VALUE_CONSTANT)
+			return val;
+
+		if (e.f != function)
+			error(node, "cannot access local variable of different function");
+
+		return val;
+	}
+
 	void use_value(const ast_node_ptr &node, value_ptr val) const
 	{
 		if (!can_use_value(context, val))
@@ -262,7 +279,7 @@ static value_ptr compile_juxtapose(const compile_state &state, ast_node_ptr node
 
 static value_ptr compile_symbol_name(const compile_state &state, ast_node_ptr node)
 {
-	auto ret = state.scope->lookup(state.function, node, node->symbol_name);
+	auto ret = state.lookup(node, node->symbol_name);
 	if (!ret)
 		state.error(node, "could not resolve symbol %s", node->symbol_name.c_str());
 

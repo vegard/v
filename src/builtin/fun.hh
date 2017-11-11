@@ -78,9 +78,11 @@ static const machine_register regs[] = {
 };
 
 struct args_allocator {
+	const compile_state &state;
 	const machine_register *it;
 
-	args_allocator():
+	args_allocator(const compile_state &state):
+		state(state),
 		it(std::cbegin(regs))
 	{
 	}
@@ -89,7 +91,7 @@ struct args_allocator {
 	{
 		// TODO: use stack
 		if (it == std::cend(regs))
-			throw compile_error(node, "out of registers");
+			state.error(node, "out of registers");
 
 		return *(it++);
 	}
@@ -108,7 +110,7 @@ static value_ptr __construct_fun(value_type_ptr type, const compile_state &state
 	value_ptr return_value;
 	label return_label;
 
-	args_allocator regs;
+	args_allocator regs(state);
 
 	// TODO: use multiple regs or pass on stack
 	// AMD64 ABI: return types with non-trivial copy constructors or destructors are
@@ -214,7 +216,7 @@ static value_ptr __call_fun(const compile_state &state, value_ptr fn, ast_node_p
 	if (args.size() != type->argument_types.size())
 		state.error(node, "expected %u arguments; got %u", type->argument_types.size(), args.size());
 
-	args_allocator regs;
+	args_allocator regs(state);
 
 	auto return_type = type->return_type;
 	value_ptr return_value;

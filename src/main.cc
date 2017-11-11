@@ -65,7 +65,7 @@ static value_ptr builtin_macro_print(const compile_state &state, ast_node_ptr no
 	auto arg = compile(state, node);
 	assert(arg->type == builtin_type_u64);
 
-	use_value(state.context, node, arg);
+	state.use_value(node, arg);
 	state.function->emit_move(arg, 0, RDI);
 	state.function->emit_call(print_fn);
 

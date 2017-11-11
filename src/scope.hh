@@ -167,7 +167,7 @@ static bool is_parent_of(scope_ptr parent, scope_ptr child)
 	return false;
 }
 
-static void use_value(context_ptr c, ast_node_ptr node, value_ptr val)
+static bool can_use_value(context_ptr c, value_ptr val)
 {
 #if 0
 	printf("use: ");
@@ -191,9 +191,10 @@ static void use_value(context_ptr c, ast_node_ptr node, value_ptr val)
 			break;
 
 		if (c == val->context)
-			// TODO: val->node
-			throw compile_error(node, "cannot access value at compile time");
+			return false;
 	}
+
+	return true;
 }
 
 #endif

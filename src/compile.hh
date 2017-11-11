@@ -229,7 +229,7 @@ static value_ptr compile_member(const compile_state &state, ast_node_ptr node)
 
 	auto it = lhs_type->members.find(rhs_node->literal_string);
 	if (it == lhs_type->members.end())
-		state.error(node, "unknown member: %s", rhs_node->literal_string.c_str());
+		state.error(node, "unknown member: $", rhs_node->literal_string.c_str());
 
 	return it->second->invoke(state, lhs, rhs_node);
 }
@@ -281,7 +281,7 @@ static value_ptr compile_symbol_name(const compile_state &state, ast_node_ptr no
 {
 	auto ret = state.lookup(node, node->symbol_name);
 	if (!ret)
-		state.error(node, "could not resolve symbol %s", node->symbol_name.c_str());
+		state.error(node, "could not resolve symbol $", node->symbol_name.c_str());
 
 	return ret;
 }

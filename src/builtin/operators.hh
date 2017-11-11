@@ -58,7 +58,7 @@ static value_ptr call_operator_fn(context_ptr c, function_ptr f, scope_ptr s, co
 		throw compile_error(node, "unknown member '$'", member);
 
 	value_ptr val = it->second->invoke(c, f, s, lhs, node->binop.rhs);
-	return _compile_juxtapose(c, f, s, node, val, node->binop.rhs);
+	return _compile_juxtapose(compile_state(c, f, s), node, val, node->binop.rhs);
 }
 
 static value_ptr builtin_macro_add(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)

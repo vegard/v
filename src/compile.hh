@@ -28,7 +28,37 @@
 #include "globals.hh"
 #include "scope.hh"
 
-static value_ptr compile(context_ptr, function_ptr f, scope_ptr s, ast_node_ptr node);
+// This is a badly named; for the future I'd like to rename 'context' to
+// something else and then rename this to 'compile_context'
+struct compile_state {
+	context_ptr context;
+	function_ptr function;
+	scope_ptr scope;
+
+	compile_state(context_ptr &context, function_ptr &function, scope_ptr &scope):
+		context(context),
+		function(function),
+		scope(scope)
+	{
+	}
+
+	compile_state set_scope(scope_ptr &new_scope) const
+	{
+		auto ret = *this;
+		ret.scope = new_scope;
+		return ret;
+	}
+
+	compile_state set_function(context_ptr &new_context, function_ptr &new_function) const
+	{
+		auto ret = *this;
+		ret.context = new_context;
+		ret.function = new_function;
+		return ret;
+	}
+};
+
+static value_ptr compile(const compile_state &state, ast_node_ptr node);
 
 static void disassemble(const uint8_t *buf, size_t len, uint64_t pc, const std::map<size_t, std::vector<std::pair<unsigned int, std::string>>> &comments)
 {
@@ -108,7 +138,7 @@ static void run(function_ptr f)
 	munmap(mem, length);
 }
 
-static value_ptr eval(context_ptr c, scope_ptr s, ast_node_ptr node)
+static value_ptr eval(const compile_state &state, ast_node_ptr node)
 {
 #if 0
 	std::cout << "eval: ";
@@ -116,10 +146,11 @@ static value_ptr eval(context_ptr c, scope_ptr s, ast_node_ptr node)
 	std::cout << std::endl;
 #endif
 
-	auto new_c = std::make_shared<context>(c);
+	auto new_c = std::make_shared<context>(state.context);
 	auto new_f = std::make_shared<function>(true);
 	new_f->emit_prologue();
-	auto v = compile(new_c, new_f, s, node);
+
+	auto v = compile(state.set_function(new_c, new_f), node);
 
 	// Make sure we copy the value out to a new global in case the
 	// returned value is a local (which cannot be accessed outside
@@ -135,23 +166,23 @@ static value_ptr eval(context_ptr c, scope_ptr s, ast_node_ptr node)
 	return ret;
 }
 
-static value_ptr compile_brackets(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr compile_brackets(const compile_state &state, ast_node_ptr node)
 {
-	return compile(c, f, s, node->unop);
+	return compile(state, node->unop);
 }
 
-static value_ptr compile_curly_brackets(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr compile_curly_brackets(const compile_state &state, ast_node_ptr node)
 {
 	// Curly brackets create a new scope parented to the old one
-	auto new_scope = std::make_shared<scope>(s);
-	return compile(c, f, new_scope, node->unop);
+	auto new_scope = std::make_shared<scope>(state.scope);
+	return compile(state.set_scope(new_scope), node->unop);
 }
 
-static value_ptr compile_member(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr compile_member(const compile_state &state, ast_node_ptr node)
 {
 	assert(node->type == AST_MEMBER);
 
-	auto lhs = compile(c, f, s, node->binop.lhs);
+	auto lhs = compile(state, node->binop.lhs);
 	auto lhs_type = lhs->type;
 
 	auto rhs_node = node->binop.rhs;
@@ -163,23 +194,23 @@ static value_ptr compile_member(context_ptr c, function_ptr f, scope_ptr s, ast_
 	if (it == lhs_type->members.end())
 		throw compile_error(node, "unknown member: %s", rhs_node->literal_string.c_str());
 
-	return it->second->invoke(c, f, s, lhs, rhs_node);
+	return it->second->invoke(state.context, state.function, state.scope, lhs, rhs_node);
 }
 
-static value_ptr _compile_juxtapose(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr lhs_node, value_ptr lhs, ast_node_ptr rhs_node)
+static value_ptr _compile_juxtapose(const compile_state &state, ast_node_ptr lhs_node, value_ptr lhs, ast_node_ptr rhs_node)
 {
 	auto lhs_type = lhs->type;
 
 	if (lhs_type == builtin_type_macro) {
 		// macros are evaluated directly
-		auto new_c = std::make_shared<context>(c);
+		auto new_c = std::make_shared<context>(state.context);
 		use_value(new_c, lhs_node, lhs);
 		assert(lhs->storage_type == VALUE_GLOBAL);
 
 		auto m = *(macro_ptr *) lhs->global.host_address;
-		return m->invoke(c, f, s, rhs_node);
+		return m->invoke(state.context, state.function, state.scope, rhs_node);
 	} else if (lhs_type == builtin_type_type) {
-		auto new_c = std::make_shared<context>(c);
+		auto new_c = std::make_shared<context>(state.context);
 		use_value(new_c, lhs_node, lhs);
 		assert(lhs->storage_type == VALUE_GLOBAL);
 
@@ -189,69 +220,84 @@ static value_ptr _compile_juxtapose(context_ptr c, function_ptr f, scope_ptr s, 
 			throw compile_error(lhs_node, "type doesn't have a constructor");
 
 		// TODO: functions as constructors
-		return type->constructor(type, c, f, s, rhs_node);
+		return type->constructor(type, state.context, state.function, state.scope, rhs_node);
 	}
 
 	auto it = lhs_type->members.find("_call");
 	if (it != lhs_type->members.end())
-		return it->second->invoke(c, f, s, lhs, rhs_node);
+		return it->second->invoke(state.context, state.function, state.scope, lhs, rhs_node);
 
 	throw compile_error(lhs_node, "type is not callable");
 }
 
-static value_ptr compile_juxtapose(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr compile_juxtapose(const compile_state &state, ast_node_ptr node)
 {
 	assert(node->type == AST_JUXTAPOSE);
 
 	auto lhs_node = node->binop.lhs;
 	auto rhs_node = node->binop.rhs;
-	auto lhs = compile(c, f, s, lhs_node);
-	return _compile_juxtapose(c, f, s, lhs_node, lhs, rhs_node);
+	auto lhs = compile(state, lhs_node);
+	return _compile_juxtapose(state, lhs_node, lhs, rhs_node);
 }
 
-static value_ptr compile_symbol_name(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr compile_symbol_name(const compile_state &state, ast_node_ptr node)
 {
-	auto ret = s->lookup(f, node, node->symbol_name);
+	auto ret = state.scope->lookup(state.function, node, node->symbol_name);
 	if (!ret)
 		throw compile_error(node, "could not resolve symbol %s", node->symbol_name.c_str());
 
 	return ret;
 }
 
-static value_ptr compile_semicolon(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr compile_semicolon(const compile_state &state, ast_node_ptr node)
 {
 	// TODO: should we return the result of compiling LHS or void?
-	compile(c, f, s, node->binop.lhs);
-	return compile(c, f, s, node->binop.rhs);
+	compile(state, node->binop.lhs);
+	return compile(state, node->binop.rhs);
 }
 
-static value_ptr compile(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
+static value_ptr compile(const compile_state &state, ast_node_ptr node)
 {
-	function_enter(f, abbreviate(node));
+	function_enter(state.function, abbreviate(node));
 
 	switch (node->type) {
 	case AST_LITERAL_INTEGER:
 		throw compile_error(node, "unexpected integer literal");
 
 	case AST_BRACKETS:
-		return compile_brackets(c, f, s, node);
+		return compile_brackets(state, node);
 	case AST_CURLY_BRACKETS:
-		return compile_curly_brackets(c, f, s, node);
+		return compile_curly_brackets(state, node);
 
 	case AST_MEMBER:
-		return compile_member(c, f, s, node);
+		return compile_member(state, node);
 	case AST_JUXTAPOSE:
-		return compile_juxtapose(c, f, s, node);
+		return compile_juxtapose(state, node);
 	case AST_SYMBOL_NAME:
-		return compile_symbol_name(c, f, s, node);
+		return compile_symbol_name(state, node);
 	case AST_SEMICOLON:
-		return compile_semicolon(c, f, s, node);
+		return compile_semicolon(state, node);
 	default:
 		throw compile_error(node, "internal compiler error: unrecognised AST node type $: $", node->type, abbreviate(node));
 	}
 
 	assert(false);
 	return nullptr;
+}
+
+// XXX: Temporary overloaded wrapper for compile() until we can convert all
+// other callsites to use compile_state directly.
+static value_ptr compile(context_ptr &c, function_ptr &f, scope_ptr &s, ast_node_ptr &node)
+{
+	return compile(compile_state(c, f, s), node);
+}
+
+// XXX: Temporary overloaded wrapper for eval() until we can convert all
+// other callsites to use compile_state directly.
+static value_ptr eval(context_ptr &c, scope_ptr &s, ast_node_ptr node)
+{
+	function_ptr f(nullptr);
+	return eval(compile_state(c, f, s), node);
 }
 
 #endif

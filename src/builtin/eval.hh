@@ -30,6 +30,11 @@ static value_ptr builtin_macro_eval(context_ptr c, function_ptr f, scope_ptr s, 
 	return eval(c, s, node);
 }
 
+static value_ptr _eval(context_ptr c, scope_ptr s, ast_node_ptr node)
+{
+	return eval(c, s, node);
+}
+
 static value_ptr builtin_function_eval(context_ptr c, function_ptr f, scope_ptr s, ast_node_ptr node)
 {
 	// XXX: make wrapping functions easier
@@ -48,7 +53,7 @@ static value_ptr builtin_function_eval(context_ptr c, function_ptr f, scope_ptr 
 
 	auto val = std::make_shared<value>(nullptr, VALUE_GLOBAL, fun_type);
 	auto global = new void *;
-	*global = (void *) &eval;
+	*global = (void *) &_eval;
 	val->global.host_address = global;
 
 	return _call_fun(c, f, s, val, node);

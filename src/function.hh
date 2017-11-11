@@ -541,9 +541,9 @@ struct function {
 };
 
 struct function_block {
-	function_ptr &f;
+	function_ptr f;
 
-	function_block(function_ptr &f, std::string name, std::string args = ""):
+	function_block(const function_ptr &f, std::string name, std::string args = ""):
 		f(f)
 	{
 		f->comment(format("$($) {", name, args));

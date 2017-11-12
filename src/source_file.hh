@@ -124,8 +124,10 @@ static std::string get_source_for(const source_file_ptr &source, const ast_node_
 	if (pos.line == end.line)
 		return std::string(source->data + node->pos, node->end - node->pos);
 
-	assert(pos.line_length - 1 >= pos.column + 1);
-	return std::string(source->data + node->pos, pos.line_length - pos.column - 1) + "...";
+	if (pos.line_length - 1 >= pos.column + 1)
+		return std::string(source->data + node->pos, pos.line_length - pos.column - 1) + "...";
+
+	return std::string(source->data + node->pos, pos.line_length - pos.column);
 }
 
 static void print_message(const source_file_ptr &source, unsigned int pos_byte, unsigned int end_byte, std::string message)
@@ -138,11 +140,13 @@ static void print_message(const source_file_ptr &source, unsigned int pos_byte, 
 	if (pos.line == end.line) {
 		printf("%.*s", pos.line_length, source->data + pos.line_start);
 		printf("%*s%s\n", pos.column, "", std::string(end.column - pos.column, '^').c_str());
-	} else {
+	} else if (pos.line_length - 1 >= pos.column + 1) {
 		// TODO: print following lines as well?
 		printf("%.*s", pos.line_length, source->data + pos.line_start);
-		assert(pos.line_length - 1 >= pos.column + 1);
 		printf("%*s%s\n", pos.column, "", std::string(pos.line_length - 1 - pos.column, '^').c_str());
+	} else {
+		printf("%.*s\n", pos.line_length, source->data + pos.line_start);
+		printf("%*s%s\n", pos.column, "", std::string(pos.line_length - pos.column, '^').c_str());
 	}
 }
 

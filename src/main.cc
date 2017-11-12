@@ -28,6 +28,7 @@ extern "C" {
 #include "builtin/assign.hh"
 #include "builtin/scope.hh"
 #include "builtin/compile.hh"
+#include "builtin/compile_state.hh"
 #include "builtin/debug.hh"
 #include "builtin/define.hh"
 #include "builtin/equals.hh"

@@ -25,7 +25,7 @@
 #include "./fun.hh"
 #include "./value.hh"
 
-typedef value_ptr (*user_macro_fn_type)(context_ptr, function_ptr, scope_ptr, ast_node_ptr);
+typedef value_ptr (*user_macro_fn_type)(compile_state_ptr state, ast_node_ptr);
 
 // Macros defined by a program we're compiling
 struct user_macro: macro {
@@ -42,17 +42,23 @@ struct user_macro: macro {
 		assert(fn_value->storage_type == VALUE_GLOBAL);
 		auto fn = *(user_macro_fn_type *) fn_value->global.host_address;
 
+		// NOTE: it's easier for us to pass a shared_ptr to compiled
+		// code, that's why we create one here (from a copy of the
+		// state that was passed to us). There is a little bit of
+		// associated overhead, but makes things a lot easier since
+		// then the compiled code doesn't have to know anything about
+		// proper pointers.
+		auto new_state = std::make_shared<compile_state>(state);
+
 		// XXX: why the indirection? I forgot why I did it this way.
-		return (*fn)(state.context, state.function, state.scope, node);
+		return (*fn)(new_state, node);
 	}
 };
 
 static value_ptr builtin_type_macro_constructor(value_type_ptr type, const compile_state &state, ast_node_ptr node)
 {
 	static std::vector<value_type_ptr> argument_types = {
-		builtin_type_context,
-		builtin_type_function,
-		builtin_type_scope,
+		builtin_type_compile_state,
 		builtin_type_ast_node,
 	};
 
@@ -60,9 +66,7 @@ static value_ptr builtin_type_macro_constructor(value_type_ptr type, const compi
 	static auto macro_fun_type = *(value_type_ptr *) macro_fun_type_value->global.host_address;
 
 	std::vector<std::string> args;
-	args.push_back("context");
-	args.push_back("function");
-	args.push_back("scope");
+	args.push_back("state");
 	args.push_back("node");
 
 	auto macro_fun = __construct_fun(macro_fun_type, state, node, args, node);

@@ -47,6 +47,7 @@ struct ast_node;
 typedef std::shared_ptr<ast_node> ast_node_ptr;
 
 struct compile_state;
+typedef std::shared_ptr<compile_state> compile_state_ptr;
 
 typedef value_ptr (*operator_fn_type)(context_ptr, function_ptr, scope_ptr, value_ptr, ast_node_ptr);
 

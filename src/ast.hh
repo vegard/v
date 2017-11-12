@@ -76,7 +76,7 @@ typedef std::shared_ptr<ast_node> ast_node_ptr;
 struct ast_node {
 	ast_node_type type;
 
-	// Position where it was defined in the source document
+	// Position where it was defined in the source file
 	unsigned int pos;
 	unsigned int end;
 

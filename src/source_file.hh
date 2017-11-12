@@ -16,8 +16,8 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef V_DOCUMENT_HH
-#define V_DOCUMENT_HH
+#ifndef V_SOURCE_FILE_HH
+#define V_SOURCE_FILE_HH
 
 extern "C" {
 #include <sys/mman.h>
@@ -37,7 +37,7 @@ extern "C" {
 #include "line_number_info.hh"
 #include "parser.hh"
 
-struct document {
+struct source_file {
 	const char *name;
 
 	const char *data;
@@ -45,18 +45,18 @@ struct document {
 
 	std::unique_ptr<line_number_info> _line_numbers;
 
-	document()
+	source_file()
 	{
 	}
 
-	document(const char *name, const char *data, size_t data_size):
+	source_file(const char *name, const char *data, size_t data_size):
 		name(name),
 		data(data),
 		data_size(data_size)
 	{
 	}
 
-	virtual ~document()
+	virtual ~source_file()
 	{
 	}
 
@@ -76,12 +76,12 @@ struct document {
 	}
 };
 
-struct file_document: document {
+struct mmap_source_file: source_file {
 	const char *filename;
 	struct stat stbuf;
 	void *mem;
 
-	file_document(const char *filename):
+	mmap_source_file(const char *filename):
 		filename(filename),
 		mem(nullptr)
 	{
@@ -106,25 +106,25 @@ struct file_document: document {
 		data_size = stbuf.st_size;
 	}
 
-	~file_document()
+	~mmap_source_file()
 	{
 		munmap(mem, stbuf.st_size);
 	}
 };
 
-static void print_message(document &doc, unsigned int pos_byte, unsigned int end_byte, std::string message)
+static void print_message(source_file &source, unsigned int pos_byte, unsigned int end_byte, std::string message)
 {
-	line_number_info &line_numbers = doc.line_numbers();
+	line_number_info &line_numbers = source.line_numbers();
 	auto pos = line_numbers.lookup(pos_byte);
 	auto end = line_numbers.lookup(end_byte);
 
-	printf("%s:%u:%u: %s\n", doc.name, pos.line, pos.column, message.c_str());
+	printf("%s:%u:%u: %s\n", source.name, pos.line, pos.column, message.c_str());
 	if (pos.line == end.line) {
-		printf("%.*s", pos.line_length, doc.data + pos.line_start);
+		printf("%.*s", pos.line_length, source.data + pos.line_start);
 		printf("%*s%s\n", pos.column, "", std::string(end.column - pos.column, '^').c_str());
 	} else {
 		// TODO: print following lines as well?
-		printf("%.*s", pos.line_length, doc.data + pos.line_start);
+		printf("%.*s", pos.line_length, source.data + pos.line_start);
 		assert(pos.line_length - 1 >= pos.column + 1);
 		printf("%*s%s\n", pos.column, "", std::string(pos.line_length - 1 - pos.column, '^').c_str());
 	}

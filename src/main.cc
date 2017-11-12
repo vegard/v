@@ -43,7 +43,7 @@ extern "C" {
 #include "builtin/value.hh"
 #include "builtin/while.hh"
 #include "compile.hh"
-#include "document.hh"
+#include "source_file.hh"
 #include "function.hh"
 #include "globals.hh"
 #include "macro.hh"
@@ -175,13 +175,13 @@ int main(int argc, char *argv[])
 	}
 
 	for (const char *filename: filenames) {
-		file_document doc(filename);
+		mmap_source_file source(filename);
 		ast_node_ptr node;
 
 		try {
-			node = doc.parse();
+			node = source.parse();
 		} catch (const parse_error &e) {
-			print_message(doc, e.pos, e.end, e.what());
+			print_message(source, e.pos, e.end, e.what());
 			return EXIT_FAILURE;
 		}
 
@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
 			try {
 				f = compile_metaprogram(node);
 			} catch (const compile_error &e) {
-				print_message(doc, e.pos, e.end, e.what());
+				print_message(source, e.pos, e.end, e.what());
 				return EXIT_FAILURE;
 			}
 

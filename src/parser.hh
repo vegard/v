@@ -370,7 +370,7 @@ ast_node_ptr parser::parse_binop(const char (&op)[op_size], ast_node_ptr lhs, un
 		return lhs;
 	}
 
-	auto result = std::make_shared<ast_node>(type, pos, i);
+	auto result = std::make_shared<ast_node>(type, lhs->pos, i);
 	new (&result->binop.lhs) ast_node_ptr(lhs);
 	new (&result->binop.rhs) ast_node_ptr(rhs);
 

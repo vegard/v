@@ -63,7 +63,8 @@ static value_ptr builtin_macro_print(const compile_state &state, ast_node_ptr no
 
 	// TODO: save registers
 	auto arg = compile(state, node);
-	assert(arg->type == builtin_type_u64);
+	if (arg->type != builtin_type_u64)
+		state.error(node, "expected value of type u64");
 
 	state.use_value(node, arg);
 	state.function->emit_move(arg, 0, RDI);

@@ -199,7 +199,7 @@ static value_ptr _construct_fun(value_type_ptr type, const compile_state &state,
 	}
 
 	if (args.size() != type->argument_types.size())
-		state.error(node, "expected %u arguments; got %u", type->argument_types.size(), args.size());
+		state.error(node, "expected $ arguments; got $", type->argument_types.size(), args.size());
 
 	auto body_node = node->binop.rhs;
 	return __construct_fun(type, state, node, args, body_node);
@@ -214,7 +214,7 @@ static value_ptr __call_fun(const compile_state &state, value_ptr fn, ast_node_p
 	auto type = fn->type;
 
 	if (args.size() != type->argument_types.size())
-		state.error(node, "expected %u arguments; got %u", type->argument_types.size(), args.size());
+		state.error(node, "expected $ arguments; got $", type->argument_types.size(), args.size());
 
 	args_allocator regs(state);
 

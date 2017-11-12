@@ -306,6 +306,9 @@ static value_ptr compile_semicolon(const compile_state &state, ast_node_ptr node
 
 static value_ptr compile(const compile_state &state, ast_node_ptr node)
 {
+	if (!node)
+		return builtin_value_void;
+
 	function_enter(state.function, get_source_for(state.source, node));
 
 	switch (node->type) {

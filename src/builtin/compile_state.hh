@@ -33,8 +33,8 @@ static value_ptr builtin_type_compile_state_new_scope(const compile_state &state
 {
 	// XXX: make wrapping functions easier
 
-	assert(this_state->type == builtin_type_compile_state);
-	assert(node->type == AST_BRACKETS);
+	state.expect_type(node, this_state, builtin_type_compile_state);
+	state.expect_type(node, AST_BRACKETS);
 
 	std::vector<std::pair<ast_node_ptr, value_ptr>> args;
 	args.push_back(std::make_pair(node, this_state));
@@ -69,8 +69,8 @@ static value_ptr builtin_type_compile_state_define(const compile_state &state, v
 {
 	// XXX: make wrapping functions easier
 
-	assert(this_state->type == builtin_type_compile_state);
-	assert(node->type == AST_BRACKETS);
+	state.expect_type(node, this_state, builtin_type_compile_state);
+	state.expect_type(node, AST_BRACKETS);
 
 	std::vector<std::pair<ast_node_ptr, value_ptr>> args;
 	args.push_back(std::make_pair(node, this_state));
@@ -104,8 +104,8 @@ static value_ptr builtin_type_compile_state_eval(const compile_state &state, val
 {
 	// XXX: make wrapping functions easier
 
-	assert(this_state->type == builtin_type_compile_state);
-	assert(node->type == AST_BRACKETS);
+	state.expect_type(node, this_state, builtin_type_compile_state);
+	state.expect_type(node, AST_BRACKETS);
 
 	std::vector<std::pair<ast_node_ptr, value_ptr>> args;
 	args.push_back(std::make_pair(node, this_state));
@@ -138,8 +138,8 @@ static value_ptr builtin_type_compile_state_compile(const compile_state &state, 
 {
 	// XXX: make wrapping functions easier
 
-	assert(this_state->type == builtin_type_compile_state);
-	assert(node->type == AST_BRACKETS);
+	state.expect_type(node, this_state, builtin_type_compile_state);
+	state.expect_type(node, AST_BRACKETS);
 
 	std::vector<std::pair<ast_node_ptr, value_ptr>> args;
 	args.push_back(std::make_pair(node, this_state));

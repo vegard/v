@@ -82,6 +82,25 @@ struct compile_state {
 		throw compile_error(node, fmt, args...);
 	}
 
+	template<typename... Args>
+	void expect(const ast_node_ptr &node, bool cond, const char *fmt, Args... args) const
+	{
+		if (!cond)
+			error(node, fmt, args...);
+	}
+
+	void expect_type(const ast_node_ptr &node, ast_node_type type) const
+	{
+		// TODO: stringify the expected and actual types
+		expect(node, node->type == type, "got AST node type $, expected $", node->type, type);
+	}
+
+	void expect_type(const ast_node_ptr &node, value_ptr value, value_type_ptr type) const
+	{
+		// TODO: can we even stringify these types?
+		expect(node, value->type == type, "unexpected type");
+	}
+
 	value_ptr lookup(const ast_node_ptr &node, const std::string name) const
 	{
 		scope::entry e;

@@ -115,6 +115,19 @@ struct mmap_source_file: source_file {
 	}
 };
 
+static std::string get_source_for(const source_file_ptr &source, const ast_node_ptr &node)
+{
+	const line_number_info &line_numbers = source->line_numbers();
+	auto pos = line_numbers.lookup(node->pos);
+	auto end = line_numbers.lookup(node->end);
+
+	if (pos.line == end.line)
+		return std::string(source->data + node->pos, node->end - node->pos);
+
+	assert(pos.line_length - 1 >= pos.column + 1);
+	return std::string(source->data + node->pos, pos.line_length - pos.column - 1) + "...";
+}
+
 static void print_message(const source_file_ptr &source, unsigned int pos_byte, unsigned int end_byte, std::string message)
 {
 	const line_number_info &line_numbers = source->line_numbers();

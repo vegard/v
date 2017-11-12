@@ -103,7 +103,7 @@ static value_ptr builtin_macro_struct(const compile_state &state, ast_node_ptr n
 		auto type_node = member_node->binop.rhs;
 		auto type_value = eval(state, type_node);
 		assert(type_value->storage_type == VALUE_GLOBAL);
-		assert(type_value->type == builtin_type_type);
+		state.expect_type(member_node, type_value, builtin_type_type);
 
 		auto field_type = *(value_type_ptr *) type_value->global.host_address;
 

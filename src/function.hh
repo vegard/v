@@ -101,9 +101,8 @@ struct function {
 
 	value_ptr alloc_local_value(context_ptr c, value_type_ptr type)
 	{
-		assert(type != builtin_type_void);
-		assert(type->size > 0);
-		assert(type->alignment > 0);
+		if (type->size == 0 || type->alignment == 0)
+			return std::make_shared<value>(c, VALUE_CONSTANT, type);
 
 		auto result = std::make_shared<value>(c, VALUE_LOCAL, type);
 

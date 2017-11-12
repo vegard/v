@@ -27,7 +27,6 @@ extern "C" {
 #include "builtin.hh"
 #include "builtin/assign.hh"
 #include "builtin/scope.hh"
-#include "builtin/compile.hh"
 #include "builtin/compile_state.hh"
 #include "builtin/debug.hh"
 #include "builtin/define.hh"
@@ -135,11 +134,6 @@ static function_ptr compile_metaprogram(ast_node_ptr root)
 	global_scope->define_builtin_macro("struct", builtin_macro_struct);
 
 	global_scope->define_builtin_macro("print", builtin_macro_print);
-
-	// Functions
-	// XXX: move eval and compile to 'lang' namespace
-	global_scope->define_builtin_macro("eval", builtin_function_eval);
-	global_scope->define_builtin_macro("compile", builtin_function_compile);
 
 	auto c = std::make_shared<context>(nullptr);
 	auto f = std::make_shared<function>(true);

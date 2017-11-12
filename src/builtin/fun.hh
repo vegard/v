@@ -141,7 +141,7 @@ static value_ptr __construct_fun(value_type_ptr type, const compile_state &state
 		new_scope->define(new_f, node, args[i], arg_value);
 	}
 
-	auto v = compile(compile_state(c, new_f, new_scope), body_node);
+	auto v = compile(state.set_function(new_f, new_scope), body_node);
 	auto v_type = v->type;
 	if (v_type != return_type)
 		state.error(node, "wrong return type for function");

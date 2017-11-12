@@ -102,7 +102,7 @@ static auto builtin_value_namespace_lang = std::make_shared<value>(nullptr, VALU
 	})
 );
 
-static function_ptr compile_metaprogram(ast_node_ptr root)
+static function_ptr compile_metaprogram(source_file_ptr source, ast_node_ptr root)
 {
 	auto global_scope = std::make_shared<scope>();
 
@@ -138,7 +138,7 @@ static function_ptr compile_metaprogram(ast_node_ptr root)
 	auto c = std::make_shared<context>(nullptr);
 	auto f = std::make_shared<function>(true);
 	f->emit_prologue();
-	compile(compile_state(c, f, global_scope), root);
+	compile(compile_state(source, c, f, global_scope), root);
 	f->emit_epilogue();
 
 	return f;
@@ -169,11 +169,11 @@ int main(int argc, char *argv[])
 	}
 
 	for (const char *filename: filenames) {
-		mmap_source_file source(filename);
+		auto source = std::make_shared<mmap_source_file>(filename);
 		ast_node_ptr node;
 
 		try {
-			node = source.parse();
+			node = source->parse();
 		} catch (const parse_error &e) {
 			print_message(source, e.pos, e.end, e.what());
 			return EXIT_FAILURE;
@@ -190,7 +190,7 @@ int main(int argc, char *argv[])
 			function_ptr f;
 
 			try {
-				f = compile_metaprogram(node);
+				f = compile_metaprogram(source, node);
 			} catch (const compile_error &e) {
 				print_message(source, e.pos, e.end, e.what());
 				return EXIT_FAILURE;

@@ -52,7 +52,7 @@ struct line_number_info {
 		unsigned int column;
 	};
 
-	struct lookup_result lookup(unsigned int byte_offset)
+	struct lookup_result lookup(unsigned int byte_offset) const
 	{
 		auto it = byte_offset_to_line_number_map.upper_bound(byte_offset);
 		if (it == byte_offset_to_line_number_map.begin())

@@ -27,16 +27,19 @@
 #include "function.hh"
 #include "globals.hh"
 #include "scope.hh"
+#include "source_file.hh"
 #include "value.hh"
 
 // This is a badly named; for the future I'd like to rename 'context' to
 // something else and then rename this to 'compile_context'
 struct compile_state {
+	source_file_ptr source;
 	context_ptr context;
 	function_ptr function;
 	scope_ptr scope;
 
-	compile_state(context_ptr &context, function_ptr &function, scope_ptr &scope):
+	compile_state(source_file_ptr &source, context_ptr &context, function_ptr &function, scope_ptr &scope):
+		source(source),
 		context(context),
 		function(function),
 		scope(scope)
@@ -62,6 +65,14 @@ struct compile_state {
 		auto ret = *this;
 		ret.context = new_context;
 		ret.function = new_function;
+		return ret;
+	}
+
+	compile_state set_function(function_ptr &new_function, scope_ptr &new_scope) const
+	{
+		auto ret = *this;
+		ret.function = new_function;
+		ret.scope = new_scope;
 		return ret;
 	}
 

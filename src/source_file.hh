@@ -37,6 +37,9 @@ extern "C" {
 #include "line_number_info.hh"
 #include "parser.hh"
 
+struct source_file;
+typedef std::shared_ptr<source_file> source_file_ptr;
+
 struct source_file {
 	const char *name;
 
@@ -112,19 +115,19 @@ struct mmap_source_file: source_file {
 	}
 };
 
-static void print_message(source_file &source, unsigned int pos_byte, unsigned int end_byte, std::string message)
+static void print_message(const source_file_ptr &source, unsigned int pos_byte, unsigned int end_byte, std::string message)
 {
-	line_number_info &line_numbers = source.line_numbers();
+	const line_number_info &line_numbers = source->line_numbers();
 	auto pos = line_numbers.lookup(pos_byte);
 	auto end = line_numbers.lookup(end_byte);
 
-	printf("%s:%u:%u: %s\n", source.name, pos.line, pos.column, message.c_str());
+	printf("%s:%u:%u: %s\n", source->name, pos.line, pos.column, message.c_str());
 	if (pos.line == end.line) {
-		printf("%.*s", pos.line_length, source.data + pos.line_start);
+		printf("%.*s", pos.line_length, source->data + pos.line_start);
 		printf("%*s%s\n", pos.column, "", std::string(end.column - pos.column, '^').c_str());
 	} else {
 		// TODO: print following lines as well?
-		printf("%.*s", pos.line_length, source.data + pos.line_start);
+		printf("%.*s", pos.line_length, source->data + pos.line_start);
 		assert(pos.line_length - 1 >= pos.column + 1);
 		printf("%*s%s\n", pos.column, "", std::string(pos.line_length - 1 - pos.column, '^').c_str());
 	}

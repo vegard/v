@@ -37,17 +37,13 @@ static auto builtin_type_function = std::make_shared<value_type>(value_type {
 	.size = sizeof(function_ptr),
 });
 
-static value_ptr builtin_type_scope_constructor(value_type_ptr, const compile_state &, ast_node_ptr);
-static value_ptr builtin_type_scope_define(const compile_state &, value_ptr, ast_node_ptr);
-
 static auto builtin_type_scope = std::make_shared<value_type>(value_type {
 	.alignment = alignof(scope_ptr),
 	.size = sizeof(scope_ptr),
-	.constructor = &builtin_type_scope_constructor,
+	.constructor = nullptr,
 	.argument_types = std::vector<value_type_ptr>(),
 	.return_type = nullptr,
 	.members = std::map<std::string, member_ptr>({
-		{"define", std::make_shared<macrofy_callback_member>(builtin_type_scope_define)},
 	}),
 });
 

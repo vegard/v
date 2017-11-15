@@ -20,6 +20,8 @@
 #define V_BUILTIN_COMPILE_STATE_HH
 
 #include "../compile.hh"
+#include "./fun.hh"
+#include "./value.hh"
 
 // TODO for this whole file: provide helper for calling a function!
 

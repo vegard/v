@@ -146,16 +146,49 @@ static function_ptr compile_metaprogram(source_file_ptr source, ast_node_ptr roo
 	return f;
 }
 
+static bool do_repl = false;
+static bool do_dump_ast = false;
+static bool do_compile = true;
+static bool do_run = true;
+
+static bool compile_and_run(source_file_ptr source)
+{
+	try {
+		auto node = source->parse();
+		assert(node);
+
+		function_ptr f;
+
+		if (do_compile)
+			f = compile_metaprogram(source, node);
+
+		if (do_dump_ast) {
+			serializer().serialize(std::cout, node);
+			std::cout << std::endl;
+		}
+
+		if (do_compile && do_run)
+			run(f);
+	} catch (const parse_error &e) {
+		print_message(source, e.pos, e.end, e.what());
+		return true;
+	} catch (const compile_error &e) {
+		print_message(e.source, e.pos, e.end, e.what());
+		return true;
+	}
+
+	return false;
+}
+
 int main(int argc, char *argv[])
 {
-	bool do_dump_ast = false;
-	bool do_compile = true;
-	bool do_run = true;
 	std::vector<const char *> filenames;
 
 	for (int i = 1; i < argc; ++i) {
 		if (argv[i][0] == '-') {
-			if (!strcmp(argv[i], "--dump-ast"))
+			if (!strcmp(argv[i], "--repl"))
+				do_repl = true;
+			else if (!strcmp(argv[i], "--dump-ast"))
 				do_dump_ast = true;
 			else if (!strcmp(argv[i], "--no-compile"))
 				do_compile = false;
@@ -170,31 +203,25 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	if (do_repl) {
+		// TODO: use std::cin or something that doesn't limit line length
+		static char line[1024];
+		while (true) {
+			fprintf(stdout, ">>> ");
+			fflush(stdout);
+
+			if (!fgets(line, sizeof(line), stdin))
+				break;
+
+			auto source = std::make_shared<source_file>("<stdin>", line, strlen(line));
+			compile_and_run(source);
+		}
+	}
+
 	for (const char *filename: filenames) {
 		auto source = std::make_shared<mmap_source_file>(filename);
-		try {
-			auto node = source->parse();
-			assert(node);
-
-			function_ptr f;
-
-			if (do_compile)
-				f = compile_metaprogram(source, node);
-
-			if (do_dump_ast) {
-				serializer().serialize(std::cout, node);
-				std::cout << std::endl;
-			}
-
-			if (do_compile && do_run)
-				run(f);
-		} catch (const parse_error &e) {
-			print_message(source, e.pos, e.end, e.what());
+		if (compile_and_run(source))
 			return EXIT_FAILURE;
-		} catch (const compile_error &e) {
-			print_message(e.source, e.pos, e.end, e.what());
-			return EXIT_FAILURE;
-		}
 	}
 
 	return EXIT_SUCCESS;

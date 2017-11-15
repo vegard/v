@@ -79,7 +79,7 @@ struct compile_state {
 	template<typename... Args>
 	void __attribute__((noreturn)) error(const ast_node_ptr &node, const char *fmt, Args... args) const
 	{
-		throw compile_error(node, fmt, args...);
+		throw compile_error(source, node, fmt, args...);
 	}
 
 	template<typename... Args>

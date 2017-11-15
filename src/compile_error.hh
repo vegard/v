@@ -21,14 +21,18 @@
 
 #include "ast.hh"
 #include "format.hh"
+#include "source_file.hh"
 
 struct compile_error: std::runtime_error {
+	source_file_ptr source;
+
 	unsigned int pos;
 	unsigned int end;
 
 	template<typename... Args>
-	compile_error(const ast_node_ptr &node, const char *fmt, Args... args):
+	compile_error(const source_file_ptr &source, const ast_node_ptr &node, const char *fmt, Args... args):
 		std::runtime_error(format(fmt, args...)),
+		source(source),
 		pos(node->pos),
 		end(node->end)
 	{

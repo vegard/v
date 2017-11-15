@@ -170,34 +170,28 @@ int main(int argc, char *argv[])
 
 	for (const char *filename: filenames) {
 		auto source = std::make_shared<mmap_source_file>(filename);
-		ast_node_ptr node;
-
 		try {
-			node = source->parse();
+			auto node = source->parse();
+			assert(node);
+
+			function_ptr f;
+
+			if (do_compile)
+				f = compile_metaprogram(source, node);
+
+			if (do_dump_ast) {
+				serializer().serialize(std::cout, node);
+				std::cout << std::endl;
+			}
+
+			if (do_compile && do_run)
+				run(f);
 		} catch (const parse_error &e) {
 			print_message(source, e.pos, e.end, e.what());
 			return EXIT_FAILURE;
-		}
-
-		assert(node);
-
-		if (do_dump_ast) {
-			serializer().serialize(std::cout, node);
-			std::cout << std::endl;
-		}
-
-		if (do_compile) {
-			function_ptr f;
-
-			try {
-				f = compile_metaprogram(source, node);
-			} catch (const compile_error &e) {
-				print_message(source, e.pos, e.end, e.what());
-				return EXIT_FAILURE;
-			}
-
-			if (do_run)
-				run(f);
+		} catch (const compile_error &e) {
+			print_message(e.source, e.pos, e.end, e.what());
+			return EXIT_FAILURE;
 		}
 	}
 

@@ -33,6 +33,7 @@ extern "C" {
 #include "builtin/eval.hh"
 #include "builtin/fun.hh"
 #include "builtin/if.hh"
+#include "builtin/import.hh"
 #include "builtin/macro.hh"
 #include "builtin/operators.hh"
 #include "builtin/quote.hh"
@@ -128,6 +129,7 @@ static function_ptr compile_metaprogram(source_file_ptr source, ast_node_ptr roo
 	// Keywords
 	global_scope->define_builtin_macro("debug", builtin_macro_debug);
 	global_scope->define_builtin_macro("if", builtin_macro_if);
+	global_scope->define_builtin_macro("import", builtin_macro_import);
 	global_scope->define_builtin_macro("while", builtin_macro_while);
 	global_scope->define_builtin_macro("fun", builtin_macro_fun);
 	global_scope->define_builtin_macro("quote", builtin_macro_quote);

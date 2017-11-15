@@ -46,6 +46,14 @@ struct compile_state {
 	{
 	}
 
+	compile_state set_source(source_file_ptr &new_source, scope_ptr &new_scope) const
+	{
+		auto ret = *this;
+		ret.source = new_source;
+		ret.scope = new_scope;
+		return ret;
+	}
+
 	compile_state set_context(context_ptr &new_context) const
 	{
 		auto ret = *this;

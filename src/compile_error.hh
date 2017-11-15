@@ -30,6 +30,16 @@ struct compile_error: std::runtime_error {
 	unsigned int end;
 
 	template<typename... Args>
+	compile_error(const source_file_ptr &source, unsigned int pos, unsigned int end, const char *fmt, Args... args):
+		std::runtime_error(format(fmt, args...)),
+		source(source),
+		pos(pos),
+		end(end)
+	{
+		assert(end >= pos);
+	}
+
+	template<typename... Args>
 	compile_error(const source_file_ptr &source, const ast_node_ptr &node, const char *fmt, Args... args):
 		std::runtime_error(format(fmt, args...)),
 		source(source),

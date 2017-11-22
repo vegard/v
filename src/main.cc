@@ -28,6 +28,7 @@ extern "C" {
 #include "builtin/assign.hh"
 #include "builtin/compile_state.hh"
 #include "builtin/debug.hh"
+#include "builtin/declare.hh"
 #include "builtin/define.hh"
 #include "builtin/equals.hh"
 #include "builtin/eval.hh"
@@ -115,6 +116,7 @@ static function_ptr compile_metaprogram(source_file_ptr source, ast_node_ptr roo
 
 	// Operators
 	global_scope->define_builtin_macro("_eval", builtin_macro_eval);
+	global_scope->define_builtin_macro("_declare", builtin_macro_declare);
 	global_scope->define_builtin_macro("_define", builtin_macro_define);
 	global_scope->define_builtin_macro("_assign", builtin_macro_assign);
 	global_scope->define_builtin_macro("_equals", builtin_macro_equals);

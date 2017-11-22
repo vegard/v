@@ -48,7 +48,6 @@ enum ast_node_type {
 
 	/* Binary infix operators */
 	AST_MEMBER,
-	AST_PAIR,
 	AST_JUXTAPOSE,
 	AST_COMMA,
 	AST_SEMICOLON,
@@ -58,7 +57,6 @@ bool is_binop(ast_node_type t)
 {
 	switch (t) {
 	case AST_MEMBER:
-	case AST_PAIR:
 	case AST_JUXTAPOSE:
 	case AST_COMMA:
 	case AST_SEMICOLON:
@@ -132,7 +130,6 @@ struct ast_node {
 
 		/* Binary operators */
 		case AST_MEMBER:
-		case AST_PAIR:
 		case AST_JUXTAPOSE:
 		case AST_COMMA:
 		case AST_SEMICOLON:
@@ -237,9 +234,6 @@ struct serializer {
 
 		case AST_MEMBER:
 			binop(os, node, depth, "member");
-			break;
-		case AST_PAIR:
-			binop(os, node, depth, "pair");
 			break;
 		case AST_JUXTAPOSE:
 			binop(os, node, depth, "juxtapose");

@@ -450,7 +450,7 @@ ast_node_ptr parser::parse_expr(unsigned int &pos, unsigned int min_precedence)
 		if (!result)
 			result = parse_binop<AST_MEMBER, PREC_MEMBER, ASSOC_LEFT, false>(".", lhs, i, min_precedence);
 		if (!result)
-			result = parse_binop<AST_PAIR, PREC_PAIR, ASSOC_LEFT, false>(":", lhs, i, min_precedence);
+			result = parse_binop_as_call<PREC_PAIR, ASSOC_LEFT, false>(":", "_declare", lhs, i, min_precedence);
 		if (!result)
 			result = parse_binop_as_call<PREC_MULTIPLY_DIVIDE, ASSOC_LEFT, false>("*", "_multiply", lhs, i, min_precedence);
 		if (!result)

@@ -177,7 +177,7 @@ struct serializer {
 			os << ")";
 		} else {
 			indent(os, depth);
-			os << "(parens)";
+			os << "(" << name << ")";
 		}
 	}
 

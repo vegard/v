@@ -1,5 +1,5 @@
 (semicolon
-    (parens)
+    (brackets)
     (semicolon
         (brackets
             (literal_integer 1)
@@ -34,13 +34,13 @@
                         )
                         (semicolon
                             (brackets
-                                (parens)
+                                (brackets)
                             )
                             (semicolon
                                 (brackets
                                     (comma
-                                        (parens)
-                                        (parens)
+                                        (brackets)
+                                        (brackets)
                                     )
                                 )
                                 (semicolon
@@ -62,7 +62,7 @@
                                         )
                                     )
                                     (semicolon
-                                        (parens)
+                                        (square-brackets)
                                         (semicolon
                                             (square-brackets
                                                 (literal_integer 1)
@@ -89,7 +89,7 @@
                                                             )
                                                         )
                                                         (semicolon
-                                                            (parens)
+                                                            (curly-brackets)
                                                             (semicolon
                                                                 (curly-brackets
                                                                     (literal_integer 1)

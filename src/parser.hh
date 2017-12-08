@@ -186,6 +186,9 @@ ast_node_ptr parser::parse_literal_integer(unsigned int &pos)
 	unsigned int i = pos;
 	unsigned int base = 10;
 
+	// TODO: this rejects hex digits, but if we use isxdigit() it
+	// will consume non-numbers
+
 	if (i < len && (isdigit(buf[i]) || buf[i] == '-'))
 		++i;
 	while (i < len && isdigit(buf[i]))

@@ -40,6 +40,7 @@ extern "C" {
 #include "builtin/quote.hh"
 #include "builtin/struct.hh"
 #include "builtin/u64.hh"
+#include "builtin/str.hh"
 #include "builtin/value.hh"
 #include "builtin/while.hh"
 #include "compile.hh"
@@ -50,26 +51,44 @@ extern "C" {
 #include "scope.hh"
 #include "value.hh"
 
-static void _print(uint64_t x)
+static void _print_u64(uint64_t x)
 {
 	printf("%lu\n", x);
 }
 
+static void _print_str(const char *s)
+{
+	printf("%s\n", s);
+}
+
 static value_ptr builtin_macro_print(const compile_state &state, ast_node_ptr node)
 {
-	auto print_fn = std::make_shared<value>(state.context, VALUE_GLOBAL, builtin_type_u64);
-	auto global = new void *;
-	*global = (void *) &_print;
-	print_fn->global.host_address = (void *) global;
 
 	// TODO: save registers
 	auto arg = compile(state, node);
-	if (arg->type != builtin_type_u64)
-		state.error(node, "expected value of type u64");
+	if (arg->type == builtin_type_u64) {
+		auto print_fn = std::make_shared<value>(state.context, VALUE_GLOBAL, builtin_type_u64);
+		auto global = new void *;
+		*global = (void *) &_print_u64;
+		print_fn->global.host_address = (void *) global;
 
-	state.use_value(node, arg);
-	state.function->emit_move(arg, 0, RDI);
-	state.function->emit_call(print_fn);
+		state.use_value(node, arg);
+		state.function->emit_move(arg, 0, RDI);
+		state.function->emit_call(print_fn);
+	} else if (arg->type == builtin_type_str) {
+		auto print_fn = std::make_shared<value>(state.context, VALUE_GLOBAL, builtin_type_str);
+		auto global = new void *;
+		*global = (void *) &_print_str;
+		print_fn->global.host_address = (void *) global;
+
+		// TODO: I think this only works by pure coincidence,
+		// the problem is we're passing (part of) a std::string as char *
+		state.use_value(node, arg);
+		state.function->emit_move(arg, 0, RDI);
+		state.function->emit_call(print_fn);
+	} else {
+		state.error(node, "expected value of type u64");
+	}
 
 	return builtin_value_void;
 }
@@ -112,6 +131,7 @@ static function_ptr compile_metaprogram(source_file_ptr source, ast_node_ptr roo
 	global_scope->define_builtin_namespace("lang", builtin_value_namespace_lang);
 
 	// Types
+	global_scope->define_builtin_type("str", builtin_type_str);
 	global_scope->define_builtin_type("u64", builtin_type_u64);
 
 	// Operators

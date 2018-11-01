@@ -43,18 +43,12 @@ static value_ptr builtin_macro_declare(const compile_state &state, ast_node_ptr 
 		state.error(rhs_node, "type must be an instance of a type");
 	auto rhs_type = *(value_type_ptr *) rhs->global.host_address;
 
-	value_ptr val;
-	if (state.function->target_jit) {
-		// For functions that are run at compile-time, we allocate
-		// a new global value. The _name_ is still scoped as usual,
-		// though.
-		val = std::make_shared<value>(state.context, VALUE_GLOBAL, rhs_type);
-		auto global = new uint8_t[rhs_type->size];
-		val->global.host_address = (void *) global;
-	} else {
-		// Create new local
-		val = state.function->alloc_local_value(state.context, rhs_type);
-	}
+	// For functions that are run at compile-time, we allocate
+	// a new global value. The _name_ is still scoped as usual,
+	// though.
+	auto val = std::make_shared<value>(state.context, VALUE_GLOBAL, rhs_type);
+	auto global = new uint8_t[rhs_type->size];
+	val->global.host_address = (void *) global;
 
 	state.scope->define(state.function, node, lhs->symbol_name, val);
 	return val;

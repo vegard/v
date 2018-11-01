@@ -73,11 +73,6 @@ struct function;
 typedef std::shared_ptr<function> function_ptr;
 
 struct function {
-	// Is this function being compiled for immediate execution?
-	// We need to know this to know whether we should allocate
-	// local or global variables.
-	bool target_jit;
-
 	std::shared_ptr<value> return_value;
 	std::vector<uint8_t> bytes;
 
@@ -90,8 +85,7 @@ struct function {
 
 	unsigned int next_local_slot;
 
-	function(bool target_jit):
-		target_jit(target_jit),
+	function():
 		indentation(0),
 		// slot 0 is the return address
 		// slot 1 is the saved rbx

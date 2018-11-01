@@ -120,7 +120,7 @@ static value_ptr __construct_fun(value_type_ptr type, const compile_state &state
 {
 	auto c = state.context;
 
-	auto new_f = std::make_shared<function>(false);
+	auto new_f = std::make_shared<function>();
 	new_f->emit_prologue();
 
 	value_type_ptr return_type = type->return_type;

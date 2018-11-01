@@ -25,6 +25,7 @@
 #include "../scope.hh"
 #include "../value.hh"
 
+// _define at the top-level, creates globals
 static value_ptr builtin_macro_define(const compile_state &state, ast_node_ptr node)
 {
 	if (node->type != AST_JUXTAPOSE)
@@ -34,19 +35,13 @@ static value_ptr builtin_macro_define(const compile_state &state, ast_node_ptr n
 	if (lhs->type != AST_SYMBOL_NAME)
 		state.error(node, "definition of non-symbol");
 
+	// For functions that are run at compile-time, we allocate
+	// a new global value. The _name_ is still scoped as usual,
+	// though.
 	auto rhs = compile(state, node->binop.rhs);
-	value_ptr val;
-	if (state.function->target_jit) {
-		// For functions that are run at compile-time, we allocate
-		// a new global value. The _name_ is still scoped as usual,
-		// though.
-		val = std::make_shared<value>(state.context, VALUE_GLOBAL, rhs->type);
-		auto global = new uint8_t[rhs->type->size];
-		val->global.host_address = (void *) global;
-	} else {
-		// Create new local
-		val = state.function->alloc_local_value(state.context, rhs->type);
-	}
+	auto val = std::make_shared<value>(state.context, VALUE_GLOBAL, rhs->type);
+	auto global = new uint8_t[rhs->type->size];
+	val->global.host_address = (void *) global;
 
 	state.scope->define(state.function, node, lhs->symbol_name, val);
 	state.function->emit_move(rhs, val);

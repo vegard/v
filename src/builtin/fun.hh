@@ -97,6 +97,23 @@ struct args_allocator {
 	}
 };
 
+// _define inside functions always creates locals
+static value_ptr fun_define_macro(const compile_state &state, ast_node_ptr node)
+{
+	if (node->type != AST_JUXTAPOSE)
+		state.error(node, "expected juxtaposition");
+
+	auto lhs = node->binop.lhs;
+	if (lhs->type != AST_SYMBOL_NAME)
+		state.error(node, "definition of non-symbol");
+
+	auto rhs = compile(state, node->binop.rhs);
+	auto val = state.function->alloc_local_value(state.context, rhs->type);
+	state.scope->define(state.function, node, lhs->symbol_name, val);
+	state.function->emit_move(rhs, val);
+	return val;
+}
+
 // Low-level helper (for use after data has been extracted from syntax)
 static value_ptr __construct_fun(value_type_ptr type, const compile_state &state, ast_node_ptr node,
 	std::vector<std::string> &args, ast_node_ptr body_node)
@@ -124,6 +141,7 @@ static value_ptr __construct_fun(value_type_ptr type, const compile_state &state
 	}
 
 	auto new_scope = std::make_shared<scope>(state.scope);
+	new_scope->define_builtin_macro("_define", fun_define_macro);
 	new_scope->define_builtin_macro("return", std::make_shared<return_macro>(new_f, new_scope, return_type, return_value, return_label));
 
 	for (unsigned int i = 0; i < args.size(); ++i) {

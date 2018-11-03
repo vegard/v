@@ -73,6 +73,8 @@ struct function;
 typedef std::shared_ptr<function> function_ptr;
 
 struct function {
+	object_ptr this_object;
+
 	std::shared_ptr<value> return_value;
 	std::vector<uint8_t> bytes;
 
@@ -85,7 +87,8 @@ struct function {
 
 	unsigned int next_local_slot;
 
-	function():
+	function(object_ptr this_object = nullptr):
+		this_object(this_object),
 		indentation(0),
 		// slot 0 is the return address
 		// slot 1 is the saved rbx
@@ -183,6 +186,22 @@ struct function {
 		bytes[addr + 1] = v >> 8;
 		bytes[addr + 2] = v >> 16;
 		bytes[addr + 3] = v >> 24;
+	}
+
+	void emit_quad_placeholder()
+	{
+		// emit something that we can recognise as a bogus value
+		// if we forget to replace it
+		emit_quad(0x5b5b5b5b5b5b5b5b);
+	}
+
+	void emit_obj(unsigned int object_id)
+	{
+		assert(this_object);
+
+		// this emits a relocation for the address of the given object
+		this_object->relocations.push_back(relocation(bytes.size(), object_id));
+		emit_quad_placeholder();
 	}
 
 	void emit_prologue()
@@ -288,12 +307,25 @@ struct function {
 		emit_quad(source);
 	}
 
+	void emit_move_obj_to_reg(unsigned int object_id, machine_register dest)
+	{
+		// REX_W (+ REX.B)
+		bytes.push_back(REX | REX_W | (REX_B * (dest >= 8)));
+		// Opcode
+		bytes.push_back(0xb8 | (dest & 7));
+		emit_obj(object_id);
+	}
+
 	void emit_move(value_ptr source, unsigned int source_offset, machine_register dest)
 	{
 		switch (source->storage_type) {
 		case VALUE_GLOBAL:
 			// TODO
 			emit_move_imm_to_reg((uint64_t) source->global.host_address, RBX);
+			emit_move_mreg_offset_to_reg(RBX, source_offset, dest);
+			break;
+		case VALUE_TARGET_GLOBAL:
+			emit_move_obj_to_reg(source->target_global.object_id, RBX);
 			emit_move_mreg_offset_to_reg(RBX, source_offset, dest);
 			break;
 		case VALUE_LOCAL:
@@ -315,6 +347,10 @@ struct function {
 		case VALUE_GLOBAL:
 			// TODO
 			emit_move_imm_to_reg((uint64_t) dest->global.host_address, RBX);
+			emit_move_reg_to_mreg_offset(source, RBX, dest_offset);
+			break;
+		case VALUE_TARGET_GLOBAL:
+			emit_move_obj_to_reg(dest->target_global.object_id, RBX);
 			emit_move_reg_to_mreg_offset(source, RBX, dest_offset);
 			break;
 		case VALUE_LOCAL:
@@ -359,6 +395,9 @@ struct function {
 		switch (source->storage_type) {
 		case VALUE_GLOBAL:
 			emit_move_imm_to_reg((uint64_t) source->global.host_address, dest);
+			break;
+		case VALUE_TARGET_GLOBAL:
+			emit_move_obj_to_reg(source->target_global.object_id, dest);
 			break;
 		case VALUE_LOCAL:
 			emit_move_reg_offset_to_reg(RBP, source->local.offset, dest);
@@ -478,6 +517,11 @@ struct function {
 		case VALUE_GLOBAL:
 			// TODO: optimise
 			emit_move_imm_to_reg((uint64_t) target->global.host_address, RAX);
+			emit_move_mreg_offset_to_reg(RAX, 0, RAX);
+			emit_call(RAX);
+			break;
+		case VALUE_TARGET_GLOBAL:
+			emit_move_obj_to_reg(target->target_global.object_id, RAX);
 			emit_move_mreg_offset_to_reg(RAX, 0, RAX);
 			emit_call(RAX);
 			break;

@@ -30,9 +30,12 @@
 #include "source_file.hh"
 #include "value.hh"
 
+typedef std::shared_ptr<std::vector<object_ptr>> objects_ptr;
+
 // This is a badly named; for the future I'd like to rename 'context' to
 // something else and then rename this to 'compile_context'
 struct compile_state {
+	objects_ptr objects;
 	source_file_ptr source;
 	context_ptr context;
 	function_ptr function;
@@ -44,6 +47,13 @@ struct compile_state {
 		function(function),
 		scope(scope)
 	{
+	}
+
+	unsigned int new_object(object_ptr object) const
+	{
+		unsigned int object_id = objects->size();
+		objects->push_back(object);
+		return object_id;
 	}
 
 	compile_state set_source(source_file_ptr &new_source, scope_ptr &new_scope) const

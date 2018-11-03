@@ -19,8 +19,13 @@
 #ifndef V_VALUE_HH
 #define V_VALUE_HH
 
+#include "object.hh"
+
 enum value_storage_type {
+	// host global (direct pointer)
 	VALUE_GLOBAL,
+	// target global (object reference)
+	VALUE_TARGET_GLOBAL,
 	// a local (on-stack) value
 	VALUE_LOCAL,
 	// a local (on-stack) pointer to the value itself
@@ -102,6 +107,10 @@ struct value {
 		} global;
 
 		struct {
+			unsigned int object_id;
+		} target_global;
+
+		struct {
 			// offset in the local stack frame
 			unsigned int offset;
 		} local;
@@ -123,6 +132,14 @@ struct value {
 		storage_type(storage_type),
 		type(type)
 	{
+	}
+
+	value(context_ptr context, value_type_ptr type, unsigned int object_id):
+		context(context),
+		storage_type(VALUE_TARGET_GLOBAL),
+		type(type)
+	{
+		target_global.object_id = object_id;
 	}
 
 	~value()

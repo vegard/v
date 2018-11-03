@@ -85,6 +85,9 @@ struct scope {
 			case VALUE_GLOBAL:
 				f->comment(format("define global var $", name));
 				break;
+			case VALUE_TARGET_GLOBAL:
+				f->comment(format("define target global var $", name));
+				break;
 			case VALUE_LOCAL:
 				f->comment(format("define local var $", name));
 				break;

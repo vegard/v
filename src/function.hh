@@ -59,14 +59,14 @@ const unsigned int REX_W = 0x08;
 //  - If we already know a label's address, do we output it immediately
 //    instead of linking it at the end?
 
-struct relocation {
+struct jump_relocation {
 	unsigned int addr;
 	unsigned int offset;
 };
 
 struct label {
 	unsigned int addr;
-	std::vector<relocation> relocations;
+	std::vector<jump_relocation> relocations;
 };
 
 struct function;
@@ -528,7 +528,7 @@ struct function {
 
 	void link_label(const label &l)
 	{
-		for (const relocation &r: l.relocations)
+		for (const jump_relocation &r: l.relocations)
 			overwrite_long(r.addr, l.addr - (r.addr + r.offset));
 	}
 };

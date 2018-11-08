@@ -35,6 +35,7 @@ typedef std::shared_ptr<std::vector<object_ptr>> objects_ptr;
 // This is a badly named; for the future I'd like to rename 'context' to
 // something else and then rename this to 'compile_context'
 struct compile_state {
+	// XXX: Implicit assumption: when objects == nullptr, we're compiling for the host
 	objects_ptr objects;
 	source_file_ptr source;
 	context_ptr context;
@@ -51,9 +52,17 @@ struct compile_state {
 
 	unsigned int new_object(object_ptr object) const
 	{
+		assert(objects);
 		unsigned int object_id = objects->size();
 		objects->push_back(object);
 		return object_id;
+	}
+
+	compile_state set_objects(objects_ptr objects) const
+	{
+		auto ret = *this;
+		ret.objects = objects;
+		return ret;
 	}
 
 	compile_state set_source(source_file_ptr &new_source, scope_ptr &new_scope) const
@@ -127,7 +136,7 @@ struct compile_state {
 
 		// We can always access globals
 		auto val = e.val;
-		if (val->storage_type == VALUE_GLOBAL || val->storage_type == VALUE_CONSTANT)
+		if (val->storage_type == VALUE_GLOBAL || val->storage_type == VALUE_TARGET_GLOBAL || val->storage_type == VALUE_CONSTANT)
 			return val;
 
 		if (e.f != function)
@@ -237,13 +246,19 @@ static value_ptr eval(const compile_state &state, ast_node_ptr node)
 
 	auto v = compile(state.set_function(new_c, new_f), node);
 
-	// Make sure we copy the value out to a new global in case the
-	// returned value is a local (which cannot be accessed outside
-	// "new_f" itself).
-	auto ret = std::make_shared<value>(new_c, VALUE_GLOBAL, v->type);
-	auto global = new uint8_t[v->type->size];
-	ret->global.host_address = (void *) global;
-	new_f->emit_move(v, ret);
+	value_ptr ret;
+	if (v->storage_type == VALUE_LOCAL || v->storage_type == VALUE_LOCAL_POINTER) {
+		// Make sure we copy the value out to a new global in case the
+		// returned value is a local (which cannot be accessed outside
+		// "new_f" itself).
+		ret = std::make_shared<value>(new_c, VALUE_GLOBAL, v->type);
+		auto global = new uint8_t[v->type->size];
+		ret->global.host_address = (void *) global;
+		new_f->emit_move(v, ret);
+	} else {
+		// We can return it directly
+		ret = v;
+	}
 
 	new_f->emit_epilogue();
 

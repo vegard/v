@@ -64,14 +64,21 @@ static value_ptr builtin_type_u64_constructor(value_type_ptr, const compile_stat
 	if (node->type != AST_LITERAL_INTEGER)
 		state.error(node, "expected literal integer");
 
-	auto ret = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_u64);
 	if (!node->literal_integer.fits_ulong_p())
 		state.error(node, "literal integer is too large to fit in u64");
 
-	auto global = new uint64_t;
-	*global = node->literal_integer.get_si();
-	ret->global.host_address = (void *) global;
-	return ret;
+	if (state.objects) {
+		// TODO: do byte-swapping from host -> target if necessary
+		// (actually, we should create a separate type for the target...)
+		auto obj = std::make_shared<object>(node->literal_integer.get_si());
+		return std::make_shared<value>(nullptr, builtin_type_u64, state.new_object(obj));
+	} else {
+		auto ret = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_u64);
+		auto global = new uint64_t;
+		*global = node->literal_integer.get_si();
+		ret->global.host_address = (void *) global;
+		return ret;
+	}
 }
 
 // TODO: maybe this should really be a function rather than a macro

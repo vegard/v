@@ -118,9 +118,14 @@ static value_ptr fun_define_macro(const compile_state &state, ast_node_ptr node)
 static value_ptr __construct_fun(value_type_ptr type, const compile_state &state, ast_node_ptr node,
 	std::vector<std::string> &args, ast_node_ptr body_node)
 {
+	object_ptr obj;
+	if (state.objects)
+		obj = std::make_shared<object>();
+
 	auto c = state.context;
 
-	auto new_f = std::make_shared<function>();
+	auto new_f = std::make_shared<function>(obj);
+
 	new_f->emit_prologue();
 
 	value_type_ptr return_type = type->return_type;
@@ -176,24 +181,37 @@ static value_ptr __construct_fun(value_type_ptr type, const compile_state &state
 	new_f->link_label(return_label);
 	new_f->emit_epilogue();
 
-	// We need this to keep the new function from getting freed when this
-	// function returns.
-	// TODO: Another solution?
-	static std::set<function_ptr> functions;
-	functions.insert(new_f);
+	if (obj) {
+		// target
 
-	auto ret = std::make_shared<value>(nullptr, VALUE_GLOBAL, type);
-	void *mem = map(new_f);
+		// XXX
+		obj->size = new_f->bytes.size();
+		obj->bytes = new uint8_t[obj->size];
+		memcpy(obj->bytes, &new_f->bytes[0], obj->size);
 
-	// XXX: why the indirection? I forgot why I did it this way.
-	auto global = new void *;
-	*global = mem;
-	ret->global.host_address = (void *) global;
+		return std::make_shared<value>(nullptr, type, state.new_object(obj));
+	} else {
+		// host
 
-	if (global_disassemble)
-		disassemble((const uint8_t *) mem, new_f->bytes.size(), (uint64_t) mem, new_f->comments);
+		// We need this to keep the new function from getting freed when this
+		// function returns.
+		// TODO: Another solution?
+		static std::set<function_ptr> functions;
+		functions.insert(new_f);
 
-	return ret;
+		auto ret = std::make_shared<value>(nullptr, VALUE_GLOBAL, type);
+		void *mem = map(new_f);
+
+		// XXX: why the indirection? I forgot why I did it this way.
+		auto global = new void *;
+		*global = mem;
+		ret->global.host_address = (void *) global;
+
+		if (global_disassemble)
+			disassemble((const uint8_t *) mem, new_f->bytes.size(), (uint64_t) mem, new_f->comments);
+
+		return ret;
+	}
 }
 
 // actually compile a function body

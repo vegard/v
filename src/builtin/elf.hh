@@ -56,29 +56,30 @@ struct entry_macro: macro {
 			state.error(node, "'entry' used outside defining scope");
 
 		auto entry_value = eval(state, node);
-		if (entry_value->storage_type != VALUE_GLOBAL)
-			state.error(node, "entry point must be known at compile time");
+		if (entry_value->storage_type != VALUE_TARGET_GLOBAL)
+			state.error(node, "entry point must be a compile-time target constant");
+
+		// TODO: check here that entry_point is not void and callable with no args
 
 		elf.entry_point = entry_value;
 		return builtin_value_void;
 	}
 };
 
-struct export_define_macro: macro {
+struct define_macro: macro {
 	scope_ptr s;
 	elf_data &elf;
+	bool do_export;
 
-	export_define_macro(scope_ptr s, elf_data &elf):
+	define_macro(scope_ptr s, elf_data &elf, bool do_export):
 		s(s),
-		elf(elf)
+		elf(elf),
+		do_export(do_export)
 	{
 	}
 
 	value_ptr invoke(const compile_state &state, ast_node_ptr node)
 	{
-		//printf("define something\n");
-		//serializer().serialize(std::cout, node);
-
 		if (node->type != AST_JUXTAPOSE)
 			state.error(node, "expected juxtaposition");
 
@@ -90,7 +91,8 @@ struct export_define_macro: macro {
 		auto rhs = compile(state.set_scope(s), node->binop.rhs);
 		s->define(state.function, node, lhs->symbol_name, rhs);
 
-		elf.exports[lhs->symbol_name] = rhs;
+		if (do_export)
+			elf.exports[lhs->symbol_name] = rhs;
 		return builtin_value_void;
 	}
 };
@@ -114,7 +116,7 @@ struct export_macro: macro {
 		// that when the user defines something it still becomes visible
 		// in the parent scope
 		auto new_scope = std::make_shared<scope>(state.scope);
-		new_scope->define_builtin_macro("_define", std::make_shared<export_define_macro>(s, elf));
+		new_scope->define_builtin_macro("_define", std::make_shared<define_macro>(s, elf, true));
 
 		return eval(state.set_scope(new_scope), node);
 	}
@@ -134,13 +136,15 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 	auto filename = *(std::string *) filename_value->global.host_address;
 
 	elf_data elf;
+	auto objects = std::make_shared<std::vector<object_ptr>>();
 
 	auto new_scope = std::make_shared<scope>(state.scope);
+	new_scope->define_builtin_macro("_define", std::make_shared<define_macro>(new_scope, elf, false));
 	new_scope->define_builtin_macro("entry", std::make_shared<entry_macro>(new_scope, elf));
 	new_scope->define_builtin_macro("export", std::make_shared<export_macro>(new_scope, elf));
 
 	auto expr_node = node->binop.rhs;
-	auto expr_value = eval(state.set_scope(new_scope), expr_node);
+	auto expr_value = eval(state.set_objects(objects).set_scope(new_scope), expr_node);
 
 	// TODO: error handling, temporaries, etc.
 	int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
@@ -149,12 +153,20 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 
 	// TODO: is this check sufficient?
 	if (elf.entry_point != builtin_value_void) {
-		assert(elf.entry_point->storage_type == VALUE_GLOBAL);
+		assert(elf.entry_point->storage_type == VALUE_TARGET_GLOBAL);
 	}
 
 	// TODO: traverse entry point + exports
 	for (const auto it: elf.exports) {
 		//printf("export: %s\n", it.first.c_str());
+	}
+
+	printf("%lu objects!\n", objects->size());
+
+	for (const auto obj: *objects) {
+		printf(" - object size %lu\n", obj->size);
+		//std::map<size_t, std::vector<std::pair<unsigned int, std::string>>> comments;
+		//disassemble((const uint8_t *) obj->bytes, obj->size, 0, comments);
 	}
 
 	close(fd);

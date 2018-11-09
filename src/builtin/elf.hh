@@ -19,6 +19,10 @@
 #ifndef V_BUILTIN_ELF_HH
 #define V_BUILTIN_ELF_HH
 
+extern "C" {
+#include <elf.h>
+}
+
 #include <array>
 #include <set>
 #include <vector>
@@ -122,6 +126,44 @@ struct export_macro: macro {
 	}
 };
 
+struct elf_writer {
+	struct element {
+		size_t offset;
+		uint8_t *data;
+		size_t size;
+	};
+
+	size_t offset;
+	std::vector<element> elements;
+
+	elf_writer():
+		offset(0)
+	{
+	}
+
+	template<typename t>
+	t &append()
+	{
+		// TODO: we allocate as uint8_t[] because we will free
+		// everything using that as well. Hopefully the alignment
+		// of t will agree with our current offset...
+		size_t size = sizeof(t);
+		uint8_t *data = new uint8_t[size];
+		elements.push_back(element { offset, data, size });
+		offset += size;
+		return *(t *) data;
+	}
+
+	void align(size_t alignment)
+	{
+		size_t size = alignment - (offset & (alignment - 1));
+		uint8_t *data = new uint8_t[size];
+		memset(data, 0, size);
+		elements.push_back(element { offset, data, size });
+		offset += size;
+	}
+};
+
 static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node)
 {
 	if (node->type != AST_JUXTAPOSE)
@@ -146,15 +188,47 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 	auto expr_node = node->binop.rhs;
 	auto expr_value = eval(state.set_objects(objects).set_scope(new_scope), expr_node);
 
-	// TODO: error handling, temporaries, etc.
-	int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
-	if (fd == -1)
-		state.error(filename_node, "couldn't open '$' for writing: $", filename.c_str(), strerror(errno));
+	elf_writer w;
 
-	// TODO: is this check sufficient?
-	if (elf.entry_point != builtin_value_void) {
-		assert(elf.entry_point->storage_type == VALUE_TARGET_GLOBAL);
-	}
+	auto &ehdr = w.append<Elf64_Ehdr>();
+	ehdr = {};
+	ehdr.e_ident[EI_MAG0] = ELFMAG0;
+	ehdr.e_ident[EI_MAG1] = ELFMAG1;
+	ehdr.e_ident[EI_MAG2] = ELFMAG2;
+	ehdr.e_ident[EI_MAG3] = ELFMAG3;
+	ehdr.e_ident[EI_CLASS] = ELFCLASS64;
+	ehdr.e_ident[EI_DATA] = ELFDATA2LSB;
+	ehdr.e_ident[EI_VERSION] = EV_CURRENT;
+	ehdr.e_ident[EI_OSABI] = ELFOSABI_SYSV;
+	ehdr.e_ident[EI_ABIVERSION] = 0;
+	ehdr.e_ident[EI_PAD] = 0;
+	ehdr.e_type = ET_EXEC;
+	ehdr.e_machine = EM_X86_64;
+	ehdr.e_version = EV_CURRENT;
+	ehdr.e_ehsize = sizeof(Elf64_Ehdr);
+	ehdr.e_phentsize = sizeof(Elf64_Phdr);
+	ehdr.e_shentsize = sizeof(Elf64_Shdr);
+
+	// TODO: do we need a PT_PHDR Phdr?
+
+	ehdr.e_phoff = w.offset;
+
+	// TODO: just one segment for everything for now
+	auto &phdr = w.append<Elf64_Phdr>();
+	phdr = {};
+	phdr.p_type = PT_LOAD;
+	phdr.p_flags = PF_X | PF_W | PF_R;
+	phdr.p_vaddr = 0x400000;
+	phdr.p_paddr = phdr.p_vaddr;
+	phdr.p_align = 1;
+	++ehdr.e_phnum;
+
+	// XXX: the low order bits of this offset must match with the
+	// virtual address. We should pad with zero to the nearest
+	// page boundary to avoid loading parts of the ELF header.
+	w.align(4096);
+
+	phdr.p_offset = w.offset;
 
 	// TODO: traverse entry point + exports
 	for (const auto it: elf.exports) {
@@ -163,10 +237,46 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 
 	printf("%lu objects!\n", objects->size());
 
+	std::vector<size_t> offsets;
+
+	size_t offset = 0;
 	for (const auto obj: *objects) {
 		printf(" - object size %lu\n", obj->size);
 		//std::map<size_t, std::vector<std::pair<unsigned int, std::string>>> comments;
 		//disassemble((const uint8_t *) obj->bytes, obj->size, 0, comments);
+		offsets.push_back(offset);
+		offset += obj->size;
+	}
+
+	phdr.p_filesz = offset;
+	phdr.p_memsz = offset;
+
+	// TODO: is this check sufficient?
+	if (elf.entry_point != builtin_value_void) {
+		assert(elf.entry_point->storage_type == VALUE_TARGET_GLOBAL);
+
+		// TODO
+		ehdr.e_entry = phdr.p_vaddr + offsets[elf.entry_point->target_global.object_id];
+	}
+
+	// TODO: error handling, temporaries, etc.
+	int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	if (fd == -1)
+		state.error(filename_node, "couldn't open '$' for writing: $", filename.c_str(), strerror(errno));
+
+	for (auto x: w.elements) {
+		write(fd, x.data, x.size);
+	}
+
+	for (const auto obj: *objects) {
+		// apply relocations
+		for (const auto &reloc: obj->relocations) {
+			uint64_t target = phdr.p_vaddr + offsets[reloc.object];
+			for (unsigned int i = 0; i < 8; ++i)
+				obj->bytes[reloc.offset + i] = target >> (8 * i);
+		}
+
+		write(fd, obj->bytes, obj->size);
 	}
 
 	close(fd);

@@ -53,7 +53,7 @@ struct object {
 	size_t size;
 
 	// TODO: is this linked or not? (i.e. relocations replaced)
-	void *bytes;
+	uint8_t *bytes;
 
 	// TODO: should this be actual full-fledged relocations or just
 	// references? See http://www.ucw.cz/~hubicka/papers/abi/node19.html

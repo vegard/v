@@ -253,6 +253,16 @@ struct function {
 		emit_byte(0xc3);
 	}
 
+	void emit_move_reg_to_reg(machine_register source, machine_register dest)
+	{
+		// REX.W (+ REX.B)
+		bytes.push_back(REX | REX_W | (REX_R * (source >= 8)) | (REX_B * (dest >= 8)));
+		// Opcode
+		bytes.push_back(0x89);
+		// Mod-Reg-R/M
+		bytes.push_back(/* Mod */ 0xc0 | /* Reg */ ((source & 7) << 3) | /* R/M */ (dest & 7));
+	}
+
 	void emit_move_reg_to_mreg_offset(machine_register source, machine_register dest, unsigned int dest_offset)
 	{
 		// REX.W (+ REX.B)
@@ -320,6 +330,7 @@ struct function {
 	{
 		switch (source->storage_type) {
 		case VALUE_GLOBAL:
+			assert(!this_object);
 			// TODO
 			emit_move_imm_to_reg((uint64_t) source->global.host_address, RBX);
 			emit_move_mreg_offset_to_reg(RBX, source_offset, dest);
@@ -345,6 +356,7 @@ struct function {
 	{
 		switch (dest->storage_type) {
 		case VALUE_GLOBAL:
+			assert(!this_object);
 			// TODO
 			emit_move_imm_to_reg((uint64_t) dest->global.host_address, RBX);
 			emit_move_reg_to_mreg_offset(source, RBX, dest_offset);
@@ -394,6 +406,7 @@ struct function {
 	{
 		switch (source->storage_type) {
 		case VALUE_GLOBAL:
+			assert(!this_object);
 			emit_move_imm_to_reg((uint64_t) source->global.host_address, dest);
 			break;
 		case VALUE_TARGET_GLOBAL:
@@ -515,14 +528,15 @@ struct function {
 	{
 		switch (target->storage_type) {
 		case VALUE_GLOBAL:
+			assert(!this_object);
 			// TODO: optimise
 			emit_move_imm_to_reg((uint64_t) target->global.host_address, RAX);
 			emit_move_mreg_offset_to_reg(RAX, 0, RAX);
 			emit_call(RAX);
 			break;
 		case VALUE_TARGET_GLOBAL:
+			// TODO: optimise
 			emit_move_obj_to_reg(target->target_global.object_id, RAX);
-			emit_move_mreg_offset_to_reg(RAX, 0, RAX);
 			emit_call(RAX);
 			break;
 		case VALUE_LOCAL:

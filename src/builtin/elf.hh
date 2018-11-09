@@ -185,8 +185,10 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 	new_scope->define_builtin_macro("entry", std::make_shared<entry_macro>(new_scope, elf));
 	new_scope->define_builtin_macro("export", std::make_shared<export_macro>(new_scope, elf));
 
+	auto new_state = state.set_objects(objects).set_scope(new_scope);
+
 	auto expr_node = node->binop.rhs;
-	auto expr_value = eval(state.set_objects(objects).set_scope(new_scope), expr_node);
+	auto expr_value = eval(new_state, expr_node);
 
 	elf_writer w;
 
@@ -235,6 +237,36 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 		//printf("export: %s\n", it.first.c_str());
 	}
 
+	unsigned int entry_object_id;
+
+	// TODO: is this check sufficient?
+	if (elf.entry_point != builtin_value_void) {
+		assert(elf.entry_point->storage_type == VALUE_TARGET_GLOBAL);
+
+		// We cannot set the entry point _directly_ at the function
+		// given by the user, as the stack doesn't contain a return
+		// value for us to return to. So we instead generate a new
+		// function with a call to the entry point given by the user
+		// and finish off with a syscall to terminate the process.
+
+		auto obj = std::make_shared<object>();
+		auto new_f = std::make_shared<function>(obj);
+
+		new_f->emit_call(elf.entry_point);
+		new_f->emit_move_reg_to_reg(RAX, RDI);
+		new_f->emit_move_imm_to_reg(/* SYS_exit_group */ 231, RAX);
+
+		// syscall
+		new_f->emit_byte(0x0f);
+		new_f->emit_byte(0x05);
+
+		obj->size = new_f->bytes.size();
+		obj->bytes = new uint8_t[obj->size];
+		memcpy(obj->bytes, &new_f->bytes[0], obj->size);
+
+		entry_object_id = new_state.new_object(obj);
+	}
+
 	printf("%lu objects!\n", objects->size());
 
 	std::vector<size_t> offsets;
@@ -248,16 +280,11 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 		offset += obj->size;
 	}
 
+	if (elf.entry_point != builtin_value_void)
+		ehdr.e_entry = phdr.p_vaddr + offsets[entry_object_id];
+
 	phdr.p_filesz = offset;
 	phdr.p_memsz = offset;
-
-	// TODO: is this check sufficient?
-	if (elf.entry_point != builtin_value_void) {
-		assert(elf.entry_point->storage_type == VALUE_TARGET_GLOBAL);
-
-		// TODO
-		ehdr.e_entry = phdr.p_vaddr + offsets[elf.entry_point->target_global.object_id];
-	}
 
 	// TODO: error handling, temporaries, etc.
 	int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);

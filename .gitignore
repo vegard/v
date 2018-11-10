@@ -2,3 +2,5 @@
 
 udis86-install/
 v
+
+tests/elf/*.exe

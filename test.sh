@@ -20,3 +20,11 @@ do
 	echo $file
 	diff -U100 ${file%.v}.out <(./v $file) || true
 done
+
+for file in tests/elf/*.v
+do
+	echo $file
+	rm -rf ${file}.exe
+	./v $file >/dev/null
+	diff -U100 ${file%.v}.out <(${file}.exe; echo $?) || true
+done

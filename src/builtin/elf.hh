@@ -287,7 +287,7 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 	phdr.p_memsz = offset;
 
 	// TODO: error handling, temporaries, etc.
-	int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0755);
 	if (fd == -1)
 		state.error(filename_node, "couldn't open '$' for writing: $", filename.c_str(), strerror(errno));
 

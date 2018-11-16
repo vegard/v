@@ -133,6 +133,15 @@ struct scope {
 		define(nullptr, nullptr, name, val);
 	}
 
+	template<typename t>
+	void define_builtin_constant(const std::string name, value_type_ptr type, const t &constant_value)
+	{
+		auto type_value = std::make_shared<value>(nullptr, VALUE_GLOBAL, type);
+		auto copy = new t(constant_value);
+		type_value->global.host_address = (void *) copy;
+		define(nullptr, nullptr, name, type_value);
+	}
+
 	bool lookup(const std::string name, entry &result)
 	{
 		auto it = contents.find(name);

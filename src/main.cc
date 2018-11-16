@@ -25,6 +25,7 @@ extern "C" {
 
 #include "ast.hh"
 #include "builtin.hh"
+#include "builtin/asm.hh"
 #include "builtin/assign.hh"
 #include "builtin/compile_state.hh"
 #include "builtin/debug.hh"
@@ -150,6 +151,7 @@ static function_ptr compile_metaprogram(source_file_ptr source, ast_node_ptr roo
 	global_scope->define_builtin_macro("_greater_equal", builtin_macro_greater_equal);
 
 	// Keywords
+	global_scope->define_builtin_macro("asm", builtin_macro_asm);
 	global_scope->define_builtin_macro("debug", builtin_macro_debug);
 	global_scope->define_builtin_macro("elf", builtin_macro_elf);
 	global_scope->define_builtin_macro("if", builtin_macro_if);

@@ -118,13 +118,9 @@ static value_ptr fun_define_macro(const compile_state &state, ast_node_ptr node)
 static value_ptr __construct_fun(value_type_ptr type, const compile_state &state, ast_node_ptr node,
 	std::vector<std::string> &args, ast_node_ptr body_node)
 {
-	object_ptr obj;
-	if (state.objects)
-		obj = std::make_shared<object>();
-
 	auto c = state.context;
 
-	auto new_f = std::make_shared<function>(obj);
+	auto new_f = std::make_shared<function>(!state.objects);
 
 	new_f->emit_prologue();
 
@@ -181,15 +177,9 @@ static value_ptr __construct_fun(value_type_ptr type, const compile_state &state
 	new_f->link_label(return_label);
 	new_f->emit_epilogue();
 
-	if (obj) {
+	if (state.objects) {
 		// target
-
-		// XXX
-		obj->size = new_f->bytes.size();
-		obj->bytes = new uint8_t[obj->size];
-		memcpy(obj->bytes, &new_f->bytes[0], obj->size);
-
-		return std::make_shared<value>(nullptr, type, state.new_object(obj));
+		return std::make_shared<value>(nullptr, type, state.new_object(new_f->this_object));
 	} else {
 		// host
 
@@ -208,7 +198,7 @@ static value_ptr __construct_fun(value_type_ptr type, const compile_state &state
 		ret->global.host_address = (void *) global;
 
 		if (global_disassemble)
-			disassemble((const uint8_t *) mem, new_f->bytes.size(), (uint64_t) mem, new_f->comments);
+			disassemble((const uint8_t *) mem, new_f->bytes.size(), (uint64_t) mem, new_f->this_object->comments);
 
 		return ret;
 	}

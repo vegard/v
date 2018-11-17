@@ -164,7 +164,7 @@ static function_ptr compile_metaprogram(source_file_ptr source, ast_node_ptr roo
 	global_scope->define_builtin_macro("print", builtin_macro_print);
 
 	auto c = std::make_shared<context>(nullptr);
-	auto f = std::make_shared<function>();
+	auto f = std::make_shared<function>(true);
 	f->emit_prologue();
 	compile(compile_state(source, c, f, global_scope), root);
 	f->emit_epilogue();

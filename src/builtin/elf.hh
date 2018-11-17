@@ -249,8 +249,7 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 		// function with a call to the entry point given by the user
 		// and finish off with a syscall to terminate the process.
 
-		auto obj = std::make_shared<object>();
-		auto new_f = std::make_shared<function>(obj);
+		auto new_f = std::make_shared<function>(false);
 
 		new_f->emit_call(elf.entry_point);
 		new_f->emit_move_reg_to_reg(RAX, RDI);
@@ -260,11 +259,7 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 		new_f->emit_byte(0x0f);
 		new_f->emit_byte(0x05);
 
-		obj->size = new_f->bytes.size();
-		obj->bytes = new uint8_t[obj->size];
-		memcpy(obj->bytes, &new_f->bytes[0], obj->size);
-
-		entry_object_id = new_state.new_object(obj);
+		entry_object_id = new_state.new_object(new_f->this_object);
 	}
 
 	printf("%lu objects!\n", objects->size());
@@ -273,11 +268,11 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 
 	size_t offset = 0;
 	for (const auto obj: *objects) {
-		printf(" - object size %lu\n", obj->size);
+		printf(" - object size %lu\n", obj->bytes.size());
 		//std::map<size_t, std::vector<std::pair<unsigned int, std::string>>> comments;
 		//disassemble((const uint8_t *) obj->bytes, obj->size, 0, comments);
 		offsets.push_back(offset);
-		offset += obj->size;
+		offset += obj->bytes.size();
 	}
 
 	if (elf.entry_point != builtin_value_void)
@@ -295,7 +290,9 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 		write(fd, x.data, x.size);
 	}
 
-	for (const auto obj: *objects) {
+	for (unsigned int object_id = 0; object_id < objects->size(); ++object_id) {
+		const auto obj = (*objects)[object_id];
+
 		// apply relocations
 		for (const auto &reloc: obj->relocations) {
 			uint64_t target = phdr.p_vaddr + offsets[reloc.object];
@@ -303,7 +300,9 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 				obj->bytes[reloc.offset + i] = target >> (8 * i);
 		}
 
-		write(fd, obj->bytes, obj->size);
+		disassemble(&obj->bytes[0], obj->bytes.size(), phdr.p_vaddr + offsets[object_id], obj->comments);
+
+		write(fd, &obj->bytes[0], obj->bytes.size());
 	}
 
 	close(fd);

@@ -207,7 +207,7 @@ static void run(function_ptr f)
 	void *mem = map(f);
 
 	if (global_disassemble)
-		disassemble((const uint8_t *) mem, f->bytes.size(), (uint64_t) mem, f->comments);
+		disassemble((const uint8_t *) mem, f->bytes.size(), (uint64_t) mem, f->this_object->comments);
 
 	// TODO: ABI
 	auto ret = f->return_value;
@@ -241,7 +241,7 @@ static value_ptr eval(const compile_state &state, ast_node_ptr node)
 #endif
 
 	auto new_c = std::make_shared<context>(state.context);
-	auto new_f = std::make_shared<function>();
+	auto new_f = std::make_shared<function>(true);
 	new_f->emit_prologue();
 
 	auto v = compile(state.set_function(new_c, new_f), node);

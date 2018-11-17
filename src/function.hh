@@ -73,13 +73,16 @@ struct function;
 typedef std::shared_ptr<function> function_ptr;
 
 struct function {
+	bool host;
+
+	// XXX: the double indirection is bad, we should collect bytes
+	// ourselves directly and then move it into the object at the end
 	object_ptr this_object;
+	std::vector<uint8_t> &bytes;
 
 	std::shared_ptr<value> return_value;
-	std::vector<uint8_t> bytes;
 
 	unsigned int indentation;
-	std::map<size_t, std::vector<std::pair<unsigned int, std::string>>> comments;
 
 	// offset (into "bytes") where we need to write the final frame size
 	// after we know how many locals we have.
@@ -87,8 +90,10 @@ struct function {
 
 	unsigned int next_local_slot;
 
-	function(object_ptr this_object = nullptr):
-		this_object(this_object),
+	explicit function(bool host):
+		host(host),
+		this_object(std::make_shared<object>()),
+		bytes(this_object->bytes),
 		indentation(0),
 		// slot 0 is the return address
 		// slot 1 is the saved rbx
@@ -145,7 +150,7 @@ struct function {
 
 	void comment(std::string s)
 	{
-		comments[bytes.size()].push_back(std::make_pair(indentation, s));
+		this_object->comments[bytes.size()].push_back(std::make_pair(indentation, s));
 	}
 
 	void emit_byte(uint8_t v)
@@ -197,8 +202,6 @@ struct function {
 
 	void emit_obj(unsigned int object_id)
 	{
-		assert(this_object);
-
 		// this emits a relocation for the address of the given object
 		this_object->relocations.push_back(relocation(bytes.size(), object_id));
 		emit_quad_placeholder();
@@ -330,12 +333,13 @@ struct function {
 	{
 		switch (source->storage_type) {
 		case VALUE_GLOBAL:
-			assert(!this_object);
 			// TODO
+			assert(host);
 			emit_move_imm_to_reg((uint64_t) source->global.host_address, RBX);
 			emit_move_mreg_offset_to_reg(RBX, source_offset, dest);
 			break;
 		case VALUE_TARGET_GLOBAL:
+			assert(!host);
 			emit_move_obj_to_reg(source->target_global.object_id, RBX);
 			emit_move_mreg_offset_to_reg(RBX, source_offset, dest);
 			break;
@@ -356,12 +360,13 @@ struct function {
 	{
 		switch (dest->storage_type) {
 		case VALUE_GLOBAL:
-			assert(!this_object);
 			// TODO
+			assert(host);
 			emit_move_imm_to_reg((uint64_t) dest->global.host_address, RBX);
 			emit_move_reg_to_mreg_offset(source, RBX, dest_offset);
 			break;
 		case VALUE_TARGET_GLOBAL:
+			assert(!host);
 			emit_move_obj_to_reg(dest->target_global.object_id, RBX);
 			emit_move_reg_to_mreg_offset(source, RBX, dest_offset);
 			break;
@@ -406,10 +411,11 @@ struct function {
 	{
 		switch (source->storage_type) {
 		case VALUE_GLOBAL:
-			assert(!this_object);
+			assert(host);
 			emit_move_imm_to_reg((uint64_t) source->global.host_address, dest);
 			break;
 		case VALUE_TARGET_GLOBAL:
+			assert(!host);
 			emit_move_obj_to_reg(source->target_global.object_id, dest);
 			break;
 		case VALUE_LOCAL:
@@ -528,14 +534,15 @@ struct function {
 	{
 		switch (target->storage_type) {
 		case VALUE_GLOBAL:
-			assert(!this_object);
 			// TODO: optimise
+			assert(host);
 			emit_move_imm_to_reg((uint64_t) target->global.host_address, RAX);
 			emit_move_mreg_offset_to_reg(RAX, 0, RAX);
 			emit_call(RAX);
 			break;
 		case VALUE_TARGET_GLOBAL:
 			// TODO: optimise
+			assert(!host);
 			emit_move_obj_to_reg(target->target_global.object_id, RAX);
 			emit_call(RAX);
 			break;

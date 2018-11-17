@@ -50,14 +50,13 @@ typedef std::shared_ptr<object> object_ptr;
 
 // An "object" in memory that may end up getting output
 struct object {
-	size_t size;
-
-	// TODO: is this linked or not? (i.e. relocations replaced)
-	uint8_t *bytes;
+	std::vector<uint8_t> bytes;
 
 	// TODO: should this be actual full-fledged relocations or just
 	// references? See http://www.ucw.cz/~hubicka/papers/abi/node19.html
 	std::vector<relocation> relocations;
+
+	std::map<size_t, std::vector<std::pair<unsigned int, std::string>>> comments;
 
 	object()
 	{
@@ -65,11 +64,10 @@ struct object {
 
 	template<typename t>
 	explicit object(const t &value):
-		size(sizeof(t))
+		bytes(sizeof(t))
 	{
 		// TODO: is there a better C++ way to do this?
-		bytes = new uint8_t[size];
-		memcpy(bytes, &value, size);
+		memcpy(&bytes[0], &value, sizeof(t));
 	}
 };
 

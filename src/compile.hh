@@ -356,6 +356,9 @@ static value_ptr compile_semicolon(const compile_state &state, ast_node_ptr node
 	return compile(state, node->binop.rhs);
 }
 
+static value_ptr builtin_type_u64_constructor(value_type_ptr, const compile_state &, ast_node_ptr);
+static value_ptr builtin_type_str_constructor(value_type_ptr, const compile_state &, ast_node_ptr);
+
 static value_ptr compile(const compile_state &state, ast_node_ptr node)
 {
 	if (!node)
@@ -365,7 +368,10 @@ static value_ptr compile(const compile_state &state, ast_node_ptr node)
 
 	switch (node->type) {
 	case AST_LITERAL_INTEGER:
-		state.error(node, "unexpected integer literal");
+		// TODO: evaluate as int rather than u64
+		return builtin_type_u64_constructor(nullptr, state, node);
+	case AST_LITERAL_STRING:
+		return builtin_type_str_constructor(nullptr, state, node);
 
 	case AST_BRACKETS:
 		return compile_brackets(state, node);

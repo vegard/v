@@ -22,6 +22,7 @@
 #include <iostream>
 
 #include "../ast.hh"
+#include "../ast_serializer.hh"
 #include "../compile.hh"
 #include "../function.hh"
 #include "../scope.hh"
@@ -30,7 +31,7 @@
 static value_ptr builtin_macro_debug(const compile_state &state, ast_node_ptr node)
 {
 	// TODO: need context so we can print line numbers and stuff too
-	serializer().serialize(std::cout, node);
+	ast_serializer().serialize(std::cout, node);
 	std::cout << std::endl;
 
 	return builtin_value_void;

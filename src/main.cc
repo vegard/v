@@ -24,6 +24,7 @@ extern "C" {
 #include <cstdio>
 
 #include "ast.hh"
+#include "ast_serializer.hh"
 #include "builtin.hh"
 #include "builtin/asm.hh"
 #include "builtin/assign.hh"
@@ -189,7 +190,7 @@ static bool compile_and_run(source_file_ptr source)
 			f = compile_metaprogram(source, node);
 
 		if (do_dump_ast) {
-			serializer().serialize(std::cout, node);
+			ast_serializer().serialize(std::cout, node);
 			std::cout << std::endl;
 		}
 

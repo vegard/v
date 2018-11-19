@@ -22,6 +22,7 @@
 #include "libudis86/extern.h"
 
 #include "ast.hh"
+#include "ast_serializer.hh"
 #include "compile_error.hh"
 #include "format.hh"
 #include "function.hh"
@@ -236,7 +237,7 @@ static value_ptr eval(const compile_state &state, ast_node_ptr node)
 {
 #if 0
 	std::cout << "eval: ";
-	serializer().serialize(std::cout, node);
+	ast_serializer().serialize(std::cout, node);
 	std::cout << std::endl;
 #endif
 

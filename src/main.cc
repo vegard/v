@@ -190,7 +190,7 @@ static bool compile_and_run(source_file_ptr source)
 			f = compile_metaprogram(source, node);
 
 		if (do_dump_ast) {
-			ast_serializer().serialize(std::cout, node);
+			ast_serializer(source).serialize(std::cout, node);
 			std::cout << std::endl;
 		}
 

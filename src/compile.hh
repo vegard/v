@@ -237,7 +237,7 @@ static value_ptr eval(const compile_state &state, ast_node_ptr node)
 {
 #if 0
 	std::cout << "eval: ";
-	ast_serializer().serialize(std::cout, node);
+	ast_serializer(state.source).serialize(std::cout, node);
 	std::cout << std::endl;
 #endif
 
@@ -388,7 +388,7 @@ static value_ptr compile(const compile_state &state, ast_node_ptr node)
 	case AST_SEMICOLON:
 		return compile_semicolon(state, node);
 	default:
-		state.error(node, "internal compiler error: unrecognised AST node type $: $", node->type, abbreviate(node));
+		state.error(node, "internal compiler error: unrecognised AST node type $: $", node->type, abbreviate(state.source, node));
 	}
 
 	assert(false);

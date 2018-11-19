@@ -31,12 +31,15 @@
 #include <string>
 #include <vector>
 
+#include "ast.hh"
+#include "source_file.hh"
+
 struct ast_serializer {
 	unsigned int max_depth;
 	unsigned int indentation;
 	bool line_breaks;
 
-	ast_serializer():
+	ast_serializer(source_file_ptr source):
 		max_depth(0),
 		indentation(4),
 		line_breaks(true)
@@ -142,9 +145,9 @@ struct ast_serializer {
 // Create a "one-line" abbreviation of the serialized AST node, useful
 // for debugging where you just want to show a part of the tree (e.g. the
 // node and its children, but not grandchildren).
-std::string abbreviate(const ast_node_ptr &node)
+std::string abbreviate(const source_file_ptr source, const ast_node_ptr &node)
 {
-	ast_serializer s;
+	ast_serializer s(source);
 	s.max_depth = 2;
 	s.indentation = 0;
 	s.line_breaks = false;

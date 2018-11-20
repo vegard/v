@@ -64,7 +64,7 @@ static value_ptr builtin_macro_if(const compile_state &state, ast_node_ptr node)
 			state.error(rhs, "expected 'else <expression>'");
 
 		auto else_node = state.get_node(rhs->binop.lhs);
-		if (else_node->type != AST_SYMBOL_NAME || else_node->symbol_name != "else")
+		if (else_node->type != AST_SYMBOL_NAME || state.get_symbol_name(else_node) != "else")
 			state.error(else_node, "expected 'else'");
 
 		false_node = state.get_node(rhs->binop.rhs);

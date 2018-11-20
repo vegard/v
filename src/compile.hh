@@ -19,6 +19,8 @@
 #ifndef V_COMPILE_HH
 #define V_COMPILE_HH
 
+#include <gmpxx.h>
+
 #include "libudis86/extern.h"
 
 #include "ast.hh"
@@ -155,6 +157,48 @@ struct compile_state {
 	ast_node_ptr get_node(int index) const
 	{
 		return source->tree.get(index);
+	}
+
+	mpz_class get_literal_integer(ast_node_ptr node) const
+	{
+		assert(node->type == AST_LITERAL_INTEGER);
+
+		// TODO: parse it correctly (sign, base, etc.)...
+		mpz_class literal_integer;
+		literal_integer.set_str(std::string(&source->data[node->pos], node->end - node->pos), 10);
+		return literal_integer;
+	}
+
+	std::string get_literal_string(ast_node_ptr node) const
+	{
+		assert(node->type == AST_LITERAL_STRING);
+		assert(node->pos < node->end);
+		assert(source->data[node->pos] == '\"');
+		assert(source->data[node->end - 1] == '\"');
+
+		// We don't need to do any input validation here, it should
+		// all have been done in the parser. We just have to do the
+		// minimal amount of work to extract the unescaped string.
+
+		std::vector<char> result;
+		for (unsigned int i = node->pos + 1; i < node->end - 1; ++i) {
+			if (source->data[i] == '\\')
+				++i;
+
+			result.push_back(source->data[i]);
+		}
+
+		return std::string(&result[0], result.size());
+	}
+
+	std::string get_symbol_name(ast_node_ptr node) const
+	{
+		assert(node->type == AST_SYMBOL_NAME);
+
+		if (node->symbol_name)
+			return node->symbol_name;
+
+		return std::string(&source->data[node->pos], node->end - node->pos);
 	}
 };
 
@@ -296,9 +340,10 @@ static value_ptr compile_member(const compile_state &state, ast_node_ptr node)
 		// TODO: say which AST node type we got instead of a symbol name
 		state.error(node, "member name must be a symbol");
 
-	auto it = lhs_type->members.find(rhs_node->literal_string);
+	auto symbol_name = state.get_symbol_name(rhs_node);
+	auto it = lhs_type->members.find(symbol_name);
 	if (it == lhs_type->members.end())
-		state.error(node, "unknown member: $", rhs_node->literal_string.c_str());
+		state.error(node, "unknown member: $", symbol_name);
 
 	return it->second->invoke(state, lhs, rhs_node);
 }
@@ -348,9 +393,10 @@ static value_ptr compile_juxtapose(const compile_state &state, ast_node_ptr node
 
 static value_ptr compile_symbol_name(const compile_state &state, ast_node_ptr node)
 {
-	auto ret = state.lookup(node, node->symbol_name);
+	auto symbol_name = state.get_symbol_name(node);
+	auto ret = state.lookup(node, symbol_name);
 	if (!ret)
-		state.error(node, "could not resolve symbol $", node->symbol_name.c_str());
+		state.error(node, "could not resolve symbol $", symbol_name);
 
 	return ret;
 }

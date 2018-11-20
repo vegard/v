@@ -213,10 +213,6 @@ int parser::parse_literal_integer(unsigned int &pos)
 	}
 
 	auto node_index = tree.new_node(AST_LITERAL_INTEGER, pos, i);
-	auto node = tree.get(node_index);
-	if (node->literal_integer.set_str(str, base))
-		// TODO: need to free data->value?
-		throw parse_error("mpz_set_str() returned an error", pos, i);
 
 	pos = i;
 	return node_index;
@@ -225,7 +221,6 @@ int parser::parse_literal_integer(unsigned int &pos)
 int parser::parse_literal_string(unsigned int &pos)
 {
 	unsigned int i = pos;
-	std::vector<char> str;
 
 	if (i == len || buf[i] != '\"')
 		return -1;
@@ -238,7 +233,6 @@ int parser::parse_literal_string(unsigned int &pos)
 				throw syntax_error("unterminated string literal", pos, i);
 		}
 
-		str.push_back(buf[i]);
 		++i;
 	}
 
@@ -247,8 +241,6 @@ int parser::parse_literal_string(unsigned int &pos)
 	++i;
 
 	auto node_index = tree.new_node(AST_LITERAL_STRING, pos, i);
-	auto node = tree.get(node_index);
-	node->literal_string = std::string(&str[0], str.size());
 
 	pos = i;
 	return node_index;
@@ -266,8 +258,6 @@ int parser::parse_symbol_name(unsigned int &pos)
 		return -1;
 
 	auto node_index = tree.new_node(AST_SYMBOL_NAME, pos, i);
-	auto node = tree.get(node_index);
-	node->symbol_name = std::string(buf + pos, i - pos);
 
 	pos = i;
 	return node_index;
@@ -337,7 +327,7 @@ int parser::parse_unop_prefix_as_call(const char (&op)[op_size], const char *sym
 
 	auto symbol_name_node_index = tree.new_node(AST_SYMBOL_NAME, pos, i);
 	auto symbol_name_node = tree.get(symbol_name_node_index);
-	symbol_name_node->symbol_name = std::string(symbol_name);
+	symbol_name_node->symbol_name = symbol_name;
 
 	auto node_index = tree.new_node(AST_JUXTAPOSE, pos, i);
 	auto node = tree.get(node_index);
@@ -406,7 +396,7 @@ int parser::parse_binop_as_call(const char (&op)[op_size], const char *symbol_na
 
 	auto symbol_name_node_index = tree.new_node(AST_SYMBOL_NAME, pos, i);
 	auto symbol_name_node = tree.get(symbol_name_node_index);
-	symbol_name_node->symbol_name = std::string(symbol_name);
+	symbol_name_node->symbol_name = symbol_name;
 
 	auto node_index = tree.new_node(AST_JUXTAPOSE, pos, i);
 	auto node = tree.get(node_index);

@@ -86,7 +86,7 @@ struct struct_declare_macro: macro {
 		if (name_node->type != AST_SYMBOL_NAME)
 			state.error(name_node, "expected symbol for member name");
 
-		auto field_name = name_node->literal_string;
+		auto field_name = state.get_symbol_name(name_node);
 
 		// TODO: we should call eval() here with a scope that
 		// "undefines" _declare so we get the normal definition

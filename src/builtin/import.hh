@@ -32,7 +32,8 @@ static value_ptr builtin_macro_import(const compile_state &state, ast_node_ptr n
 
 	// XXX: restrict accessible paths?
 	// TODO: search multiple paths rather than just the current dir
-	source_file_ptr source = std::make_shared<mmap_source_file>(node->literal_string.c_str());
+	auto literal_string = state.get_literal_string(node);
+	source_file_ptr source = std::make_shared<mmap_source_file>(literal_string.c_str());
 
 	int source_node;
 	try {

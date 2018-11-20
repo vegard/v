@@ -44,7 +44,7 @@ static value_ptr builtin_type_str_constructor(value_type_ptr, const compile_stat
 	auto ret = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_str);
 
 	auto global = new std::string;
-	*global = node->literal_string;
+	*global = state.get_literal_string(node);
 	ret->global.host_address = (void *) global;
 	return ret;
 }

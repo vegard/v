@@ -91,12 +91,14 @@ struct define_macro: macro {
 		if (lhs->type != AST_SYMBOL_NAME)
 			state.error(node, "definition of non-symbol");
 
+		auto symbol_name = state.get_symbol_name(lhs);
+
 		// TODO: create new value?
 		auto rhs = compile(state.set_scope(s), state.get_node(node->binop.rhs));
-		s->define(state.function, node, lhs->symbol_name, rhs);
+		s->define(state.function, node, symbol_name, rhs);
 
 		if (do_export)
-			elf.exports[lhs->symbol_name] = rhs;
+			elf.exports[symbol_name] = rhs;
 		return builtin_value_void;
 	}
 };

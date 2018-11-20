@@ -107,9 +107,11 @@ static value_ptr fun_define_macro(const compile_state &state, ast_node_ptr node)
 	if (lhs->type != AST_SYMBOL_NAME)
 		state.error(node, "definition of non-symbol");
 
+	auto symbol_name = state.get_symbol_name(lhs);
+
 	auto rhs = compile(state, state.get_node(node->binop.rhs));
 	auto val = state.function->alloc_local_value(state.context, rhs->type);
-	state.scope->define(state.function, node, lhs->symbol_name, val);
+	state.scope->define(state.function, node, symbol_name, val);
 	state.function->emit_move(rhs, val);
 	return val;
 }
@@ -221,7 +223,8 @@ static value_ptr _construct_fun(value_type_ptr type, const compile_state &state,
 		if (arg_node->type != AST_SYMBOL_NAME)
 			state.error(node, "expected symbol for argument name");
 
-		args.push_back(arg_node->symbol_name);
+		auto symbol_name = state.get_symbol_name(arg_node);
+		args.push_back(symbol_name);
 	}
 
 	if (args.size() != type->argument_types.size())

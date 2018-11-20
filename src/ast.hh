@@ -28,10 +28,7 @@
 #include <memory>
 #include <stdexcept>
 #include <sstream>
-#include <string>
 #include <vector>
-
-#include <gmpxx.h>
 
 enum ast_node_type {
 	AST_UNKNOWN,
@@ -79,9 +76,9 @@ struct ast_node {
 	unsigned int end;
 
 	union {
-		mpz_class literal_integer;
-		std::string literal_string;
-		std::string symbol_name;
+		// AST_SYMBOL_NAME for static strings only
+		// if this is nullptr, then we use pos/end to get the name
+		const char *symbol_name;
 
 		int unop;
 
@@ -96,109 +93,13 @@ struct ast_node {
 	{
 	}
 
-	explicit ast_node(const ast_node &other):
-		type(other.type),
-		pos(other.pos),
-		end(other.end)
-	{
-		switch (type) {
-		case AST_UNKNOWN:
-			break;
-
-		/* Atoms */
-		case AST_LITERAL_INTEGER:
-			new (&literal_integer) mpz_class(other.literal_integer);
-			break;
-		case AST_LITERAL_STRING:
-			new (&literal_string) std::string(other.literal_string);
-			break;
-		case AST_SYMBOL_NAME:
-			new (&symbol_name) std::string(other.symbol_name);
-			break;
-
-		/* Unary operators */
-		case AST_BRACKETS:
-		case AST_SQUARE_BRACKETS:
-		case AST_CURLY_BRACKETS:
-			unop = other.unop;
-			break;
-
-		/* Binary operators */
-		case AST_MEMBER:
-		case AST_JUXTAPOSE:
-		case AST_COMMA:
-		case AST_SEMICOLON:
-			binop = other.binop;
-			break;
-		}
-	}
-
 	ast_node(ast_node_type type, unsigned int pos, unsigned int end):
 		type(type),
 		pos(pos),
 		end(end)
 	{
-		switch (type) {
-		case AST_UNKNOWN:
-			break;
-
-		/* Atoms */
-		case AST_LITERAL_INTEGER:
-			new (&literal_integer) mpz_class();
-			break;
-		case AST_LITERAL_STRING:
-			new (&literal_string) std::string();
-			break;
-		case AST_SYMBOL_NAME:
-			new (&symbol_name) std::string();
-			break;
-
-		/* Unary operators */
-		case AST_BRACKETS:
-		case AST_SQUARE_BRACKETS:
-		case AST_CURLY_BRACKETS:
-			break;
-
-		/* Binary operators */
-		case AST_MEMBER:
-		case AST_JUXTAPOSE:
-		case AST_COMMA:
-		case AST_SEMICOLON:
-			break;
-		}
-	}
-
-	~ast_node() {
-		switch (type) {
-		case AST_UNKNOWN:
-			break;
-
-		/* Atoms */
-		case AST_LITERAL_INTEGER:
-			literal_integer.~mpz_class();
-			break;
-		case AST_LITERAL_STRING:
-			typedef std::string string;
-			literal_string.~string();
-			break;
-		case AST_SYMBOL_NAME:
-			typedef std::string string;
-			symbol_name.~string();
-			break;
-
-		/* Unary operators */
-		case AST_BRACKETS:
-		case AST_SQUARE_BRACKETS:
-		case AST_CURLY_BRACKETS:
-			break;
-
-		/* Binary operators */
-		case AST_MEMBER:
-		case AST_JUXTAPOSE:
-		case AST_COMMA:
-		case AST_SEMICOLON:
-			break;
-		}
+		if (type == AST_SYMBOL_NAME)
+			symbol_name = nullptr;
 	}
 };
 

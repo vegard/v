@@ -106,15 +106,18 @@ struct ast_serializer {
 
 		case AST_LITERAL_INTEGER:
 			indent(os, depth);
-			os << "(literal_integer " << node->literal_integer.get_str() << ")";
+			os << "(literal_integer " << std::string(&source->data[node->pos], node->end - node->pos) << ")";
 			break;
 		case AST_LITERAL_STRING:
 			indent(os, depth);
-			os << "(literal_string \"" << node->literal_string << "\")";
+			os << "(literal_string " << std::string(&source->data[node->pos], node->end - node->pos) << ")";
 			break;
 		case AST_SYMBOL_NAME:
 			indent(os, depth);
-			os << "(symbol_name " << node->symbol_name << ")";
+			if (node->symbol_name)
+				os << "(symbol_name " << node->symbol_name << ")";
+			else
+				os << "(symbol_name " << std::string(&source->data[node->pos], node->end - node->pos) << ")";
 			break;
 
 		case AST_BRACKETS:

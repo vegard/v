@@ -64,7 +64,7 @@ static void _compile_state_define(compile_state_ptr state, ast_node_ptr name, va
 	if (name->type != AST_SYMBOL_NAME)
 		state->error(name, "expected symbol");
 
-	state->scope->define(state->function, name, name->literal_string, value);
+	state->scope->define(state->function, name, state->get_symbol_name(name), value);
 }
 
 static value_ptr builtin_type_compile_state_define(const compile_state &state, value_ptr this_state, ast_node_ptr node)

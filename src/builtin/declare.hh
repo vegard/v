@@ -34,6 +34,8 @@ static value_ptr builtin_macro_declare(const compile_state &state, ast_node_ptr 
 	if (lhs->type != AST_SYMBOL_NAME)
 		state.error(node, "declaration of non-symbol");
 
+	auto symbol_name = state.get_symbol_name(lhs);
+
 	// see builtin_macro_define
 	auto rhs_node = state.get_node(node->binop.rhs);
 	auto rhs = eval(state, rhs_node);
@@ -50,7 +52,7 @@ static value_ptr builtin_macro_declare(const compile_state &state, ast_node_ptr 
 	auto global = new uint8_t[rhs_type->size];
 	val->global.host_address = (void *) global;
 
-	state.scope->define(state.function, node, lhs->symbol_name, val);
+	state.scope->define(state.function, node, symbol_name, val);
 	return val;
 }
 

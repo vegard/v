@@ -44,10 +44,10 @@ struct asm_assign_input_macro: macro {
 		if (node->type != AST_JUXTAPOSE)
 			state.error(node, "expected juxtaposition");
 
-		auto src_node = node->binop.rhs;
+		auto src_node = state.source->tree.get(node->binop.rhs);
 		auto src_value = compile(state, src_node);
 
-		auto dest_node = node->binop.lhs;
+		auto dest_node = state.source->tree.get(node->binop.lhs);
 		auto dest_value = eval(state, dest_node);
 		if (dest_value->type != builtin_type_asm_register)
 			state.error(dest_node, "expected register");
@@ -79,19 +79,23 @@ struct asm_assign_output_macro: macro {
 struct asm_mov_macro: macro {
 	value_ptr invoke(const compile_state &state, ast_node_ptr node)
 	{
-		if (node->type != AST_BRACKETS || node->unop->type != AST_COMMA)
+		if (node->type != AST_BRACKETS)
 			state.error(node, "expected (reg, reg)");
 
-		node = node->unop;
+		auto unop = state.source->tree.get(node->unop);
+		if (unop->type != AST_COMMA)
+			state.error(node, "expected (reg, reg)");
 
-		auto src_node = node->binop.lhs;
+		node = unop;
+
+		auto src_node = state.source->tree.get(node->binop.lhs);
 		auto src_value = eval(state, src_node);
 		if (src_value->type != builtin_type_asm_register)
 			state.error(src_node, "expected register");
 		if (src_value->storage_type != VALUE_GLOBAL)
 			state.error(src_node, "expected compile-time constant");
 
-		auto dest_node = node->binop.rhs;
+		auto dest_node = state.source->tree.get(node->binop.rhs);
 		auto dest_value = eval(state, dest_node);
 		if (dest_value->type != builtin_type_asm_register)
 			state.error(dest_node, "expected register");
@@ -107,7 +111,7 @@ struct asm_mov_macro: macro {
 struct asm_syscall_macro: macro {
 	value_ptr invoke(const compile_state &state, ast_node_ptr node)
 	{
-		if (node->type != AST_BRACKETS || node->unop)
+		if (node->type != AST_BRACKETS || state.source->tree.get(node->unop))
 			state.error(node, "expected ()");
 
 		state.function->emit_byte(0x0f);
@@ -121,14 +125,14 @@ static value_ptr builtin_macro_asm(const compile_state &state, ast_node_ptr node
 	if (node->type != AST_JUXTAPOSE)
 		state.error(node, "expected juxtaposition");
 
-	auto inputs_node = node->binop.lhs;
-	node = node->binop.rhs;
+	auto inputs_node = state.source->tree.get(node->binop.lhs);
+	node = state.source->tree.get(node->binop.rhs);
 
 	if (node->type != AST_JUXTAPOSE)
 		state.error(node, "expected juxtaposition");
 
-	auto outputs_node = node->binop.lhs;
-	auto asm_node = node->binop.rhs;
+	auto outputs_node = state.source->tree.get(node->binop.lhs);
+	auto asm_node = state.source->tree.get(node->binop.rhs);
 
 	auto new_scope = std::make_shared<scope>(state.scope);
 

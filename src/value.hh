@@ -49,7 +49,7 @@ struct scope;
 typedef std::shared_ptr<scope> scope_ptr;
 
 struct ast_node;
-typedef std::shared_ptr<ast_node> ast_node_ptr;
+typedef ast_node *ast_node_ptr;
 
 struct compile_state;
 typedef std::shared_ptr<compile_state> compile_state_ptr;

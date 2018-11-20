@@ -35,11 +35,13 @@
 #include "source_file.hh"
 
 struct ast_serializer {
+	source_file_ptr source;
 	unsigned int max_depth;
 	unsigned int indentation;
 	bool line_breaks;
 
 	ast_serializer(source_file_ptr source):
+		source(source),
 		max_depth(0),
 		indentation(4),
 		line_breaks(true)
@@ -59,13 +61,15 @@ struct ast_serializer {
 		std::fill_n(std::ostream_iterator<char>(os), depth * indentation, ' ');
 	}
 
-	void unop(std::ostream &os, const ast_node_ptr &node, unsigned int depth, const char *name)
+	void unop(std::ostream &os, const ast_node_ptr node, unsigned int depth, const char *name)
 	{
-		if (node->unop) {
+		auto child = source->tree.get(node->unop);
+
+		if (child) {
 			indent(os, depth);
 			os << "(" << name;
 			line_break(os);
-			serialize(os, node->unop, depth + 1);
+			serialize(os, child, depth + 1);
 			line_break(os);
 			indent(os, depth);
 			os << ")";
@@ -75,23 +79,20 @@ struct ast_serializer {
 		}
 	}
 
-	void binop(std::ostream &os, const ast_node_ptr &node, unsigned int depth, const char *name)
+	void binop(std::ostream &os, const ast_node_ptr node, unsigned int depth, const char *name)
 	{
-		assert(node->binop.lhs);
-		assert(node->binop.rhs);
-
 		indent(os, depth);
 		os << "(" << name;
 		line_break(os);
-		serialize(os, node->binop.lhs, depth + 1);
+		serialize(os, source->tree.get(node->binop.lhs), depth + 1);
 		line_break(os);
-		serialize(os, node->binop.rhs, depth + 1);
+		serialize(os, source->tree.get(node->binop.rhs), depth + 1);
 		line_break(os, "");
 		indent(os, depth);
 		os << ")";
 	}
 
-	void serialize(std::ostream &os, const ast_node_ptr &node, unsigned int depth = 0)
+	void serialize(std::ostream &os, const ast_node_ptr node, unsigned int depth = 0)
 	{
 		if (max_depth && depth >= max_depth) {
 			os << "...";
@@ -145,7 +146,7 @@ struct ast_serializer {
 // Create a "one-line" abbreviation of the serialized AST node, useful
 // for debugging where you just want to show a part of the tree (e.g. the
 // node and its children, but not grandchildren).
-std::string abbreviate(const source_file_ptr source, const ast_node_ptr &node)
+std::string abbreviate(const source_file_ptr source, const ast_node_ptr node)
 {
 	ast_serializer s(source);
 	s.max_depth = 2;

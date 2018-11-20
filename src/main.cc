@@ -182,15 +182,15 @@ static bool compile_and_run(source_file_ptr source)
 {
 	try {
 		auto node = source->parse();
-		assert(node);
+		assert(node != -1);
 
 		function_ptr f;
 
 		if (do_compile)
-			f = compile_metaprogram(source, node);
+			f = compile_metaprogram(source, source->tree.get(node));
 
 		if (do_dump_ast) {
-			ast_serializer(source).serialize(std::cout, node);
+			ast_serializer(source).serialize(std::cout, source->tree.get(node));
 			std::cout << std::endl;
 		}
 

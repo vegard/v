@@ -82,7 +82,7 @@ struct struct_declare_macro: macro {
 		if (node->type != AST_JUXTAPOSE)
 			state.error(node, "expected juxtaposition");
 
-		auto name_node = node->binop.lhs;
+		auto name_node = state.get_node(node->binop.lhs);
 		if (name_node->type != AST_SYMBOL_NAME)
 			state.error(name_node, "expected symbol for member name");
 
@@ -91,7 +91,7 @@ struct struct_declare_macro: macro {
 		// TODO: we should call eval() here with a scope that
 		// "undefines" _declare so we get the normal definition
 		// of it
-		auto type_node = node->binop.rhs;
+		auto type_node = state.get_node(node->binop.rhs);
 		auto type_value = eval(state, type_node);
 		assert(type_value->storage_type == VALUE_GLOBAL);
 		state.expect_type(node, type_value, builtin_type_type);

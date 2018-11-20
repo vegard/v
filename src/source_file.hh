@@ -48,6 +48,8 @@ struct source_file {
 
 	std::unique_ptr<line_number_info> _line_numbers;
 
+	ast_tree tree;
+
 	source_file()
 	{
 	}
@@ -72,10 +74,10 @@ struct source_file {
 		return *_line_numbers;
 	}
 
-	ast_node_ptr parse()
+	int parse()
 	{
 		unsigned int pos = 0;
-		return parser(data, data_size).parse_doc(pos);
+		return parser(data, data_size, tree).parse_doc(pos);
 	}
 };
 
@@ -115,7 +117,7 @@ struct mmap_source_file: source_file {
 	}
 };
 
-static std::string get_source_for(const source_file_ptr &source, const ast_node_ptr &node)
+static std::string get_source_for(const source_file_ptr &source, const ast_node_ptr node)
 {
 	const line_number_info &line_numbers = source->line_numbers();
 	auto pos = line_numbers.lookup(node->pos);

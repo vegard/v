@@ -40,7 +40,7 @@ static value_ptr builtin_type_compile_state_new_scope(const compile_state &state
 
 	std::vector<std::pair<ast_node_ptr, value_ptr>> args;
 	args.push_back(std::make_pair(node, this_state));
-	for (auto arg_node: traverse<AST_COMMA>(node->unop))
+	for (auto arg_node: traverse<AST_COMMA>(state.source->tree, state.get_node(node->unop)))
 		args.push_back(std::make_pair(arg_node, compile(state, arg_node)));
 
 	auto fun_type = std::make_shared<value_type>();
@@ -76,7 +76,7 @@ static value_ptr builtin_type_compile_state_define(const compile_state &state, v
 
 	std::vector<std::pair<ast_node_ptr, value_ptr>> args;
 	args.push_back(std::make_pair(node, this_state));
-	for (auto arg_node: traverse<AST_COMMA>(node->unop))
+	for (auto arg_node: traverse<AST_COMMA>(state.source->tree, state.get_node(node->unop)))
 		args.push_back(std::make_pair(arg_node, compile(state, arg_node)));
 
 	auto fun_type = std::make_shared<value_type>();
@@ -111,7 +111,7 @@ static value_ptr builtin_type_compile_state_eval(const compile_state &state, val
 
 	std::vector<std::pair<ast_node_ptr, value_ptr>> args;
 	args.push_back(std::make_pair(node, this_state));
-	for (auto arg_node: traverse<AST_COMMA>(node->unop))
+	for (auto arg_node: traverse<AST_COMMA>(state.source->tree, state.get_node(node->unop)))
 		args.push_back(std::make_pair(arg_node, compile(state, arg_node)));
 
 	auto fun_type = std::make_shared<value_type>();
@@ -145,7 +145,7 @@ static value_ptr builtin_type_compile_state_compile(const compile_state &state, 
 
 	std::vector<std::pair<ast_node_ptr, value_ptr>> args;
 	args.push_back(std::make_pair(node, this_state));
-	for (auto arg_node: traverse<AST_COMMA>(node->unop))
+	for (auto arg_node: traverse<AST_COMMA>(state.source->tree, state.get_node(node->unop)))
 		args.push_back(std::make_pair(arg_node, compile(state, arg_node)));
 
 	auto fun_type = std::make_shared<value_type>();

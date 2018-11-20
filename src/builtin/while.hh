@@ -95,8 +95,8 @@ static value_ptr builtin_macro_while(const compile_state &state, ast_node_ptr no
 	if (node->type != AST_JUXTAPOSE)
 		state.error(node, "expected 'while <expression> <expression>'");
 
-	auto condition_node = node->binop.lhs;
-	auto body_node = node->binop.rhs;
+	auto condition_node = state.get_node(node->binop.lhs);
+	auto body_node = state.get_node(node->binop.rhs);
 
 	label loop_label;
 	f->emit_label(loop_label);

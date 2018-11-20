@@ -105,31 +105,31 @@ struct compile_state {
 	}
 
 	template<typename... Args>
-	void __attribute__((noreturn)) error(const ast_node_ptr &node, const char *fmt, Args... args) const
+	void __attribute__((noreturn)) error(const ast_node_ptr node, const char *fmt, Args... args) const
 	{
 		throw compile_error(source, node, fmt, args...);
 	}
 
 	template<typename... Args>
-	void expect(const ast_node_ptr &node, bool cond, const char *fmt, Args... args) const
+	void expect(const ast_node_ptr node, bool cond, const char *fmt, Args... args) const
 	{
 		if (!cond)
 			error(node, fmt, args...);
 	}
 
-	void expect_type(const ast_node_ptr &node, ast_node_type type) const
+	void expect_type(const ast_node_ptr node, ast_node_type type) const
 	{
 		// TODO: stringify the expected and actual types
 		expect(node, node->type == type, "got AST node type $, expected $", node->type, type);
 	}
 
-	void expect_type(const ast_node_ptr &node, value_ptr value, value_type_ptr type) const
+	void expect_type(const ast_node_ptr node, value_ptr value, value_type_ptr type) const
 	{
 		// TODO: can we even stringify these types?
 		expect(node, value->type == type, "unexpected type");
 	}
 
-	value_ptr lookup(const ast_node_ptr &node, const std::string name) const
+	value_ptr lookup(const ast_node_ptr node, const std::string name) const
 	{
 		scope::entry e;
 		if (!scope->lookup(name, e))
@@ -150,6 +150,11 @@ struct compile_state {
 	{
 		if (!can_use_value(context, val))
 			error(node, "cannot access value at compile time");
+	}
+
+	ast_node_ptr get_node(int index) const
+	{
+		return source->tree.get(index);
 	}
 };
 
@@ -269,24 +274,24 @@ static value_ptr eval(const compile_state &state, ast_node_ptr node)
 
 static value_ptr compile_brackets(const compile_state &state, ast_node_ptr node)
 {
-	return compile(state, node->unop);
+	return compile(state, state.source->tree.get(node->unop));
 }
 
 static value_ptr compile_curly_brackets(const compile_state &state, ast_node_ptr node)
 {
 	// Curly brackets create a new scope parented to the old one
 	auto new_scope = std::make_shared<scope>(state.scope);
-	return compile(state.set_scope(new_scope), node->unop);
+	return compile(state.set_scope(new_scope), state.source->tree.get(node->unop));
 }
 
 static value_ptr compile_member(const compile_state &state, ast_node_ptr node)
 {
 	assert(node->type == AST_MEMBER);
 
-	auto lhs = compile(state, node->binop.lhs);
+	auto lhs = compile(state, state.source->tree.get(node->binop.lhs));
 	auto lhs_type = lhs->type;
 
-	auto rhs_node = node->binop.rhs;
+	auto rhs_node = state.source->tree.get(node->binop.rhs);
 	if (rhs_node->type != AST_SYMBOL_NAME)
 		// TODO: say which AST node type we got instead of a symbol name
 		state.error(node, "member name must be a symbol");
@@ -335,8 +340,8 @@ static value_ptr compile_juxtapose(const compile_state &state, ast_node_ptr node
 {
 	assert(node->type == AST_JUXTAPOSE);
 
-	auto lhs_node = node->binop.lhs;
-	auto rhs_node = node->binop.rhs;
+	auto lhs_node = state.source->tree.get(node->binop.lhs);
+	auto rhs_node = state.source->tree.get(node->binop.rhs);
 	auto lhs = compile(state, lhs_node);
 	return _compile_juxtapose(state, lhs_node, lhs, rhs_node);
 }
@@ -353,8 +358,8 @@ static value_ptr compile_symbol_name(const compile_state &state, ast_node_ptr no
 static value_ptr compile_semicolon(const compile_state &state, ast_node_ptr node)
 {
 	// TODO: should we return the result of compiling LHS or void?
-	compile(state, node->binop.lhs);
-	return compile(state, node->binop.rhs);
+	compile(state, state.source->tree.get(node->binop.lhs));
+	return compile(state, state.source->tree.get(node->binop.rhs));
 }
 
 static value_ptr builtin_type_u64_constructor(value_type_ptr, const compile_state &, ast_node_ptr);

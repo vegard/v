@@ -40,7 +40,7 @@ struct compile_error: std::runtime_error {
 	}
 
 	template<typename... Args>
-	compile_error(const source_file_ptr &source, const ast_node_ptr &node, const char *fmt, Args... args):
+	compile_error(const source_file_ptr &source, const ast_node_ptr node, const char *fmt, Args... args):
 		std::runtime_error(format(fmt, args...)),
 		source(source),
 		pos(node->pos),

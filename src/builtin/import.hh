@@ -34,7 +34,7 @@ static value_ptr builtin_macro_import(const compile_state &state, ast_node_ptr n
 	// TODO: search multiple paths rather than just the current dir
 	source_file_ptr source = std::make_shared<mmap_source_file>(node->literal_string.c_str());
 
-	ast_node_ptr source_node;
+	int source_node;
 	try {
 		source_node = source->parse();
 	} catch (const parse_error &e) {
@@ -42,7 +42,7 @@ static value_ptr builtin_macro_import(const compile_state &state, ast_node_ptr n
 	}
 
 	auto new_scope = std::make_shared<scope>(state.scope);
-	return compile(state.set_source(source, new_scope), source_node);
+	return compile(state.set_source(source, new_scope), source->tree.get(source_node));
 }
 
 #endif

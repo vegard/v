@@ -69,7 +69,7 @@ bool is_binop(ast_node_type t)
 }
 
 struct ast_node;
-typedef std::shared_ptr<ast_node> ast_node_ptr;
+typedef ast_node *ast_node_ptr;
 
 struct ast_node {
 	ast_node_type type;
@@ -83,11 +83,11 @@ struct ast_node {
 		std::string literal_string;
 		std::string symbol_name;
 
-		ast_node_ptr unop;
+		int unop;
 
 		struct {
-			ast_node_ptr lhs;
-			ast_node_ptr rhs;
+			int lhs;
+			int rhs;
 		} binop;
 	};
 
@@ -96,11 +96,76 @@ struct ast_node {
 	{
 	}
 
+	explicit ast_node(const ast_node &other):
+		type(other.type),
+		pos(other.pos),
+		end(other.end)
+	{
+		switch (type) {
+		case AST_UNKNOWN:
+			break;
+
+		/* Atoms */
+		case AST_LITERAL_INTEGER:
+			new (&literal_integer) mpz_class(other.literal_integer);
+			break;
+		case AST_LITERAL_STRING:
+			new (&literal_string) std::string(other.literal_string);
+			break;
+		case AST_SYMBOL_NAME:
+			new (&symbol_name) std::string(other.symbol_name);
+			break;
+
+		/* Unary operators */
+		case AST_BRACKETS:
+		case AST_SQUARE_BRACKETS:
+		case AST_CURLY_BRACKETS:
+			unop = other.unop;
+			break;
+
+		/* Binary operators */
+		case AST_MEMBER:
+		case AST_JUXTAPOSE:
+		case AST_COMMA:
+		case AST_SEMICOLON:
+			binop = other.binop;
+			break;
+		}
+	}
+
 	ast_node(ast_node_type type, unsigned int pos, unsigned int end):
 		type(type),
 		pos(pos),
 		end(end)
 	{
+		switch (type) {
+		case AST_UNKNOWN:
+			break;
+
+		/* Atoms */
+		case AST_LITERAL_INTEGER:
+			new (&literal_integer) mpz_class();
+			break;
+		case AST_LITERAL_STRING:
+			new (&literal_string) std::string();
+			break;
+		case AST_SYMBOL_NAME:
+			new (&symbol_name) std::string();
+			break;
+
+		/* Unary operators */
+		case AST_BRACKETS:
+		case AST_SQUARE_BRACKETS:
+		case AST_CURLY_BRACKETS:
+			break;
+
+		/* Binary operators */
+		case AST_MEMBER:
+		case AST_JUXTAPOSE:
+		case AST_COMMA:
+		case AST_SEMICOLON:
+			break;
+		}
 	}
 
 	~ast_node() {
@@ -125,7 +190,6 @@ struct ast_node {
 		case AST_BRACKETS:
 		case AST_SQUARE_BRACKETS:
 		case AST_CURLY_BRACKETS:
-			unop.~ast_node_ptr();
 			break;
 
 		/* Binary operators */
@@ -133,19 +197,43 @@ struct ast_node {
 		case AST_JUXTAPOSE:
 		case AST_COMMA:
 		case AST_SEMICOLON:
-			binop.lhs.~ast_node_ptr();
-			binop.rhs.~ast_node_ptr();
 			break;
 		}
+	}
+};
+
+struct ast_tree {
+	std::vector<ast_node> nodes;
+
+	ast_tree()
+	{
+	}
+
+	template<typename... Args>
+	int new_node(Args... args)
+	{
+		int result = nodes.size();
+		nodes.push_back(ast_node(args...));
+		return result;
+	}
+
+	ast_node *get(int node_index)
+	{
+		if (node_index == -1)
+			return nullptr;
+
+		return &nodes[node_index];
 	}
 };
 
 template<ast_node_type type>
 struct traverse {
 	struct iterator {
+		ast_tree &tree;
 		ast_node_ptr node;
 
-		iterator(ast_node_ptr node):
+		iterator(ast_tree &tree, ast_node_ptr node):
+			tree(tree),
 			node(node)
 		{
 		}
@@ -153,7 +241,7 @@ struct traverse {
 		ast_node_ptr operator*()
 		{
 			if (node->type == type)
-				return node->binop.lhs;
+				return tree.get(node->binop.lhs);
 
 			return node;
 		}
@@ -161,7 +249,7 @@ struct traverse {
 		iterator &operator++()
 		{
 			if (node->type == type)
-				node = node->binop.rhs;
+				node = tree.get(node->binop.rhs);
 			else
 				node = nullptr;
 
@@ -170,25 +258,28 @@ struct traverse {
 
 		bool operator!=(const iterator &other) const
 		{
+			assert(&tree == &other.tree);
 			return node != other.node;
 		}
 	};
 
+	ast_tree &tree;
 	ast_node_ptr node;
 
-	traverse(ast_node_ptr node):
+	traverse(ast_tree &tree, ast_node_ptr node):
+		tree(tree),
 		node(node)
 	{
 	}
 
 	iterator begin()
 	{
-		return iterator(node);
+		return iterator(tree, node);
 	}
 
 	iterator end()
 	{
-		return iterator(nullptr);
+		return iterator(tree, nullptr);
 	}
 };
 

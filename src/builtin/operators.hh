@@ -50,15 +50,15 @@ static value_ptr call_operator_fn(const compile_state &state, const char *member
 		state.error(node, "expected juxtaposition");
 
 	// TODO: only evaluate the type so we don't evaluate the value twice
-	auto lhs = compile(state, node->binop.lhs);
+	auto lhs = compile(state, state.get_node(node->binop.lhs));
 	auto lhs_type = lhs->type;
 
 	auto it = lhs_type->members.find(member);
 	if (it == lhs_type->members.end())
 		state.error(node, "unknown member '$'", member);
 
-	value_ptr val = it->second->invoke(state, lhs, node->binop.rhs);
-	return _compile_juxtapose(state, node, val, node->binop.rhs);
+	value_ptr val = it->second->invoke(state, lhs, state.get_node(node->binop.rhs));
+	return _compile_juxtapose(state, node, val, state.get_node(node->binop.rhs));
 }
 
 static value_ptr builtin_macro_add(const compile_state &state, ast_node_ptr node)

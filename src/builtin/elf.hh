@@ -87,12 +87,12 @@ struct define_macro: macro {
 		if (node->type != AST_JUXTAPOSE)
 			state.error(node, "expected juxtaposition");
 
-		auto lhs = node->binop.lhs;
+		auto lhs = state.get_node(node->binop.lhs);
 		if (lhs->type != AST_SYMBOL_NAME)
 			state.error(node, "definition of non-symbol");
 
 		// TODO: create new value?
-		auto rhs = compile(state.set_scope(s), node->binop.rhs);
+		auto rhs = compile(state.set_scope(s), state.get_node(node->binop.rhs));
 		s->define(state.function, node, lhs->symbol_name, rhs);
 
 		if (do_export)
@@ -169,7 +169,7 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 	if (node->type != AST_JUXTAPOSE)
 		state.error(node, "expected 'elf filename:<expression> <expression>'");
 
-	auto filename_node = node->binop.lhs;
+	auto filename_node = state.get_node(node->binop.lhs);
 	auto filename_value = eval(state, filename_node);
 	if (filename_value->storage_type != VALUE_GLOBAL)
 		state.error(filename_node, "output filename must be known at compile time");
@@ -187,7 +187,7 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 
 	auto new_state = state.set_objects(objects).set_scope(new_scope);
 
-	auto expr_node = node->binop.rhs;
+	auto expr_node = state.get_node(node->binop.rhs);
 	auto expr_value = eval(new_state, expr_node);
 
 	elf_writer w;

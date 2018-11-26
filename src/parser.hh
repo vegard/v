@@ -36,19 +36,22 @@
  * Nullary/unary (outfix) operators:
  *   (x)
  *   [x]
+ *   <x>
  *   {x}
+ *   (C++-style multiline comments)
  *
  * Unary prefix operators:
  *   @x
  *
  * Binary operators (highest precedence first):
  *   x.y
- *   x y      x := y
+ *   x y
  *   x:y
  *   x..y
  *   x * y    x / y
  *   x + y    x - y
  *   x = y
+ *   x := y
  *   x, y
  *   x; y
  */
@@ -56,6 +59,7 @@
 enum precedence {
 	PREC_SEMICOLON,
 	PREC_AT,
+	PREC_DEFINE,
 	PREC_ASSIGN,
 	PREC_COMMA,
 	PREC_EQUALITY,
@@ -444,7 +448,7 @@ int parser::parse_expr(unsigned int &pos, unsigned int min_precedence)
 
 		// This must appear before ":" since that's a prefix
 		if (result == -1)
-			result = parse_binop_as_call<PREC_JUXTAPOSE, ASSOC_RIGHT, false>(":=", "_define", lhs, i, min_precedence);
+			result = parse_binop_as_call<PREC_DEFINE, ASSOC_LEFT, false>(":=", "_define", lhs, i, min_precedence);
 
 		if (result == -1)
 			result = parse_binop<AST_MEMBER, PREC_MEMBER, ASSOC_LEFT, false>(".", lhs, i, min_precedence);

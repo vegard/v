@@ -1,0 +1,19 @@
+(juxtapose
+    (symbol_name _assign)
+    (juxtapose
+        (juxtapose
+            (symbol_name a)
+            (juxtapose
+                (symbol_name b)
+                (symbol_name c)
+            )
+        )
+        (juxtapose
+            (symbol_name d)
+            (juxtapose
+                (symbol_name e)
+                (symbol_name f)
+            )
+        )
+    )
+)

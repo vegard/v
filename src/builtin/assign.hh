@@ -35,6 +35,11 @@ static value_ptr builtin_macro_assign(const compile_state &state, ast_node_ptr n
 	if (rhs->type != lhs->type)
 		state.error(node, "type mismatch");
 
+	// TODO: in the future we can replace this by testing a flag
+	// in 'value' specifying constness/immutability
+	if (lhs->storage_type == VALUE_CONSTANT)
+		state.error(node, "cannot assign to constant");
+
 	state.function->emit_move(rhs, lhs);
 	return lhs;
 }

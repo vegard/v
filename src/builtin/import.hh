@@ -42,8 +42,8 @@ static value_ptr builtin_macro_import(const compile_state &state, ast_node_ptr n
 		throw compile_error(source, e.pos, e.end, "parse error: $", e.what());
 	}
 
-	auto new_scope = std::make_shared<scope>(state.scope);
-	return compile(state.set_source(source, new_scope), source->tree.get(source_node));
+	auto scope = state.scope;
+	return compile(state.set_source(source, scope), source->tree.get(source_node));
 }
 
 #endif

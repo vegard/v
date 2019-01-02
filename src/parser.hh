@@ -28,8 +28,6 @@
 #include <string>
 #include <vector>
 
-#include <gmpxx.h>
-
 #include "ast.hh"
 
 /*

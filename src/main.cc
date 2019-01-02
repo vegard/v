@@ -33,6 +33,7 @@ extern "C" {
 #include "builtin/debug.hh"
 #include "builtin/declare.hh"
 #include "builtin/define.hh"
+#include "builtin/doc.hh"
 #include "builtin/elf.hh"
 #include "builtin/equals.hh"
 #include "builtin/eval.hh"
@@ -156,6 +157,7 @@ static function_ptr compile_metaprogram(source_file_ptr source, ast_node_ptr roo
 	global_scope->define_builtin_macro("asm", builtin_macro_asm);
 	global_scope->define_builtin_macro("constant", builtin_macro_constant);
 	global_scope->define_builtin_macro("debug", builtin_macro_debug);
+	global_scope->define_builtin_macro("doc", builtin_macro_doc);
 	global_scope->define_builtin_macro("elf", builtin_macro_elf);
 	global_scope->define_builtin_macro("if", builtin_macro_if);
 	global_scope->define_builtin_macro("import", builtin_macro_import);

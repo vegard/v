@@ -19,6 +19,10 @@
 #ifndef V_FUNCTION_HH
 #define V_FUNCTION_HH
 
+extern "C" {
+#include <elf.h>
+}
+
 #include <map>
 #include <memory>
 
@@ -203,8 +207,15 @@ struct function {
 	void emit_obj(unsigned int object_id)
 	{
 		// this emits a relocation for the address of the given object
-		this_object->relocations.push_back(relocation(bytes.size(), object_id));
+		this_object->relocations.push_back(relocation(R_X86_64_64, bytes.size(), object_id));
 		emit_quad_placeholder();
+	}
+
+	void emit_obj_PC32(unsigned int object_id, int addend)
+	{
+		// this emits a relocation for the address of the given object
+		this_object->relocations.push_back(relocation(R_X86_64_PC32, bytes.size(), object_id, addend));
+		emit_long_placeholder();
 	}
 
 	void emit_prologue()
@@ -543,8 +554,9 @@ struct function {
 		case VALUE_TARGET_GLOBAL:
 			// TODO: optimise
 			assert(!host);
-			emit_move_obj_to_reg(target->target_global.object_id, RAX);
-			emit_call(RAX);
+			// Opcode
+			emit_byte(0xe8);
+			emit_obj_PC32(target->target_global.object_id, -4);
 			break;
 		case VALUE_LOCAL:
 			// TODO: optimise

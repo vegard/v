@@ -297,9 +297,28 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 
 		// apply relocations
 		for (const auto &reloc: obj->relocations) {
-			uint64_t target = phdr.p_vaddr + offsets[reloc.object];
-			for (unsigned int i = 0; i < 8; ++i)
-				obj->bytes[reloc.offset + i] = target >> (8 * i);
+			switch (reloc.type) {
+			case R_X86_64_64:
+				{
+					uint64_t target = phdr.p_vaddr + offsets[reloc.object];
+					for (unsigned int i = 0; i < 8; ++i)
+						obj->bytes[reloc.offset + i] = target >> (8 * i);
+				}
+				break;
+			case R_X86_64_PC32:
+				{
+					uint64_t S = phdr.p_vaddr + offsets[reloc.object];
+					uint64_t A = reloc.addend;
+					uint64_t P = phdr.p_vaddr + offsets[object_id] + reloc.offset;
+
+					uint64_t value = S + A - P;
+					for (unsigned int i = 0; i < 4; ++i)
+						obj->bytes[reloc.offset + i] = value >> (8 * i);
+				}
+				break;
+			default:
+				assert(false);
+			}
 		}
 
 		disassemble(&obj->bytes[0], obj->bytes.size(), phdr.p_vaddr + offsets[object_id], obj->comments);

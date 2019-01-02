@@ -32,15 +32,29 @@
 // say, self-referential data.
 
 struct relocation {
+	// ELF relocation type
+	// TODO: technically we don't need to use ELF relocations here as
+	// these relocations are all internal; they don't have anything to
+	// do with the relocations that end up in generated ELF files.
+	// But it might be handy to just reuse all of that anyway...
+	// Maybe switch to 'Elf64_Rela' altogether? No, we want this to
+	// remain generic so you can emit code for any architecture (or
+	// multiple architectures...)
+	unsigned int type;
+
 	// Where to apply it
 	unsigned int offset;
 
 	// What to point to
 	unsigned int object;
 
-	relocation(unsigned int offset, unsigned int object):
+	int addend;
+
+	relocation(unsigned int type, unsigned int offset, unsigned int object, int addend = 0):
+		type(type),
 		offset(offset),
-		object(object)
+		object(object),
+		addend(addend)
 	{
 	}
 };

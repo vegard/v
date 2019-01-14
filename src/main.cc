@@ -53,6 +53,7 @@ extern "C" {
 #include "function.hh"
 #include "globals.hh"
 #include "macro.hh"
+#include "namespace.hh"
 #include "scope.hh"
 #include "value.hh"
 
@@ -97,21 +98,6 @@ static value_ptr builtin_macro_print(const compile_state &state, ast_node_ptr no
 
 	return builtin_value_void;
 }
-
-struct namespace_member: member {
-	value_ptr val;
-
-	namespace_member(value_type_ptr type)
-	{
-		val = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_type);
-		val->global.host_address = (void *) new value_type_ptr(type);
-	}
-
-	value_ptr invoke(const compile_state &state, value_ptr v, ast_node_ptr node)
-	{
-		return val;
-	}
-};
 
 static auto builtin_value_namespace_lang = std::make_shared<value>(nullptr, VALUE_CONSTANT,
 	std::make_shared<value_type>(value_type {

@@ -22,6 +22,7 @@
 #include "../ast.hh"
 #include "../compile.hh"
 #include "../function.hh"
+#include "../namespace.hh"
 #include "../scope.hh"
 #include "../value.hh"
 
@@ -42,8 +43,28 @@ static value_ptr builtin_macro_import(const compile_state &state, ast_node_ptr n
 		throw compile_error(source, e.pos, e.end, "parse error: $", e.what());
 	}
 
-	auto scope = state.scope;
-	return compile(state.set_source(source, scope), source->tree.get(source_node));
+	auto new_scope = std::make_shared<scope>(state.scope);
+	compile(state.set_source(source, new_scope), source->tree.get(source_node));
+
+	// Create new namespace with the contents of the new scope as members
+	auto members = std::map<std::string, member_ptr>();
+	for (auto &it: new_scope->contents) {
+		// TODO: preserve location of definition
+		members[it.first] = std::make_shared<namespace_member>(it.second.val);
+	}
+
+	auto new_namespace = std::make_shared<value>(nullptr, VALUE_CONSTANT,
+		std::make_shared<value_type>(value_type {
+			.alignment = 0,
+			.size = 0,
+			.constructor = nullptr,
+			.argument_types = std::vector<value_type_ptr>(),
+			.return_type = nullptr,
+			.members = members,
+		})
+	);
+
+	return new_namespace;
 }
 
 #endif

@@ -46,6 +46,7 @@ extern "C" {
 #include "builtin/struct.hh"
 #include "builtin/u64.hh"
 #include "builtin/str.hh"
+#include "builtin/use.hh"
 #include "builtin/value.hh"
 #include "builtin/while.hh"
 #include "compile.hh"
@@ -151,6 +152,7 @@ static function_ptr compile_metaprogram(source_file_ptr source, ast_node_ptr roo
 	global_scope->define_builtin_macro("fun", builtin_macro_fun);
 	global_scope->define_builtin_macro("quote", builtin_macro_quote);
 	global_scope->define_builtin_macro("struct", builtin_macro_struct);
+	global_scope->define_builtin_macro("use", builtin_macro_use);
 
 	global_scope->define_builtin_macro("print", builtin_macro_print);
 

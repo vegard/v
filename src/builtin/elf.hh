@@ -159,9 +159,7 @@ struct elf_writer {
 	void align(size_t alignment)
 	{
 		size_t size = alignment - (offset & (alignment - 1));
-		uint8_t *data = new uint8_t[size];
-		memset(data, 0, size);
-		elements.push_back(element { offset, data, size });
+		elements.push_back(element { offset, nullptr, size });
 		offset += size;
 	}
 };
@@ -302,7 +300,18 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 		state.error(filename_node, "couldn't open '$' for writing: $", filename.c_str(), strerror(errno));
 
 	for (auto x: w.elements) {
-		write(fd, x.data, x.size);
+		if (x.data) {
+			// TODO: proper error handling
+			size_t len = write(fd, x.data, x.size);
+			if (len == -1)
+				error(EXIT_FAILURE, errno, "write()");
+		} else {
+			// Skip over padding
+			// TODO: proper error handling
+			off_t offset = lseek(fd, x.size, SEEK_CUR);
+			if (offset == -1)
+				error(EXIT_FAILURE, errno, "lseek()");
+		}
 	}
 
 	for (unsigned int object_id = 0; object_id < objects->size(); ++object_id) {

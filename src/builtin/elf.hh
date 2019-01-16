@@ -144,7 +144,7 @@ struct elf_writer {
 	}
 
 	template<typename t>
-	t &append()
+	t *append()
 	{
 		// TODO: we allocate as uint8_t[] because we will free
 		// everything using that as well. Hopefully the alignment
@@ -153,7 +153,7 @@ struct elf_writer {
 		uint8_t *data = new uint8_t[size];
 		elements.push_back(element { offset, data, size });
 		offset += size;
-		return *(t *) data;
+		return (t *) data;
 	}
 
 	void align(size_t alignment)
@@ -194,45 +194,45 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 
 	elf_writer w;
 
-	auto &ehdr = w.append<Elf64_Ehdr>();
-	ehdr = {};
-	ehdr.e_ident[EI_MAG0] = ELFMAG0;
-	ehdr.e_ident[EI_MAG1] = ELFMAG1;
-	ehdr.e_ident[EI_MAG2] = ELFMAG2;
-	ehdr.e_ident[EI_MAG3] = ELFMAG3;
-	ehdr.e_ident[EI_CLASS] = ELFCLASS64;
-	ehdr.e_ident[EI_DATA] = ELFDATA2LSB;
-	ehdr.e_ident[EI_VERSION] = EV_CURRENT;
-	ehdr.e_ident[EI_OSABI] = ELFOSABI_SYSV;
-	ehdr.e_ident[EI_ABIVERSION] = 0;
-	ehdr.e_ident[EI_PAD] = 0;
-	ehdr.e_type = ET_EXEC;
-	ehdr.e_machine = EM_X86_64;
-	ehdr.e_version = EV_CURRENT;
-	ehdr.e_ehsize = sizeof(Elf64_Ehdr);
-	ehdr.e_phentsize = sizeof(Elf64_Phdr);
-	ehdr.e_shentsize = sizeof(Elf64_Shdr);
+	auto ehdr = w.append<Elf64_Ehdr>();
+	*ehdr = {};
+	ehdr->e_ident[EI_MAG0] = ELFMAG0;
+	ehdr->e_ident[EI_MAG1] = ELFMAG1;
+	ehdr->e_ident[EI_MAG2] = ELFMAG2;
+	ehdr->e_ident[EI_MAG3] = ELFMAG3;
+	ehdr->e_ident[EI_CLASS] = ELFCLASS64;
+	ehdr->e_ident[EI_DATA] = ELFDATA2LSB;
+	ehdr->e_ident[EI_VERSION] = EV_CURRENT;
+	ehdr->e_ident[EI_OSABI] = ELFOSABI_SYSV;
+	ehdr->e_ident[EI_ABIVERSION] = 0;
+	ehdr->e_ident[EI_PAD] = 0;
+	ehdr->e_type = ET_EXEC;
+	ehdr->e_machine = EM_X86_64;
+	ehdr->e_version = EV_CURRENT;
+	ehdr->e_ehsize = sizeof(Elf64_Ehdr);
+	ehdr->e_phentsize = sizeof(Elf64_Phdr);
+	ehdr->e_shentsize = sizeof(Elf64_Shdr);
 
-	// TODO: do we need a PT_PHDR Phdr?
+	w.align(alignof(Elf64_Phdr));
 
-	ehdr.e_phoff = w.offset;
+	ehdr->e_phoff = w.offset;
 
 	// TODO: just one segment for everything for now
-	auto &phdr = w.append<Elf64_Phdr>();
-	phdr = {};
-	phdr.p_type = PT_LOAD;
-	phdr.p_flags = PF_X | PF_W | PF_R;
-	phdr.p_vaddr = 0x400000;
-	phdr.p_paddr = phdr.p_vaddr;
-	phdr.p_align = 1;
-	++ehdr.e_phnum;
+	auto phdr = w.append<Elf64_Phdr>();
+	*phdr = {};
+	phdr->p_type = PT_LOAD;
+	phdr->p_flags = PF_X | PF_W | PF_R;
+	phdr->p_vaddr = 0x400000;
+	phdr->p_paddr = phdr->p_vaddr;
+	phdr->p_align = 4096;
+	++ehdr->e_phnum;
 
 	// XXX: the low order bits of this offset must match with the
 	// virtual address. We should pad with zero to the nearest
 	// page boundary to avoid loading parts of the ELF header.
 	w.align(4096);
 
-	phdr.p_offset = w.offset;
+	phdr->p_offset = w.offset;
 
 	// TODO: traverse entry point + exports
 	for (const auto it: elf.exports) {
@@ -284,17 +284,17 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 		//disassemble((const uint8_t *) obj->bytes, obj->size, 0, comments);
 
 		object_infos[i] = {
-			.offset = phdr.p_offset + offset,
-			.addr = phdr.p_vaddr + offset,
+			.offset = phdr->p_offset + offset,
+			.addr = phdr->p_vaddr + offset,
 		};
 		offset += obj->bytes.size();
 	}
 
 	if (elf.entry_point != builtin_value_void)
-		ehdr.e_entry = object_infos[entry_object_id].addr;
+		ehdr->e_entry = object_infos[entry_object_id].addr;
 
-	phdr.p_filesz = offset;
-	phdr.p_memsz = offset;
+	phdr->p_filesz = offset;
+	phdr->p_memsz = offset;
 
 	// TODO: error handling, temporaries, etc.
 	int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0755);

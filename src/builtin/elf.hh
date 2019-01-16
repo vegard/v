@@ -146,11 +146,15 @@ struct elf_writer {
 	template<typename t>
 	t *append()
 	{
+		align(alignof(t));
+
+		size_t size = sizeof(t);
 		// TODO: we allocate as uint8_t[] because we will free
 		// everything using that as well. Hopefully the alignment
-		// of t will agree with our current offset...
-		size_t size = sizeof(t);
+		// of t will agree with the data type... (it should be!)
 		uint8_t *data = new uint8_t[size];
+		assert(((uintptr_t) data & (alignof(t) - 1)) == 0);
+
 		elements.push_back(element { offset, data, size });
 		offset += size;
 		return (t *) data;
@@ -158,7 +162,14 @@ struct elf_writer {
 
 	void align(size_t alignment)
 	{
-		size_t size = alignment - (offset & (alignment - 1));
+		// alignment must be a power of 2
+		assert((alignment & (alignment - 1)) == 0);
+
+		size_t remainder = offset & (alignment - 1);
+		if (remainder == 0)
+			return;
+
+		size_t size = alignment - remainder;
 		elements.push_back(element { offset, nullptr, size });
 		offset += size;
 	}

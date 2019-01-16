@@ -1,10 +1,10 @@
 Introduction
 ============
 
-This is a toy language/compiler that I'm designing/writing just for fun
-in my spare time. Some explicit goals for the language/compiler:
+This is a toy language/compiler that I'm designing/writing for fun.
+Some explicit goals are:
 
- - giving the programmer full access to the compiler internals
+ - giving the programmer access to compiler internals
  - metaprogramming using the same syntax/semantics as regular (compiled)
    code
  - simplicity; "keywords" are just built-in macros
@@ -12,6 +12,8 @@ in my spare time. Some explicit goals for the language/compiler:
 
 Getting started
 ===============
+
+For now, building the compiler is only supported on Linux x86-64 hosts.
 
 Building:
 
@@ -21,23 +23,3 @@ Building:
 Running a program:
 
     ./v main.v
-
-
-Thanks
-======
-
-- [Jonathan Blow](https://twitter.com/Jonathan_Blow)
-    - compiler/language demos and ideas
-- [Eli Bendersky](https://twitter.com/elibendersky)
-    - lots of interesting parsing/compiling blog posts
-- Blaise Boscaccy
-    - language design discussions/LLVM help
-
-
-See also
-========
-
-Some projects with similar ideas/goals:
-
- - [Ante](https://github.com/jfecher/ante) by Jake Fecher
- - [Zig](http://ziglang.org/) by [Andrew Kelley](https://twitter.com/andy_kelley)

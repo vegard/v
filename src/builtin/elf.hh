@@ -266,19 +266,32 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 
 	printf("%lu objects!\n", objects->size());
 
-	std::vector<size_t> offsets;
+	struct elf_object_info {
+		Elf64_Off offset;
+		Elf64_Addr addr;
+	};
+
+	size_t nr_objects = objects->size();
+	std::vector<elf_object_info> object_infos(nr_objects);
 
 	size_t offset = 0;
-	for (const auto obj: *objects) {
+	for (unsigned int i = 0; i < nr_objects; ++i) {
+		const auto obj = (*objects)[i];
+
+		// TODO: alignment
 		printf(" - object size %lu\n", obj->bytes.size());
 		//std::map<size_t, std::vector<std::pair<unsigned int, std::string>>> comments;
 		//disassemble((const uint8_t *) obj->bytes, obj->size, 0, comments);
-		offsets.push_back(offset);
+
+		object_infos[i] = {
+			.offset = phdr.p_offset + offset,
+			.addr = phdr.p_vaddr + offset,
+		};
 		offset += obj->bytes.size();
 	}
 
 	if (elf.entry_point != builtin_value_void)
-		ehdr.e_entry = phdr.p_vaddr + offsets[entry_object_id];
+		ehdr.e_entry = object_infos[entry_object_id].addr;
 
 	phdr.p_filesz = offset;
 	phdr.p_memsz = offset;
@@ -300,16 +313,16 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 			switch (reloc.type) {
 			case R_X86_64_64:
 				{
-					uint64_t target = phdr.p_vaddr + offsets[reloc.object];
+					uint64_t target = object_infos[reloc.object].addr;
 					for (unsigned int i = 0; i < 8; ++i)
 						obj->bytes[reloc.offset + i] = target >> (8 * i);
 				}
 				break;
 			case R_X86_64_PC32:
 				{
-					uint64_t S = phdr.p_vaddr + offsets[reloc.object];
+					uint64_t S = object_infos[reloc.object].addr;
 					uint64_t A = reloc.addend;
-					uint64_t P = phdr.p_vaddr + offsets[object_id] + reloc.offset;
+					uint64_t P = object_infos[object_id].addr + reloc.offset;
 
 					uint64_t value = S + A - P;
 					for (unsigned int i = 0; i < 4; ++i)
@@ -321,7 +334,7 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 			}
 		}
 
-		disassemble(&obj->bytes[0], obj->bytes.size(), phdr.p_vaddr + offsets[object_id], obj->comments);
+		disassemble(&obj->bytes[0], obj->bytes.size(), object_infos[object_id].addr, obj->comments);
 
 		write(fd, &obj->bytes[0], obj->bytes.size());
 	}

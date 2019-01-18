@@ -143,20 +143,21 @@ struct elf_writer {
 	{
 	}
 
+	uint8_t *append(size_t alignment, size_t size)
+	{
+		align(alignment);
+
+		uint8_t *data = new uint8_t[size];
+		elements.push_back(element { offset, data, size });
+		offset += size;
+		return data;
+	}
+
 	template<typename t>
 	t *append()
 	{
-		align(alignof(t));
-
-		size_t size = sizeof(t);
-		// TODO: we allocate as uint8_t[] because we will free
-		// everything using that as well. Hopefully the alignment
-		// of t will agree with the data type... (it should be!)
-		uint8_t *data = new uint8_t[size];
+		uint8_t *data = append(alignof(t), sizeof(t));
 		assert(((uintptr_t) data & (alignof(t) - 1)) == 0);
-
-		elements.push_back(element { offset, data, size });
-		offset += size;
 		return (t *) data;
 	}
 
@@ -278,28 +279,104 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 
 	printf("%lu objects!\n", objects->size());
 
+	struct elf_segment {
+		size_t offset;
+		size_t size;
+		uint8_t *bytes;
+		std::vector<unsigned int> objects;
+	};
+
+	std::vector<elf_segment> segments;
+	segments.push_back(elf_segment());
+
+	// allocate segments
+	// TODO: split based on permissions (e.g. r, rw, rx); just put everything in one segment for now
+	size_t nr_objects = objects->size();
+	for (unsigned int i = 0; i < nr_objects; ++i) {
+		const auto obj = (*objects)[i];
+
+		segments[0].objects.push_back(i);
+	}
+
 	struct elf_object_info {
+		Elf64_Off segment_offset;
 		Elf64_Off offset;
 		Elf64_Addr addr;
 	};
 
-	size_t nr_objects = objects->size();
 	std::vector<elf_object_info> object_infos(nr_objects);
 
 	size_t offset = 0;
-	for (unsigned int i = 0; i < nr_objects; ++i) {
-		const auto obj = (*objects)[i];
+	for (auto &segment: segments) {
+		// align segment to page boundary
+		offset = (offset + page_size - 1) & ~(page_size - 1);
+		segment.offset = offset;
 
-		// TODO: alignment
-		printf(" - object size %lu\n", obj->bytes.size());
-		//std::map<size_t, std::vector<std::pair<unsigned int, std::string>>> comments;
-		//disassemble((const uint8_t *) obj->bytes, obj->size, 0, comments);
+		for (const auto object_id: segment.objects) {
+			const auto obj = (*objects)[object_id];
 
-		object_infos[i] = {
-			.offset = phdr->p_offset + offset,
-			.addr = phdr->p_vaddr + offset,
-		};
-		offset += obj->bytes.size();
+			// align object
+			// TODO: store alignment in object...
+			const size_t alignment = 16;
+			offset = (offset + alignment - 1) & ~(alignment - 1);
+
+			object_infos[object_id] = {
+				.segment_offset = offset,
+				.offset = phdr->p_offset + offset,
+				.addr = phdr->p_vaddr + offset,
+			};
+
+			offset += obj->bytes.size();
+		}
+
+		segment.size = offset - segment.offset;
+
+		// write data to segment
+		uint8_t *bytes = w.append(/* XXX */ 16, segment.size);
+		for (const auto object_id: segment.objects) {
+			const auto obj = (*objects)[object_id];
+			const auto &info = object_infos[object_id];
+			memcpy(bytes + info.segment_offset, &obj->bytes[0], obj->bytes.size());
+		}
+
+		segment.bytes = bytes;
+	}
+
+	// apply relocations
+	for (const auto &segment: segments) {
+		for (const auto object_id: segment.objects) {
+			const auto obj = (*objects)[object_id];
+			uint8_t *object_bytes = segment.bytes + object_infos[object_id].segment_offset;
+
+			// apply relocations
+			for (const auto &reloc: obj->relocations) {
+				switch (reloc.type) {
+				case R_X86_64_64:
+					{
+						uint64_t target = object_infos[reloc.object].addr;
+						for (unsigned int i = 0; i < 8; ++i)
+							object_bytes[reloc.offset + i] = target >> (8 * i);
+					}
+					break;
+				case R_X86_64_PC32:
+					{
+						uint64_t S = object_infos[reloc.object].addr;
+						uint64_t A = reloc.addend;
+						uint64_t P = object_infos[object_id].addr + reloc.offset;
+
+						uint64_t value = S + A - P;
+						for (unsigned int i = 0; i < 4; ++i)
+							object_bytes[reloc.offset + i] = value >> (8 * i);
+					}
+					break;
+				default:
+					assert(false);
+				}
+			}
+
+			//disassemble(&obj->bytes[0], obj->bytes.size(), object_infos[object_id].addr, obj->comments);
+			//write(fd, &obj->bytes[0], obj->bytes.size());
+		}
 	}
 
 	if (elf.entry_point != builtin_value_void)
@@ -326,40 +403,6 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 			if (offset == -1)
 				error(EXIT_FAILURE, errno, "lseek()");
 		}
-	}
-
-	for (unsigned int object_id = 0; object_id < objects->size(); ++object_id) {
-		const auto obj = (*objects)[object_id];
-
-		// apply relocations
-		for (const auto &reloc: obj->relocations) {
-			switch (reloc.type) {
-			case R_X86_64_64:
-				{
-					uint64_t target = object_infos[reloc.object].addr;
-					for (unsigned int i = 0; i < 8; ++i)
-						obj->bytes[reloc.offset + i] = target >> (8 * i);
-				}
-				break;
-			case R_X86_64_PC32:
-				{
-					uint64_t S = object_infos[reloc.object].addr;
-					uint64_t A = reloc.addend;
-					uint64_t P = object_infos[object_id].addr + reloc.offset;
-
-					uint64_t value = S + A - P;
-					for (unsigned int i = 0; i < 4; ++i)
-						obj->bytes[reloc.offset + i] = value >> (8 * i);
-				}
-				break;
-			default:
-				assert(false);
-			}
-		}
-
-		disassemble(&obj->bytes[0], obj->bytes.size(), object_infos[object_id].addr, obj->comments);
-
-		write(fd, &obj->bytes[0], obj->bytes.size());
 	}
 
 	close(fd);

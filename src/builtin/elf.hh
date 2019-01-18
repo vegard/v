@@ -175,6 +175,10 @@ struct elf_writer {
 	}
 };
 
+// TODO: platform definitions
+const unsigned int page_size = 4096;
+const unsigned int vaddr_start = 0x400000;
+
 static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node)
 {
 	if (node->type != AST_JUXTAPOSE)
@@ -231,16 +235,15 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 	*phdr = {};
 	phdr->p_type = PT_LOAD;
 	phdr->p_flags = PF_X | PF_W | PF_R;
-	phdr->p_vaddr = 0x400000;
+	phdr->p_vaddr = vaddr_start;
 	phdr->p_paddr = phdr->p_vaddr;
-	phdr->p_align = 4096;
+	phdr->p_align = page_size;
 	++ehdr->e_phnum;
 
 	// XXX: the low order bits of this offset must match with the
 	// virtual address. We should pad with zero to the nearest
 	// page boundary to avoid loading parts of the ELF header.
-	w.align(4096);
-
+	w.align(page_size);
 	phdr->p_offset = w.offset;
 
 	// TODO: traverse entry point + exports

@@ -135,11 +135,47 @@ struct elf_writer {
 		size_t size;
 	};
 
-	size_t offset;
+	template<typename t>
+	struct handle {
+		t *data;
+		Elf64_Off offset;
+		Elf64_Addr addr;
+
+		handle():
+			data(nullptr)
+		{
+		}
+
+		handle(t *data, Elf64_Off offset, Elf64_Addr addr):
+			data(data),
+			offset(offset),
+			addr(addr)
+		{
+		}
+
+		operator bool() const
+		{
+			return data;
+		}
+
+		t &operator*() const
+		{
+			return *data;
+		}
+
+		t *operator->() const
+		{
+			return data;
+		}
+	};
+
+	Elf64_Off offset;
+	Elf64_Addr addr;
 	std::vector<element> elements;
 
-	elf_writer():
-		offset(0)
+	elf_writer(Elf64_Addr addr):
+		offset(0),
+		addr(addr)
 	{
 	}
 
@@ -149,16 +185,20 @@ struct elf_writer {
 
 		uint8_t *data = new uint8_t[size];
 		elements.push_back(element { offset, data, size });
+		addr += size;
 		offset += size;
 		return data;
 	}
 
 	template<typename t>
-	t *append()
+	handle<t> append()
 	{
+		Elf64_Off orig_offset = offset;
+		Elf64_Addr orig_addr = addr;
+
 		uint8_t *data = append(alignof(t), sizeof(t));
 		assert(((uintptr_t) data & (alignof(t) - 1)) == 0);
-		return (t *) data;
+		return handle<t>((t *) data, orig_offset, orig_addr);
 	}
 
 	void align(size_t alignment)
@@ -172,6 +212,7 @@ struct elf_writer {
 
 		size_t size = alignment - remainder;
 		elements.push_back(element { offset, nullptr, size });
+		addr += size;
 		offset += size;
 	}
 };
@@ -179,6 +220,7 @@ struct elf_writer {
 // TODO: platform definitions
 const unsigned int page_size = 4096;
 const unsigned int vaddr_start = 0x400000;
+const char interp[] = "/lib64/ld-linux-x86-64.so.2";
 
 static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node)
 {
@@ -196,6 +238,8 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 	elf_data elf;
 	auto objects = std::make_shared<std::vector<object_ptr>>();
 
+	const bool dynamic_exe = false;
+
 	auto new_scope = std::make_shared<scope>(state.scope);
 	new_scope->define_builtin_macro("_define", std::make_shared<define_macro>(new_scope, elf, false));
 	new_scope->define_builtin_macro("entry", std::make_shared<entry_macro>(new_scope, elf));
@@ -203,10 +247,21 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 
 	auto new_state = state.set_objects(objects).set_scope(new_scope);
 
+	// we allocate the interpreter as an object because we need to get
+	// both its address and its offset
+	unsigned int interp_object_id;
+	object_ptr interp_object;
+	if (dynamic_exe) {
+		interp_object = std::make_shared<object>(interp);
+		interp_object_id = new_state.new_object(interp_object);
+	}
+
 	auto expr_node = state.get_node(node->binop.rhs);
 	auto expr_value = eval(new_state, expr_node);
 
-	elf_writer w;
+	elf_writer w(vaddr_start);
+
+	// ELF header
 
 	auto ehdr = w.append<Elf64_Ehdr>();
 	*ehdr = {};
@@ -227,30 +282,102 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 	ehdr->e_phentsize = sizeof(Elf64_Phdr);
 	ehdr->e_shentsize = sizeof(Elf64_Shdr);
 
+	// Dynamic entries (necessary for ld.so)
+
+	// TODO: move after program headers?
+	size_t dyn_offset = 0;
+	size_t dyn_size = 0;
+	elf_writer::handle<Elf64_Dyn> strtab_dyn;
+	elf_writer::handle<Elf64_Dyn> symtab_dyn;
+	if (dynamic_exe) {
+		w.align(alignof(Elf64_Dyn));
+		dyn_offset = w.offset;
+
+		strtab_dyn = w.append<Elf64_Dyn>();
+		*strtab_dyn = {};
+		strtab_dyn->d_tag = DT_STRTAB;
+		strtab_dyn->d_un.d_ptr = /* TODO */ 0;
+		dyn_size += sizeof(Elf64_Dyn);
+
+		symtab_dyn = w.append<Elf64_Dyn>();
+		*symtab_dyn = {};
+		symtab_dyn->d_tag = DT_SYMTAB;
+		symtab_dyn->d_un.d_ptr = /* TODO */ 0;
+		dyn_size += sizeof(Elf64_Dyn);
+	}
+
+	// Program headers
+
 	w.align(alignof(Elf64_Phdr));
 
-	ehdr->e_phoff = w.offset;
+	size_t phdr_offset = w.offset;
+	ehdr->e_phoff = phdr_offset;
+
+	// segment covering the ELF headers/segments
+	elf_writer::handle<Elf64_Phdr> phdr_phdr;
+	elf_writer::handle<Elf64_Phdr> interp_phdr;
+	elf_writer::handle<Elf64_Phdr> elf_phdr;
+	if (dynamic_exe) {
+		// libc rtld *requires* a PT_PHDR segment for dynamic objects
+		phdr_phdr = w.append<Elf64_Phdr>();
+		*phdr_phdr = {};
+		phdr_phdr->p_type = PT_PHDR;
+		phdr_phdr->p_offset = phdr_phdr.offset;
+		phdr_phdr->p_vaddr = phdr_phdr.addr;
+		phdr_phdr->p_paddr = phdr_phdr.addr;
+		phdr_phdr->p_flags = PF_R | PF_X;
+		phdr_phdr->p_align = 8;
+		++ehdr->e_phnum;
+
+		interp_phdr = w.append<Elf64_Phdr>();
+		*interp_phdr = {};
+		interp_phdr->p_type = PT_INTERP;
+		interp_phdr->p_flags = PF_R;
+		interp_phdr->p_align = 1;
+		++ehdr->e_phnum;
+
+		// LOAD covering the ELF header itself
+		elf_phdr = w.append<Elf64_Phdr>();
+		*elf_phdr = {};
+		elf_phdr->p_type = PT_LOAD;
+		elf_phdr->p_flags = PF_R | PF_X;
+		elf_phdr->p_align = page_size;
+		++ehdr->e_phnum;
+	}
 
 	// TODO: just one segment for everything for now
 	auto phdr = w.append<Elf64_Phdr>();
 	*phdr = {};
 	phdr->p_type = PT_LOAD;
 	phdr->p_flags = PF_X | PF_W | PF_R;
-	phdr->p_vaddr = vaddr_start;
-	phdr->p_paddr = phdr->p_vaddr;
 	phdr->p_align = page_size;
 	++ehdr->e_phnum;
 
-	// XXX: the low order bits of this offset must match with the
-	// virtual address. We should pad with zero to the nearest
-	// page boundary to avoid loading parts of the ELF header.
+	elf_writer::handle<Elf64_Phdr> dynamic_phdr;
+	if (dynamic_exe) {
+		dynamic_phdr = w.append<Elf64_Phdr>();
+		*dynamic_phdr = {};
+		dynamic_phdr->p_type = PT_DYNAMIC;
+		dynamic_phdr->p_flags = PF_R | PF_W;
+		dynamic_phdr->p_align = alignof(Elf64_Dyn);
+		++ehdr->e_phnum;
+	}
+
+	// End of program headers!
+	size_t phdr_offset_end = w.offset;
+
+	if (phdr_phdr) {
+		phdr_phdr->p_filesz = phdr_offset_end - phdr_offset;
+		phdr_phdr->p_memsz = phdr_offset_end - phdr_offset;
+	}
+
+	// NOTE: the low order bits of this offset must match with the
+	// virtual address. We pad with zeros to the nearest page boundary
+	// to avoid loading parts of the ELF header for static executables.
 	w.align(page_size);
 	phdr->p_offset = w.offset;
-
-	// TODO: traverse entry point + exports
-	for (const auto it: elf.exports) {
-		//printf("export: %s\n", it.first.c_str());
-	}
+	phdr->p_vaddr = w.addr;
+	phdr->p_paddr = w.addr;
 
 	unsigned int entry_object_id;
 
@@ -263,6 +390,8 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 		// value for us to return to. So we instead generate a new
 		// function with a call to the entry point given by the user
 		// and finish off with a syscall to terminate the process.
+
+		// XXX: this is obviously highly Linux/x86-64-specific.
 
 		auto new_f = std::make_shared<function>(false);
 
@@ -375,15 +504,41 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 			}
 
 			//disassemble(&obj->bytes[0], obj->bytes.size(), object_infos[object_id].addr, obj->comments);
-			//write(fd, &obj->bytes[0], obj->bytes.size());
 		}
 	}
 
 	if (elf.entry_point != builtin_value_void)
 		ehdr->e_entry = object_infos[entry_object_id].addr;
 
-	phdr->p_filesz = offset;
-	phdr->p_memsz = offset;
+	if (interp_phdr) {
+		interp_phdr->p_offset = object_infos[interp_object_id].offset;
+		interp_phdr->p_vaddr = object_infos[interp_object_id].addr;
+		interp_phdr->p_paddr = object_infos[interp_object_id].addr;
+		interp_phdr->p_filesz = interp_object->bytes.size();
+		interp_phdr->p_memsz = interp_object->bytes.size();
+	}
+
+	if (elf_phdr) {
+		elf_phdr->p_offset = ehdr.offset;
+		elf_phdr->p_vaddr = ehdr.addr;
+		elf_phdr->p_paddr = ehdr.addr;
+		elf_phdr->p_filesz = phdr_offset_end;
+		elf_phdr->p_memsz = phdr_offset_end;
+	}
+
+	if (dynamic_phdr) {
+		// String table
+
+		dynamic_phdr->p_offset = dyn_offset;
+		dynamic_phdr->p_vaddr = strtab_dyn.addr;
+		dynamic_phdr->p_paddr = strtab_dyn.addr;
+		dynamic_phdr->p_filesz = dyn_size;
+		dynamic_phdr->p_memsz = dyn_size;
+	}
+
+	// TODO
+	phdr->p_filesz = segments[0].size;
+	phdr->p_memsz = segments[0].size;
 
 	// TODO: error handling, temporaries, etc.
 	int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0755);

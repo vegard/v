@@ -393,7 +393,7 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 	for (auto x: w.elements) {
 		if (x.data) {
 			// TODO: proper error handling
-			size_t len = write(fd, x.data, x.size);
+			ssize_t len = write(fd, x.data, x.size);
 			if (len == -1)
 				error(EXIT_FAILURE, errno, "write()");
 		} else {

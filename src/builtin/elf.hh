@@ -224,8 +224,48 @@ const char interp[] = "/lib64/ld-linux-x86-64.so.2";
 
 static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node)
 {
-	if (node->type != AST_JUXTAPOSE)
-		state.error(node, "expected 'elf filename:<expression> <expression>'");
+	auto elf_node = node;
+
+	state.expect(node, node->type == AST_JUXTAPOSE,
+		"expected 'elf [attributes...] filename:<expression> <expression>'");
+
+	enum {
+		STATIC,
+		DYNAMIC,
+	} linking_type = STATIC;
+
+	enum {
+		EXECUTABLE,
+		LIBRARY,
+		OBJECT,
+	} file_type = EXECUTABLE;
+
+	ast_node_ptr lhs_node = state.get_node(node->binop.lhs);
+	if (lhs_node->type == AST_SQUARE_BRACKETS) {
+		for (auto attribute_node: traverse<AST_COMMA>(state.source->tree, state.get_node(lhs_node->unop))) {
+			// XXX: error handling
+			assert(attribute_node->type == AST_SYMBOL_NAME);
+			auto symbol_name = state.get_symbol_name(attribute_node);
+
+			if (symbol_name == "static")
+				linking_type = STATIC;
+			else if (symbol_name == "dynamic")
+				linking_type = DYNAMIC;
+			else if (symbol_name == "exe")
+				file_type = EXECUTABLE;
+			else if (symbol_name == "lib")
+				file_type = LIBRARY;
+			else if (symbol_name == "obj")
+				file_type = OBJECT;
+			else
+				state.error(attribute_node, "expected attribute");
+		}
+
+		node = state.get_node(node->binop.rhs);
+	}
+
+	state.expect(elf_node, node->type == AST_JUXTAPOSE,
+		"expected 'elf [attributes...] filename:<expression> <expression>'");
 
 	auto filename_node = state.get_node(node->binop.lhs);
 	auto filename_value = eval(state, filename_node);
@@ -238,8 +278,6 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 	elf_data elf;
 	auto objects = std::make_shared<std::vector<object_ptr>>();
 
-	const bool dynamic_exe = false;
-
 	auto new_scope = std::make_shared<scope>(state.scope);
 	new_scope->define_builtin_macro("_define", std::make_shared<define_macro>(new_scope, elf, false));
 	new_scope->define_builtin_macro("entry", std::make_shared<entry_macro>(new_scope, elf));
@@ -251,7 +289,7 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 	// both its address and its offset
 	unsigned int interp_object_id;
 	object_ptr interp_object;
-	if (dynamic_exe) {
+	if (linking_type == DYNAMIC && file_type == EXECUTABLE) {
 		interp_object = std::make_shared<object>(interp);
 		interp_object_id = new_state.new_object(interp_object);
 	}
@@ -289,7 +327,7 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 	size_t dyn_size = 0;
 	elf_writer::handle<Elf64_Dyn> strtab_dyn;
 	elf_writer::handle<Elf64_Dyn> symtab_dyn;
-	if (dynamic_exe) {
+	if (linking_type == DYNAMIC) {
 		w.align(alignof(Elf64_Dyn));
 		dyn_offset = w.offset;
 
@@ -317,7 +355,7 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 	elf_writer::handle<Elf64_Phdr> phdr_phdr;
 	elf_writer::handle<Elf64_Phdr> interp_phdr;
 	elf_writer::handle<Elf64_Phdr> elf_phdr;
-	if (dynamic_exe) {
+	if (linking_type == DYNAMIC && file_type == EXECUTABLE) {
 		// libc rtld *requires* a PT_PHDR segment for dynamic objects
 		phdr_phdr = w.append<Elf64_Phdr>();
 		*phdr_phdr = {};
@@ -354,7 +392,7 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 	++ehdr->e_phnum;
 
 	elf_writer::handle<Elf64_Phdr> dynamic_phdr;
-	if (dynamic_exe) {
+	if (linking_type == DYNAMIC) {
 		dynamic_phdr = w.append<Elf64_Phdr>();
 		*dynamic_phdr = {};
 		dynamic_phdr->p_type = PT_DYNAMIC;

@@ -219,7 +219,7 @@ struct elf_writer {
 
 // TODO: platform definitions
 const unsigned int page_size = 4096;
-const unsigned int vaddr_start = 0x400000;
+const unsigned int exe_vaddr_base = 0x400000;
 const char interp[] = "/lib64/ld-linux-x86-64.so.2";
 
 static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node)
@@ -297,7 +297,7 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 	auto expr_node = state.get_node(node->binop.rhs);
 	auto expr_value = eval(new_state, expr_node);
 
-	elf_writer w(vaddr_start);
+	elf_writer w(file_type == EXECUTABLE ? exe_vaddr_base : 0);
 
 	// ELF header
 
@@ -432,10 +432,12 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 	// virtual address. We pad with zeros to the nearest page boundary
 	// to avoid loading parts of the ELF header for static executables.
 	w.align(page_size);
+	Elf64_Addr base_addr = w.addr;
+	Elf64_Off base_offset = w.offset;
 	if (phdr) {
-		phdr->p_offset = w.offset;
-		phdr->p_vaddr = w.addr;
-		phdr->p_paddr = w.addr;
+		phdr->p_offset = base_offset;
+		phdr->p_vaddr = base_addr;
+		phdr->p_paddr = base_addr;
 	}
 
 	unsigned int entry_object_id;
@@ -512,8 +514,8 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 
 			object_infos[object_id] = {
 				.segment_offset = offset,
-				.offset = phdr->p_offset + offset,
-				.addr = phdr->p_vaddr + offset,
+				.offset = base_offset + offset,
+				.addr = base_addr + offset,
 			};
 
 			offset += obj->bytes.size();
@@ -523,6 +525,7 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 
 		// write data to segment
 		uint8_t *bytes = w.append(/* XXX */ 16, segment.size);
+		memset(bytes, 0, segment.size);
 		for (const auto object_id: segment.objects) {
 			const auto obj = (*objects)[object_id];
 			const auto &info = object_infos[object_id];
@@ -568,8 +571,10 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 		}
 	}
 
-	if (elf.entry_point != builtin_value_void)
-		ehdr->e_entry = object_infos[entry_object_id].addr;
+	if (file_type == EXECUTABLE) {
+		if (elf.entry_point != builtin_value_void)
+			ehdr->e_entry = object_infos[entry_object_id].addr;
+	}
 
 	if (interp_phdr) {
 		interp_phdr->p_offset = object_infos[interp_object_id].offset;
@@ -598,8 +603,10 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 	}
 
 	// TODO
-	phdr->p_filesz = segments[0].size;
-	phdr->p_memsz = segments[0].size;
+	if (phdr) {
+		phdr->p_filesz = segments[0].size;
+		phdr->p_memsz = segments[0].size;
+	}
 
 	// TODO: error handling, temporaries, etc.
 	int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0755);

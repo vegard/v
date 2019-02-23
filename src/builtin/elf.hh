@@ -313,7 +313,19 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 	ehdr->e_ident[EI_OSABI] = ELFOSABI_SYSV;
 	ehdr->e_ident[EI_ABIVERSION] = 0;
 	ehdr->e_ident[EI_PAD] = 0;
-	ehdr->e_type = ET_EXEC;
+
+	switch (file_type) {
+	case EXECUTABLE:
+		ehdr->e_type = ET_EXEC;
+		break;
+	case LIBRARY:
+		ehdr->e_type = ET_DYN;
+		break;
+	case OBJECT:
+		ehdr->e_type = ET_REL;
+		break;
+	}
+
 	ehdr->e_machine = EM_X86_64;
 	ehdr->e_version = EV_CURRENT;
 	ehdr->e_ehsize = sizeof(Elf64_Ehdr);
@@ -346,63 +358,70 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 
 	// Program headers
 
-	w.align(alignof(Elf64_Phdr));
-
-	size_t phdr_offset = w.offset;
-	ehdr->e_phoff = phdr_offset;
-
-	// segment covering the ELF headers/segments
+	elf_writer::handle<Elf64_Phdr> phdr;
 	elf_writer::handle<Elf64_Phdr> phdr_phdr;
 	elf_writer::handle<Elf64_Phdr> interp_phdr;
 	elf_writer::handle<Elf64_Phdr> elf_phdr;
-	if (linking_type == DYNAMIC && file_type == EXECUTABLE) {
-		// libc rtld *requires* a PT_PHDR segment for dynamic objects
-		phdr_phdr = w.append<Elf64_Phdr>();
-		*phdr_phdr = {};
-		phdr_phdr->p_type = PT_PHDR;
-		phdr_phdr->p_offset = phdr_phdr.offset;
-		phdr_phdr->p_vaddr = phdr_phdr.addr;
-		phdr_phdr->p_paddr = phdr_phdr.addr;
-		phdr_phdr->p_flags = PF_R | PF_X;
-		phdr_phdr->p_align = 8;
-		++ehdr->e_phnum;
-
-		interp_phdr = w.append<Elf64_Phdr>();
-		*interp_phdr = {};
-		interp_phdr->p_type = PT_INTERP;
-		interp_phdr->p_flags = PF_R;
-		interp_phdr->p_align = 1;
-		++ehdr->e_phnum;
-
-		// LOAD covering the ELF header itself
-		elf_phdr = w.append<Elf64_Phdr>();
-		*elf_phdr = {};
-		elf_phdr->p_type = PT_LOAD;
-		elf_phdr->p_flags = PF_R | PF_X;
-		elf_phdr->p_align = page_size;
-		++ehdr->e_phnum;
-	}
-
-	// TODO: just one segment for everything for now
-	auto phdr = w.append<Elf64_Phdr>();
-	*phdr = {};
-	phdr->p_type = PT_LOAD;
-	phdr->p_flags = PF_X | PF_W | PF_R;
-	phdr->p_align = page_size;
-	++ehdr->e_phnum;
-
 	elf_writer::handle<Elf64_Phdr> dynamic_phdr;
-	if (linking_type == DYNAMIC) {
-		dynamic_phdr = w.append<Elf64_Phdr>();
-		*dynamic_phdr = {};
-		dynamic_phdr->p_type = PT_DYNAMIC;
-		dynamic_phdr->p_flags = PF_R | PF_W;
-		dynamic_phdr->p_align = alignof(Elf64_Dyn);
-		++ehdr->e_phnum;
-	}
 
-	// End of program headers!
-	size_t phdr_offset_end = w.offset;
+	size_t phdr_offset;
+	size_t phdr_offset_end;
+
+	if (file_type == EXECUTABLE || file_type == LIBRARY) {
+		w.align(alignof(Elf64_Phdr));
+
+		phdr_offset = w.offset;
+		ehdr->e_phoff = phdr_offset;
+
+		// segment covering the ELF headers/segments
+		if (linking_type == DYNAMIC && file_type == EXECUTABLE) {
+			// libc rtld *requires* a PT_PHDR segment for dynamic objects
+			phdr_phdr = w.append<Elf64_Phdr>();
+			*phdr_phdr = {};
+			phdr_phdr->p_type = PT_PHDR;
+			phdr_phdr->p_offset = phdr_phdr.offset;
+			phdr_phdr->p_vaddr = phdr_phdr.addr;
+			phdr_phdr->p_paddr = phdr_phdr.addr;
+			phdr_phdr->p_flags = PF_R | PF_X;
+			phdr_phdr->p_align = 8;
+			++ehdr->e_phnum;
+
+			interp_phdr = w.append<Elf64_Phdr>();
+			*interp_phdr = {};
+			interp_phdr->p_type = PT_INTERP;
+			interp_phdr->p_flags = PF_R;
+			interp_phdr->p_align = 1;
+			++ehdr->e_phnum;
+
+			// LOAD covering the ELF header itself
+			elf_phdr = w.append<Elf64_Phdr>();
+			*elf_phdr = {};
+			elf_phdr->p_type = PT_LOAD;
+			elf_phdr->p_flags = PF_R | PF_X;
+			elf_phdr->p_align = page_size;
+			++ehdr->e_phnum;
+		}
+
+		// TODO: just one segment for everything for now
+		phdr = w.append<Elf64_Phdr>();
+		*phdr = {};
+		phdr->p_type = PT_LOAD;
+		phdr->p_flags = PF_X | PF_W | PF_R;
+		phdr->p_align = page_size;
+		++ehdr->e_phnum;
+
+		if (linking_type == DYNAMIC) {
+			dynamic_phdr = w.append<Elf64_Phdr>();
+			*dynamic_phdr = {};
+			dynamic_phdr->p_type = PT_DYNAMIC;
+			dynamic_phdr->p_flags = PF_R | PF_W;
+			dynamic_phdr->p_align = alignof(Elf64_Dyn);
+			++ehdr->e_phnum;
+		}
+
+		// End of program headers!
+		phdr_offset_end = w.offset;
+	}
 
 	if (phdr_phdr) {
 		phdr_phdr->p_filesz = phdr_offset_end - phdr_offset;
@@ -413,35 +432,39 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 	// virtual address. We pad with zeros to the nearest page boundary
 	// to avoid loading parts of the ELF header for static executables.
 	w.align(page_size);
-	phdr->p_offset = w.offset;
-	phdr->p_vaddr = w.addr;
-	phdr->p_paddr = w.addr;
+	if (phdr) {
+		phdr->p_offset = w.offset;
+		phdr->p_vaddr = w.addr;
+		phdr->p_paddr = w.addr;
+	}
 
 	unsigned int entry_object_id;
 
-	// TODO: is this check sufficient?
-	if (elf.entry_point != builtin_value_void) {
-		assert(elf.entry_point->storage_type == VALUE_TARGET_GLOBAL);
+	if (file_type == EXECUTABLE) {
+		// TODO: is this check sufficient?
+		if (elf.entry_point != builtin_value_void) {
+			assert(elf.entry_point->storage_type == VALUE_TARGET_GLOBAL);
 
-		// We cannot set the entry point _directly_ at the function
-		// given by the user, as the stack doesn't contain a return
-		// value for us to return to. So we instead generate a new
-		// function with a call to the entry point given by the user
-		// and finish off with a syscall to terminate the process.
+			// We cannot set the entry point _directly_ at the function
+			// given by the user, as the stack doesn't contain a return
+			// value for us to return to. So we instead generate a new
+			// function with a call to the entry point given by the user
+			// and finish off with a syscall to terminate the process.
 
-		// XXX: this is obviously highly Linux/x86-64-specific.
+			// XXX: this is obviously highly Linux/x86-64-specific.
 
-		auto new_f = std::make_shared<function>(false);
+			auto new_f = std::make_shared<function>(false);
 
-		new_f->emit_call(elf.entry_point);
-		new_f->emit_move_reg_to_reg(RAX, RDI);
-		new_f->emit_move_imm_to_reg(/* SYS_exit_group */ 231, RAX);
+			new_f->emit_call(elf.entry_point);
+			new_f->emit_move_reg_to_reg(RAX, RDI);
+			new_f->emit_move_imm_to_reg(/* SYS_exit_group */ 231, RAX);
 
-		// syscall
-		new_f->emit_byte(0x0f);
-		new_f->emit_byte(0x05);
+			// syscall
+			new_f->emit_byte(0x0f);
+			new_f->emit_byte(0x05);
 
-		entry_object_id = new_state.new_object(new_f->this_object);
+			entry_object_id = new_state.new_object(new_f->this_object);
+		}
 	}
 
 	printf("%lu objects!\n", objects->size());

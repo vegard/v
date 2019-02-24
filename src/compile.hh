@@ -323,11 +323,15 @@ static value_ptr eval(const compile_state &state, ast_node_ptr node)
 
 static value_ptr compile_brackets(const compile_state &state, ast_node_ptr node)
 {
+	function_enter(state.function, get_source_for(state.source, node));
+
 	return compile(state, state.source->tree.get(node->unop));
 }
 
 static value_ptr compile_curly_brackets(const compile_state &state, ast_node_ptr node)
 {
+	function_enter(state.function, get_source_for(state.source, node));
+
 	// Curly brackets create a new scope parented to the old one
 	auto new_scope = std::make_shared<scope>(state.scope);
 	return compile(state.set_scope(new_scope), state.source->tree.get(node->unop));
@@ -335,6 +339,8 @@ static value_ptr compile_curly_brackets(const compile_state &state, ast_node_ptr
 
 static value_ptr compile_member(const compile_state &state, ast_node_ptr node)
 {
+	function_enter(state.function, get_source_for(state.source, node));
+
 	assert(node->type == AST_MEMBER);
 
 	auto lhs = compile(state, state.source->tree.get(node->binop.lhs));
@@ -388,6 +394,8 @@ static value_ptr _compile_juxtapose(const compile_state &state, ast_node_ptr lhs
 
 static value_ptr compile_juxtapose(const compile_state &state, ast_node_ptr node)
 {
+	function_enter(state.function, get_source_for(state.source, node));
+
 	assert(node->type == AST_JUXTAPOSE);
 
 	auto lhs_node = state.source->tree.get(node->binop.lhs);
@@ -420,8 +428,6 @@ static value_ptr compile(const compile_state &state, ast_node_ptr node)
 {
 	if (!node)
 		return builtin_value_void;
-
-	function_enter(state.function, get_source_for(state.source, node));
 
 	switch (node->type) {
 	case AST_LITERAL_INTEGER:

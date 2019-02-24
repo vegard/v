@@ -154,7 +154,7 @@ struct function {
 
 	void comment(std::string s)
 	{
-		this_object->comments[bytes.size()].push_back(std::make_pair(indentation, s));
+		this_object->comments.push_back(::comment(bytes.size(), indentation, s));
 	}
 
 	void emit_byte(uint8_t v)

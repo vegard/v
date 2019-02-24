@@ -204,7 +204,7 @@ struct compile_state {
 
 static value_ptr compile(const compile_state &state, ast_node_ptr node);
 
-static void disassemble(const uint8_t *buf, size_t len, uint64_t pc, const std::map<size_t, std::vector<std::pair<unsigned int, std::string>>> &comments)
+static void disassemble(const uint8_t *buf, size_t len, uint64_t pc, const std::vector<comment> &comments)
 {
 	ud_t u;
 	ud_init(&u);
@@ -215,16 +215,21 @@ static void disassemble(const uint8_t *buf, size_t len, uint64_t pc, const std::
 
 	printf("Disassembly at 0x%08lx:\n", pc);
 
+	auto comments_it = comments.begin();
+	auto comments_end = comments.end();
+
 	unsigned int indentation = 0;
 	while (ud_disassemble(&u)) {
 		uint64_t offset = ud_insn_off(&u) - pc;
-		auto comments_it = comments.find(offset);
-		if (comments_it != comments.end()) {
-			for (const auto &comment: comments_it->second) {
-				indentation = comment.first;
-				const auto &str = comment.second;
-				printf("\e[33m%4s//%*.s %s\n", "", 2 * indentation, "", str.c_str());
-			}
+
+		while (comments_it != comments_end) {
+			const auto &c = *comments_it;
+			if (c.offset > offset)
+				break;
+
+			indentation = c.indentation;
+			printf("\e[33m%4s//%*.s %s\n", "", 2 * indentation, "", c.text.c_str());
+			++comments_it;
 		}
 
 		printf("\e[0m %4lx: %*.s%s\n", offset, 2 * indentation, "", ud_insn_asm(&u));

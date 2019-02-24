@@ -59,6 +59,19 @@ struct relocation {
 	}
 };
 
+struct comment {
+	size_t offset;
+	unsigned int indentation;
+	std::string text;
+
+	comment(size_t offset, unsigned int indentation, std::string text):
+		offset(offset),
+		indentation(indentation),
+		text(text)
+	{
+	}
+};
+
 struct object;
 typedef std::shared_ptr<object> object_ptr;
 
@@ -70,7 +83,7 @@ struct object {
 	// references? See http://www.ucw.cz/~hubicka/papers/abi/node19.html
 	std::vector<relocation> relocations;
 
-	std::map<size_t, std::vector<std::pair<unsigned int, std::string>>> comments;
+	std::vector<comment> comments;
 
 	object()
 	{

@@ -70,7 +70,6 @@ static void _print_str(const char *s)
 
 static value_ptr builtin_macro_print(const compile_state &state, ast_node_ptr node)
 {
-
 	// TODO: save registers
 	auto arg = compile(state, node);
 	if (arg->type == builtin_type_u64) {
@@ -80,8 +79,7 @@ static value_ptr builtin_macro_print(const compile_state &state, ast_node_ptr no
 		print_fn->global.host_address = (void *) global;
 
 		state.use_value(node, arg);
-		state.function->emit_move(arg, 0, RDI);
-		state.function->emit_call(print_fn);
+		state.function->emit_call(print_fn, { arg }, builtin_value_void);
 	} else if (arg->type == builtin_type_str) {
 		auto print_fn = std::make_shared<value>(state.context, VALUE_GLOBAL, builtin_type_str);
 		auto global = new void *;
@@ -157,7 +155,7 @@ static function_ptr compile_metaprogram(source_file_ptr source, ast_node_ptr roo
 	global_scope->define_builtin_macro("print", builtin_macro_print);
 
 	auto c = std::make_shared<context>(nullptr);
-	auto f = std::make_shared<function>(true);
+	auto f = std::make_shared<function>(c, true, std::vector<value_type_ptr>(), builtin_type_void);
 	f->emit_prologue();
 	compile(compile_state(source, c, f, global_scope), root);
 	f->emit_epilogue();

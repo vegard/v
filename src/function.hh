@@ -56,6 +56,29 @@ const unsigned int REX_X = 0x02;
 const unsigned int REX_R = 0x04;
 const unsigned int REX_W = 0x08;
 
+// TODO: arch-specific
+// TODO: abstract away ABI details
+
+static const machine_register regs[] = {
+	RDI, RSI, RDX, RCX, R8, R9,
+};
+
+struct args_allocator {
+	const machine_register *it;
+
+	args_allocator():
+		it(std::cbegin(regs))
+	{
+	}
+
+	machine_register next()
+	{
+		// TODO: use stack
+		assert(it != std::cend(regs));
+		return *(it++);
+	}
+};
+
 // There are many design decisions to make here:
 //  - How generic do we make labels/relocations?
 //  - Who is responsible for linking labels? (The caller, the label
@@ -78,13 +101,16 @@ typedef std::shared_ptr<function> function_ptr;
 
 struct function {
 	bool host;
+	std::vector<value_type_ptr> args_types;
+	value_type_ptr return_type;
+
+	std::vector<value_ptr> args_values;
+	value_ptr return_value;
 
 	// XXX: the double indirection is bad, we should collect bytes
 	// ourselves directly and then move it into the object at the end
 	object_ptr this_object;
 	std::vector<uint8_t> &bytes;
-
-	std::shared_ptr<value> return_value;
 
 	unsigned int indentation;
 
@@ -94,8 +120,10 @@ struct function {
 
 	unsigned int next_local_slot;
 
-	explicit function(bool host):
+	explicit function(context_ptr c, bool host, std::vector<value_type_ptr> args_types, value_type_ptr return_type):
 		host(host),
+		args_types(args_types),
+		return_type(return_type),
 		this_object(std::make_shared<object>()),
 		bytes(this_object->bytes),
 		indentation(0),
@@ -103,6 +131,27 @@ struct function {
 		// slot 1 is the saved rbx
 		next_local_slot(16)
 	{
+		// TODO: what does it mean to pass 'void' as argument or return type?
+
+		for (auto arg_type: args_types) {
+			assert(arg_type);
+
+			if (arg_type->size == 0)
+				args_values.push_back(builtin_value_void);
+			else if (arg_type->size <= 8)
+				args_values.push_back(alloc_local_value(c, arg_type));
+			else
+				args_values.push_back(alloc_local_pointer_value(c, arg_type));
+		}
+
+		assert(return_type);
+
+		if (return_type->size == 0)
+			return_value = builtin_value_void;
+		else if (return_type->size <= 8)
+			return_value = alloc_local_value(c, return_type);
+		else
+			return_value = alloc_local_pointer_value(c, return_type);
 	}
 
 	value_ptr alloc_local_value(context_ptr c, value_type_ptr type)
@@ -242,6 +291,33 @@ struct function {
 		frame_size_addr = bytes.size();
 		emit_long_placeholder();
 
+		// save args in locals
+		args_allocator regs;
+
+		// large or non-POD return type passes a pointer in the
+		// first argument
+		if (return_value->type->size == 0) {
+		} else if (return_value->type->size <= 8) {
+		} else {
+			auto reg = regs.next();
+			comment("move large retval to local");
+			emit_move_reg_to_mreg_offset(reg, RBP, return_value->local.offset);
+		}
+
+		for (auto arg_value: args_values) {
+			if (arg_value->type->size == 0) {
+			} else if (arg_value->type->size <= 8) {
+				emit_move(regs.next(), arg_value, 0);
+			} else {
+				comment("move large arg to local");
+
+				// argument is pointed-to
+				auto reg = regs.next();
+				assert(arg_value->type->size % 8 == 0);
+				emit_move_reg_to_mreg_offset(reg, RBP, arg_value->local.offset);
+			}
+		}
+
 		comment("end prologue");
 	}
 
@@ -250,6 +326,12 @@ struct function {
 		comment("epilogue");
 
 		overwrite_long(frame_size_addr, next_local_slot);
+
+		if (return_value->type->size == 0) {
+		} else if (return_value->type->size <= 8) {
+			emit_move(return_value, 0, RAX);
+		} else {
+		}
 
 		// addq $x, %rsp
 		emit_byte(0x48);
@@ -566,6 +648,55 @@ struct function {
 		default:
 			assert(false);
 			break;
+		}
+	}
+
+	void emit_call(value_ptr target, std::vector<value_ptr> args_values, value_ptr return_value)
+	{
+		// TODO: Try not to clobber the argument registers...
+		args_allocator regs;
+
+		assert(return_value);
+		if (return_value->type->size == 0) {
+		} else if (return_value->type->size <= 8) {
+		} else {
+			// TODO: handle other cases?
+			assert(return_value->storage_type == VALUE_LOCAL);
+
+			// Pass a pointer to our value
+			emit_move_reg_offset_to_reg(RBP, return_value->local.offset, regs.next());
+		}
+
+		for (auto arg_value: args_values) {
+			if (arg_value->type->size == 0) {
+			} else if (arg_value->type->size <= 8) {
+				emit_move(arg_value, 0, regs.next());
+			} else {
+				comment("move local to large arg");
+				switch (arg_value->storage_type) {
+				case VALUE_LOCAL:
+					emit_move_reg_offset_to_reg(RBP, arg_value->local.offset, regs.next());
+					break;
+				case VALUE_LOCAL_POINTER:
+					// TODO: Create a new temporary?
+					emit_move_mreg_offset_to_reg(RBP, arg_value->local.offset, regs.next());
+					break;
+				default:
+					// TODO
+					assert(false);
+					break;
+				}
+			}
+		}
+
+		emit_call(target);
+
+		assert(return_value);
+		if (return_value->type->size == 0) {
+		} else if (return_value->type->size <= 8) {
+			emit_move(RAX, return_value, 0);
+		} else {
+			// handled above
 		}
 	}
 

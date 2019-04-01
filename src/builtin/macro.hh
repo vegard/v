@@ -25,7 +25,7 @@
 #include "./fun.hh"
 #include "./value.hh"
 
-typedef value_ptr (*user_macro_fn_type)(compile_state_ptr state, ast_node_ptr);
+typedef value_ptr (*user_macro_fn_type)(compile_state_ptr state, ast_node_ptr node);
 
 // Macros defined by a program we're compiling
 struct user_macro: macro {

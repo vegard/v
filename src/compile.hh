@@ -296,7 +296,8 @@ static value_ptr eval(const compile_state &state, ast_node_ptr node)
 #endif
 
 	auto new_c = std::make_shared<context>(state.context);
-	auto new_f = std::make_shared<function>(true);
+	auto new_f = std::make_shared<function>(new_c, true, std::vector<value_type_ptr>(), builtin_type_void);
+
 	new_f->emit_prologue();
 
 	auto v = compile(state.set_function(new_c, new_f), node);

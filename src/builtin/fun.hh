@@ -71,32 +71,6 @@ struct return_macro: macro {
 	}
 };
 
-// TODO: abstract away ABI details
-
-static const machine_register regs[] = {
-	RDI, RSI, RDX, RCX, R8, R9,
-};
-
-struct args_allocator {
-	const compile_state &state;
-	const machine_register *it;
-
-	args_allocator(const compile_state &state):
-		state(state),
-		it(std::cbegin(regs))
-	{
-	}
-
-	machine_register next(ast_node_ptr node)
-	{
-		// TODO: use stack
-		if (it == std::cend(regs))
-			state.error(node, "out of registers");
-
-		return *(it++);
-	}
-};
-
 // _define inside functions always creates locals
 static value_ptr fun_define_macro(const compile_state &state, ast_node_ptr node)
 {
@@ -122,60 +96,34 @@ static value_ptr __construct_fun(value_type_ptr type, const compile_state &state
 {
 	auto c = state.context;
 
-	auto new_f = std::make_shared<function>(!state.objects);
+	auto &argument_types = type->argument_types;
+	auto &return_type = type->return_type;
 
-	new_f->emit_prologue();
+	auto new_f = std::make_shared<function>(c, !state.objects, argument_types, return_type);
+	auto new_scope = std::make_shared<scope>(state.scope);
 
-	value_type_ptr return_type = type->return_type;
-	value_ptr return_value;
 	label return_label;
-
-	args_allocator regs(state);
 
 	// TODO: use multiple regs or pass on stack
 	// AMD64 ABI: return types with non-trivial copy constructors or destructors are
 	// passed through a pointer in the first argument.
 	assert(return_type);
-	if (return_type->size <= sizeof(unsigned long)) {
-		return_value = new_f->alloc_local_value(c, return_type);
-	} else {
-		return_value = new_f->alloc_local_pointer_value(c, type->return_type);
-		new_f->emit_move_address(regs.next(node), return_value);
-	}
 
-	auto new_scope = std::make_shared<scope>(state.scope);
+	new_f->emit_prologue();
+
+	for (unsigned int i = 0; i < args.size(); ++i)
+		new_scope->define(new_f, node, args[i], new_f->args_values[i]);
+
 	new_scope->define_builtin_macro("_define", fun_define_macro);
-	new_scope->define_builtin_macro("return", std::make_shared<return_macro>(new_f, new_scope, return_type, return_value, return_label));
-
-	for (unsigned int i = 0; i < args.size(); ++i) {
-		auto arg_type = type->argument_types[i];
-		value_ptr arg_value;
-
-		if (arg_type->size <= sizeof(unsigned long)) {
-			arg_value = new_f->alloc_local_value(c, arg_type);
-			new_f->emit_move(regs.next(node), arg_value, 0);
-		} else {
-			arg_value = new_f->alloc_local_pointer_value(c, arg_type);
-			new_f->emit_move_address(regs.next(node), arg_value);
-		}
-
-		new_scope->define(new_f, node, args[i], arg_value);
-	}
+	new_scope->define_builtin_macro("return", std::make_shared<return_macro>(new_f, new_scope, return_type, new_f->return_value, return_label));
 
 	auto v = compile(state.set_function(new_f, new_scope), body_node);
 	auto v_type = v->type;
 	if (v_type != return_type)
 		state.error(node, "wrong return type for function");
 
-	new_f->emit_move(v, return_value);
-
+	new_f->emit_move(v, new_f->return_value);
 	new_f->emit_label(return_label);
-	if (return_type->size <= sizeof(unsigned long)) {
-		new_f->emit_move(return_value, 0, RAX);
-	} else {
-		new_f->emit_move_address(return_value, RAX);
-	}
-
 	new_f->link_label(return_label);
 	new_f->emit_epilogue();
 
@@ -245,8 +193,6 @@ static value_ptr __call_fun(const compile_state &state, value_ptr fn, ast_node_p
 	if (args.size() != type->argument_types.size())
 		state.error(node, "expected $ arguments; got $", type->argument_types.size(), args.size());
 
-	args_allocator regs(state);
-
 	auto return_type = type->return_type;
 	value_ptr return_value;
 	if (return_type == builtin_type_void)
@@ -254,12 +200,7 @@ static value_ptr __call_fun(const compile_state &state, value_ptr fn, ast_node_p
 	else
 		return_value = f->alloc_local_value(state.context, return_type);
 
-	// TODO: should really use a "non-trivial *structor" flag
-	if (return_type->size <= sizeof(unsigned long))
-		;
-	else
-		f->emit_move_address(return_value, regs.next(node));
-
+	std::vector<value_ptr> args_values;
 	for (unsigned int i = 0; i < args.size(); ++i) {
 		auto arg_node = args[i].first;
 		auto arg_value = args[i].second;
@@ -268,19 +209,10 @@ static value_ptr __call_fun(const compile_state &state, value_ptr fn, ast_node_p
 		if (arg_type != type->argument_types[i])
 			state.error(arg_node, "wrong argument type");
 
-		// TODO: should really use a "non-trivial *structor" flag
-		if (arg_type->size <= sizeof(unsigned long))
-			f->emit_move(arg_value, 0, regs.next(arg_node));
-		else
-			f->emit_move_address(arg_value, regs.next(arg_node));
+		args_values.push_back(arg_value);
 	}
 
-	f->emit_call(fn);
-
-	// TODO: should really use a "non-trivial *structor" flag
-	if (return_type->size > 0 && return_type->size <= sizeof(unsigned long))
-		f->emit_move(RAX, return_value, 0);
-
+	f->emit_call(fn, args_values, return_value);
 	return return_value;
 }
 

@@ -26,6 +26,11 @@
 #include "../value.hh"
 #include "../builtin/str.hh"
 
+// TODO: This is specific to the x86_64 backend.
+// TODO: We should probably make the backend itself define the 'asm' macro
+// so that it can have access to exactly the right values and call exactly
+// the right functions to emit the code that it needs to
+
 static auto builtin_type_asm_register = std::make_shared<value_type>(value_type {
 	.alignment = alignof(machine_register),
 	.size = sizeof(machine_register),
@@ -54,6 +59,10 @@ struct asm_assign_input_macro: macro {
 		if (dest_value->storage_type != VALUE_GLOBAL)
 			state.error(dest_node, "expected compile-time constant");
 
+		auto f = std::dynamic_pointer_cast<x86_64_function>(state.function);
+		if (!f)
+			state.error(node, "x86_64 inline asm used in non-x86_64 function");
+
 		// TODO: check that size matches register
 		assert(src_value->type->size == 8);
 
@@ -63,7 +72,7 @@ struct asm_assign_input_macro: macro {
 		assert(dest_reg != RBP);
 		assert(dest_reg != RSP);
 
-		state.function->emit_move(src_value, 0, dest_reg);
+		f->emit_move(src_value, 0, dest_reg);
 		return builtin_value_void;
 	}
 };
@@ -102,7 +111,11 @@ struct asm_mov_macro: macro {
 		if (dest_value->storage_type != VALUE_GLOBAL)
 			state.error(dest_node, "expected compile-time constant");
 
-		state.function->emit_move_reg_to_reg(*(machine_register *) src_value->global.host_address,
+		auto f = std::dynamic_pointer_cast<x86_64_function>(state.function);
+		if (!f)
+			state.error(node, "x86_64 inline asm used in non-x86_64 function");
+
+		f->emit_move_reg_to_reg(*(machine_register *) src_value->global.host_address,
 			*(machine_register *) dest_value->global.host_address);
 		return builtin_value_void;
 	}
@@ -114,8 +127,12 @@ struct asm_syscall_macro: macro {
 		if (node->type != AST_BRACKETS || state.source->tree.get(node->unop))
 			state.error(node, "expected ()");
 
-		state.function->emit_byte(0x0f);
-		state.function->emit_byte(0x05);
+		auto f = std::dynamic_pointer_cast<x86_64_function>(state.function);
+		if (!f)
+			state.error(node, "x86_64 inline asm used in non-x86_64 function");
+
+		f->emit_byte(0x0f);
+		f->emit_byte(0x05);
 		return builtin_value_void;
 	}
 };

@@ -99,7 +99,7 @@ static value_ptr __construct_fun(value_type_ptr type, const compile_state &state
 	auto &argument_types = type->argument_types;
 	auto &return_type = type->return_type;
 
-	auto new_f = std::make_shared<function>(c, !state.objects, argument_types, return_type);
+	auto new_f = std::make_shared<x86_64_function>(c, !state.objects, argument_types, return_type);
 	auto new_scope = std::make_shared<scope>(state.scope);
 
 	label return_label;

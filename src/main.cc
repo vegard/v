@@ -63,9 +63,9 @@ static void _print_u64(uint64_t x)
 	printf("%lu\n", x);
 }
 
-static void _print_str(const char *s)
+static void _print_str(std::string s)
 {
-	printf("%s\n", s);
+	printf("%s\n", s.c_str());
 }
 
 static value_ptr builtin_macro_print(const compile_state &state, ast_node_ptr node)
@@ -89,8 +89,7 @@ static value_ptr builtin_macro_print(const compile_state &state, ast_node_ptr no
 		// TODO: I think this only works by pure coincidence,
 		// the problem is we're passing (part of) a std::string as char *
 		state.use_value(node, arg);
-		state.function->emit_move(arg, 0, RDI);
-		state.function->emit_call(print_fn);
+		state.function->emit_call(print_fn, { arg }, builtin_value_void);
 	} else {
 		state.error(node, "expected value of type u64");
 	}
@@ -113,7 +112,7 @@ static auto builtin_value_namespace_lang = std::make_shared<value>(nullptr, VALU
 	})
 );
 
-static function_ptr compile_metaprogram(source_file_ptr source, ast_node_ptr root)
+static std::shared_ptr<x86_64_function> compile_metaprogram(source_file_ptr source, ast_node_ptr root)
 {
 	auto global_scope = std::make_shared<scope>();
 
@@ -155,7 +154,7 @@ static function_ptr compile_metaprogram(source_file_ptr source, ast_node_ptr roo
 	global_scope->define_builtin_macro("print", builtin_macro_print);
 
 	auto c = std::make_shared<context>(nullptr);
-	auto f = std::make_shared<function>(c, true, std::vector<value_type_ptr>(), builtin_type_void);
+	auto f = std::make_shared<x86_64_function>(c, true, std::vector<value_type_ptr>(), builtin_type_void);
 	f->emit_prologue();
 	compile(compile_state(source, c, f, global_scope), root);
 	f->emit_epilogue();
@@ -174,7 +173,7 @@ static bool compile_and_run(source_file_ptr source)
 		auto node = source->parse();
 		assert(node != -1);
 
-		function_ptr f;
+		std::shared_ptr<x86_64_function> f;
 
 		if (do_compile)
 			f = compile_metaprogram(source, source->tree.get(node));

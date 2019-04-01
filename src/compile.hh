@@ -45,7 +45,7 @@ struct compile_state {
 	function_ptr function;
 	scope_ptr scope;
 
-	compile_state(source_file_ptr &source, context_ptr &context, function_ptr &function, scope_ptr &scope):
+	compile_state(source_file_ptr &source, context_ptr &context, function_ptr function, scope_ptr &scope):
 		source(source),
 		context(context),
 		function(function),
@@ -90,7 +90,7 @@ struct compile_state {
 		return ret;
 	}
 
-	compile_state set_function(context_ptr &new_context, function_ptr &new_function) const
+	compile_state set_function(context_ptr &new_context, function_ptr new_function) const
 	{
 		auto ret = *this;
 		ret.context = new_context;
@@ -98,7 +98,7 @@ struct compile_state {
 		return ret;
 	}
 
-	compile_state set_function(function_ptr &new_function, scope_ptr &new_scope) const
+	compile_state set_function(function_ptr new_function, scope_ptr &new_scope) const
 	{
 		auto ret = *this;
 		ret.function = new_function;
@@ -238,7 +238,7 @@ static void disassemble(const uint8_t *buf, size_t len, uint64_t pc, const std::
 	printf("\e[0m\n");
 }
 
-static void *map(function_ptr f)
+static void *map(std::shared_ptr<x86_64_function> f)
 {
 	size_t length = (f->bytes.size() + 4095) & ~4095;
 	void *mem = mmap(NULL, length,
@@ -257,7 +257,7 @@ static void *map(function_ptr f)
 	return mem;
 }
 
-static void run(function_ptr f)
+static void run(std::shared_ptr<x86_64_function> f)
 {
 	void *mem = map(f);
 
@@ -296,7 +296,7 @@ static value_ptr eval(const compile_state &state, ast_node_ptr node)
 #endif
 
 	auto new_c = std::make_shared<context>(state.context);
-	auto new_f = std::make_shared<function>(new_c, true, std::vector<value_type_ptr>(), builtin_type_void);
+	auto new_f = std::make_shared<x86_64_function>(new_c, true, std::vector<value_type_ptr>(), builtin_type_void);
 
 	new_f->emit_prologue();
 

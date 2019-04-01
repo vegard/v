@@ -28,6 +28,139 @@ extern "C" {
 
 #include "value.hh"
 
+// There are many design decisions to make here:
+//  - How generic do we make labels/relocations?
+//  - Who is responsible for linking labels? (The caller, the label
+//    destructor, the function, etc.?)
+//  - If we already know a label's address, do we output it immediately
+//    instead of linking it at the end?
+
+struct jump_relocation {
+	unsigned int addr;
+	unsigned int offset;
+};
+
+struct label {
+	unsigned int addr;
+	std::vector<jump_relocation> relocations;
+};
+
+struct function;
+typedef std::shared_ptr<function> function_ptr;
+
+struct function
+{
+	std::vector<value_type_ptr> args_types;
+	value_type_ptr return_type;
+
+	std::vector<value_ptr> args_values;
+	value_ptr return_value;
+
+	function(std::vector<value_type_ptr> args_types, value_type_ptr return_type):
+		args_types(args_types),
+		return_type(return_type)
+	{
+	}
+
+	virtual ~function()
+	{
+	}
+
+	virtual value_ptr alloc_local_value(context_ptr c, value_type_ptr type) = 0;
+
+	void not_implemented(const char *file, unsigned int line, const char *func)
+	{
+		fprintf(stderr, "%s:%u: not implemented: %s\n",
+			file, line, func);
+	}
+
+	#define NOT_IMPLEMENTED not_implemented(__FILE__, __LINE__, __func__)
+
+	virtual void comment(std::string s)
+	{
+	}
+
+	virtual void enter()
+	{
+	}
+
+	virtual void leave()
+	{
+	}
+
+	virtual void emit_prologue()
+	{
+	}
+
+	virtual void emit_epilogue()
+	{
+	}
+
+	virtual void emit_move(value_ptr source, value_ptr dest)
+	{
+	}
+
+	virtual void emit_eq(uint8_t opcode, value_ptr source1, value_ptr source2, value_ptr dest)
+	{
+	}
+
+	enum {
+		// sete
+		CMP_EQ = 0x94,
+		// setne
+		CMP_NEQ = 0x95,
+		// setb
+		CMP_LESS = 0x92,
+		// setbe
+		CMP_LESS_EQUAL = 0x96,
+		// seta
+		CMP_GREATER = 0x97,
+		// setae
+		CMP_GREATER_EQUAL= 0x93,
+	};
+
+	template<uint8_t opcode>
+	void emit_eq(value_ptr source1, value_ptr source2, value_ptr dest)
+	{
+		emit_eq(opcode, source1, source2, dest);
+	}
+
+	virtual void emit_label(label &lab)
+	{
+	}
+
+	virtual void link_label(const label &l)
+	{
+	}
+
+	virtual void emit_jump_if_zero(value_ptr value, label &target)
+	{
+	}
+
+	virtual void emit_jump(label &lab)
+	{
+	}
+
+	virtual void emit_call(value_ptr target, std::vector<value_ptr> args_values, value_ptr return_value)
+	{
+	}
+
+	virtual void emit_add(value_ptr source1, value_ptr source2, value_ptr dest)
+	{
+	}
+
+	virtual void emit_sub(value_ptr source1, value_ptr source2, value_ptr dest)
+	{
+	}
+
+	virtual void run()
+	{
+		abort();
+	}
+};
+
+// TODO: arch-specific
+
 // Instruction encoding
 
 enum machine_register {
@@ -56,7 +189,6 @@ const unsigned int REX_X = 0x02;
 const unsigned int REX_R = 0x04;
 const unsigned int REX_W = 0x08;
 
-// TODO: arch-specific
 // TODO: abstract away ABI details
 
 static const machine_register regs[] = {
@@ -79,33 +211,10 @@ struct args_allocator {
 	}
 };
 
-// There are many design decisions to make here:
-//  - How generic do we make labels/relocations?
-//  - Who is responsible for linking labels? (The caller, the label
-//    destructor, the function, etc.?)
-//  - If we already know a label's address, do we output it immediately
-//    instead of linking it at the end?
-
-struct jump_relocation {
-	unsigned int addr;
-	unsigned int offset;
-};
-
-struct label {
-	unsigned int addr;
-	std::vector<jump_relocation> relocations;
-};
-
-struct function;
-typedef std::shared_ptr<function> function_ptr;
-
-struct function {
+struct x86_64_function:
+	function
+{
 	bool host;
-	std::vector<value_type_ptr> args_types;
-	value_type_ptr return_type;
-
-	std::vector<value_ptr> args_values;
-	value_ptr return_value;
 
 	// XXX: the double indirection is bad, we should collect bytes
 	// ourselves directly and then move it into the object at the end
@@ -120,10 +229,9 @@ struct function {
 
 	unsigned int next_local_slot;
 
-	explicit function(context_ptr c, bool host, std::vector<value_type_ptr> args_types, value_type_ptr return_type):
+	explicit x86_64_function(context_ptr c, bool host, std::vector<value_type_ptr> args_types, value_type_ptr return_type):
+		function(args_types, return_type),
 		host(host),
-		args_types(args_types),
-		return_type(return_type),
 		this_object(std::make_shared<object>()),
 		bytes(this_object->bytes),
 		indentation(0),
@@ -152,6 +260,10 @@ struct function {
 			return_value = alloc_local_value(c, return_type);
 		else
 			return_value = alloc_local_pointer_value(c, return_type);
+	}
+
+	~x86_64_function()
+	{
 	}
 
 	value_ptr alloc_local_value(context_ptr c, value_type_ptr type)
@@ -543,23 +655,7 @@ struct function {
 		emit_cmp_reg_reg(RAX, RBX);
 	}
 
-	enum {
-		// sete
-		CMP_EQ = 0x94,
-		// setne
-		CMP_NEQ = 0x95,
-		// setb
-		CMP_LESS = 0x92,
-		// setbe
-		CMP_LESS_EQUAL = 0x96,
-		// seta
-		CMP_GREATER = 0x97,
-		// setae
-		CMP_GREATER_EQUAL= 0x93,
-	};
-
-	template<uint8_t opcode>
-	void emit_eq(value_ptr source1, value_ptr source2, value_ptr dest)
+	void emit_eq(uint8_t opcode, value_ptr source1, value_ptr source2, value_ptr dest)
 	{
 		emit_compare(source1, source2);
 
@@ -583,6 +679,12 @@ struct function {
 	void emit_label(label &lab)
 	{
 		lab.addr = bytes.size();
+	}
+
+	void link_label(const label &l)
+	{
+		for (const jump_relocation &r: l.relocations)
+			overwrite_long(r.addr, l.addr - (r.addr + r.offset));
 	}
 
 	void emit_jump(label &lab)
@@ -674,6 +776,9 @@ struct function {
 			} else {
 				comment("move local to large arg");
 				switch (arg_value->storage_type) {
+				case VALUE_GLOBAL:
+					emit_move_imm_to_reg((uint64_t) arg_value->global.host_address, regs.next());
+					break;
 				case VALUE_LOCAL:
 					emit_move_reg_offset_to_reg(RBP, arg_value->local.offset, regs.next());
 					break;
@@ -732,12 +837,6 @@ struct function {
 		emit_byte(0x29);
 		emit_byte(0xd8);
 		emit_move(RAX, dest, 0);
-	}
-
-	void link_label(const label &l)
-	{
-		for (const jump_relocation &r: l.relocations)
-			overwrite_long(r.addr, l.addr - (r.addr + r.offset));
 	}
 };
 

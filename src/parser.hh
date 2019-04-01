@@ -184,7 +184,6 @@ void parser::skip_whitespace_and_comments(unsigned int &pos)
 int parser::parse_literal_integer(unsigned int &pos)
 {
 	unsigned int i = pos;
-	unsigned int base = 10;
 
 	// TODO: this rejects hex digits, but if we use isxdigit() it
 	// will consume non-numbers
@@ -200,16 +199,12 @@ int parser::parse_literal_integer(unsigned int &pos)
 
 	if (i < len) {
 		if (buf[i] == 'b') {
-			base = 2;
 			++i;
 		} else if (buf[i] == 'h') {
-			base = 16;
 			++i;
 		} else if (buf[i] == 'o') {
-			base = 8;
 			++i;
 		} else if (buf[i] == 'd') {
-			base = 10;
 			++i;
 		}
 	}

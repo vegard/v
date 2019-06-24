@@ -29,9 +29,9 @@
 struct break_macro: macro {
 	function_ptr f;
 	scope_ptr s;
-	label &done_label;
+	label_ptr done_label;
 
-	break_macro(function_ptr f, scope_ptr s, label &done_label):
+	break_macro(function_ptr f, scope_ptr s, label_ptr done_label):
 		f(f),
 		s(s),
 		done_label(done_label)
@@ -58,9 +58,9 @@ struct break_macro: macro {
 struct continue_macro: macro {
 	function_ptr f;
 	scope_ptr s;
-	label &loop_label;
+	label_ptr loop_label;
 
-	continue_macro(function_ptr f, scope_ptr s, label &loop_label):
+	continue_macro(function_ptr f, scope_ptr s, label_ptr loop_label):
 		f(f),
 		s(s),
 		loop_label(loop_label)
@@ -98,7 +98,7 @@ static value_ptr builtin_macro_while(const compile_state &state, ast_node_ptr no
 	auto condition_node = state.get_node(node->binop.lhs);
 	auto body_node = state.get_node(node->binop.rhs);
 
-	label loop_label;
+	auto loop_label = f->new_label();
 	f->emit_label(loop_label);
 
 	// condition
@@ -106,7 +106,7 @@ static value_ptr builtin_macro_while(const compile_state &state, ast_node_ptr no
 	if (condition_value->type != builtin_type_boolean)
 		state.error(condition_node, "'while' condition must be boolean");
 
-	label done_label;
+	auto done_label = f->new_label();
 	f->emit_jump_if_zero(condition_value, done_label);
 
 	// body

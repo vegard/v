@@ -81,7 +81,7 @@ static value_ptr builtin_macro_if(const compile_state &state, ast_node_ptr node)
 	if (condition_value->type != builtin_type_boolean)
 		state.error(condition_node, "'if' condition must be boolean");
 
-	label false_label;
+	auto false_label = f->new_label();
 	f->emit_jump_if_zero(condition_value, false_label);
 
 	// "if" block
@@ -91,7 +91,7 @@ static value_ptr builtin_macro_if(const compile_state &state, ast_node_ptr node)
 		f->emit_move(true_value, return_value);
 	}
 
-	label end_label;
+	auto end_label = f->new_label();
 	f->emit_jump(end_label);
 
 	// "else" block

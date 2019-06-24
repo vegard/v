@@ -33,9 +33,9 @@ struct return_macro: macro {
 	scope_ptr s;
 	value_type_ptr return_type;
 	value_ptr return_value;
-	label &return_label;
+	label_ptr return_label;
 
-	return_macro(function_ptr f, scope_ptr s, value_type_ptr return_type, value_ptr return_value, label &return_label):
+	return_macro(function_ptr f, scope_ptr s, value_type_ptr return_type, value_ptr return_value, label_ptr return_label):
 		f(f),
 		s(s),
 		return_type(return_type),
@@ -102,7 +102,7 @@ static value_ptr __construct_fun(value_type_ptr type, const compile_state &state
 	auto new_f = std::make_shared<x86_64_function>(c, !state.objects, argument_types, return_type);
 	auto new_scope = std::make_shared<scope>(state.scope);
 
-	label return_label;
+	auto return_label = new_f->new_label();
 
 	// TODO: use multiple regs or pass on stack
 	// AMD64 ABI: return types with non-trivial copy constructors or destructors are

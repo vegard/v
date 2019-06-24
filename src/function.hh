@@ -26,24 +26,16 @@ extern "C" {
 #include <map>
 #include <memory>
 
+#include "format.hh"
 #include "value.hh"
 
-// There are many design decisions to make here:
-//  - How generic do we make labels/relocations?
-//  - Who is responsible for linking labels? (The caller, the label
-//    destructor, the function, etc.?)
-//  - If we already know a label's address, do we output it immediately
-//    instead of linking it at the end?
-
-struct jump_relocation {
-	unsigned int addr;
-	unsigned int offset;
-};
-
 struct label {
-	unsigned int addr;
-	std::vector<jump_relocation> relocations;
+	virtual ~label()
+	{
+	}
 };
+
+typedef std::shared_ptr<label> label_ptr;
 
 struct function;
 typedef std::shared_ptr<function> function_ptr;
@@ -125,19 +117,21 @@ struct function
 		emit_eq(opcode, source1, source2, dest);
 	}
 
-	virtual void emit_label(label &lab)
+	virtual label_ptr new_label() = 0;
+
+	virtual void emit_label(label_ptr)
 	{
 	}
 
-	virtual void link_label(const label &l)
+	virtual void link_label(label_ptr)
 	{
 	}
 
-	virtual void emit_jump_if_zero(value_ptr value, label &target)
+	virtual void emit_jump_if_zero(value_ptr value, label_ptr target)
 	{
 	}
 
-	virtual void emit_jump(label &lab)
+	virtual void emit_jump(label_ptr target)
 	{
 	}
 
@@ -209,6 +203,16 @@ struct args_allocator {
 		assert(it != std::cend(regs));
 		return *(it++);
 	}
+};
+
+struct x86_64_jump_relocation {
+	unsigned int addr;
+	unsigned int offset;
+};
+
+struct x86_64_label: label {
+	unsigned int addr;
+	std::vector<x86_64_jump_relocation> relocations;
 };
 
 struct x86_64_function:
@@ -676,33 +680,42 @@ struct x86_64_function:
 		emit_move(RAX, dest, 0);
 	}
 
-	void emit_label(label &lab)
+	label_ptr new_label()
 	{
-		lab.addr = bytes.size();
+		return std::make_shared<x86_64_label>();
 	}
 
-	void link_label(const label &l)
+	void emit_label(label_ptr super_label)
 	{
-		for (const jump_relocation &r: l.relocations)
-			overwrite_long(r.addr, l.addr - (r.addr + r.offset));
+		auto l = std::dynamic_pointer_cast<x86_64_label>(super_label);
+		l->addr = bytes.size();
 	}
 
-	void emit_jump(label &lab)
+	void link_label(label_ptr super_label)
 	{
+		auto l = std::dynamic_pointer_cast<x86_64_label>(super_label);
+		for (const auto &r: l->relocations)
+			overwrite_long(r.addr, l->addr - (r.addr + r.offset));
+	}
+
+	void emit_jump(label_ptr super_label)
+	{
+		auto l = std::dynamic_pointer_cast<x86_64_label>(super_label);
 		emit_byte(0xe9);
-		lab.relocations.push_back({ (unsigned int) bytes.size(), 4 });
+		l->relocations.push_back({ (unsigned int) bytes.size(), 4 });
 		emit_long_placeholder();
 	}
 
-	void emit_jump_if_zero(label &lab)
+	void emit_jump_if_zero(label_ptr super_label)
 	{
+		auto l = std::dynamic_pointer_cast<x86_64_label>(super_label);
 		emit_byte(0x0f);
 		emit_byte(0x84);
-		lab.relocations.push_back({ (unsigned int) bytes.size(), 4 });
+		l->relocations.push_back({ (unsigned int) bytes.size(), 4 });
 		emit_long_placeholder();
 	}
 
-	void emit_jump_if_zero(value_ptr value, label &target)
+	void emit_jump_if_zero(value_ptr value, label_ptr super_target)
 	{
 		emit_move(value, 0, RAX);
 
@@ -712,7 +725,7 @@ struct x86_64_function:
 		emit_byte(0xf8);
 		emit_byte(0x00);
 
-		emit_jump_if_zero(target);
+		emit_jump_if_zero(super_target);
 	}
 
 	void emit_call(machine_register target)

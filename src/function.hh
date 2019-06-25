@@ -88,9 +88,7 @@ struct function
 	{
 	}
 
-	virtual void emit_move(value_ptr source, value_ptr dest)
-	{
-	}
+	virtual void emit_move(value_ptr source, value_ptr dest) = 0;
 
 	virtual void emit_eq(uint8_t opcode, value_ptr source1, value_ptr source2, value_ptr dest)
 	{

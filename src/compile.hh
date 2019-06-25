@@ -25,6 +25,7 @@
 
 #include "ast.hh"
 #include "ast_serializer.hh"
+#include "bytecode.hh"
 #include "compile_error.hh"
 #include "format.hh"
 #include "function.hh"
@@ -287,6 +288,12 @@ static void run(std::shared_ptr<x86_64_function> f)
 	munmap(mem, length);
 }
 
+static void run(std::shared_ptr<bytecode_function> f)
+{
+
+	run(&f->constants[0], &f->bytes[0], nullptr, 0);
+}
+
 static value_ptr eval(const compile_state &state, ast_node_ptr node)
 {
 #if 0
@@ -296,7 +303,7 @@ static value_ptr eval(const compile_state &state, ast_node_ptr node)
 #endif
 
 	auto new_c = std::make_shared<context>(state.context);
-	auto new_f = std::make_shared<x86_64_function>(new_c, true, std::vector<value_type_ptr>(), builtin_type_void);
+	auto new_f = std::make_shared<bytecode_function>(new_c, true, std::vector<value_type_ptr>(), builtin_type_void);
 
 	new_f->emit_prologue();
 
@@ -318,7 +325,14 @@ static value_ptr eval(const compile_state &state, ast_node_ptr node)
 
 	new_f->emit_epilogue();
 
+	if (global_disassemble) {
+		printf("eval:\n");
+		disassemble_bytecode(&new_f->constants[0], &new_f->bytes[0], new_f->bytes.size(), new_f->this_object->comments);
+		printf("\n");
+	}
+
 	run(new_f);
+
 	return ret;
 }
 

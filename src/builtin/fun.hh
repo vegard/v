@@ -136,13 +136,6 @@ static value_ptr __construct_fun(value_type_ptr type, const compile_state &state
 	if (state.objects) {
 		// target
 		auto x86_64_f = std::dynamic_pointer_cast<x86_64_function>(new_f);
-
-		if (global_disassemble) {
-			printf("target fun:\n");
-			disassemble((const uint8_t *) &x86_64_f->bytes[0], x86_64_f->bytes.size(), 0, x86_64_f->this_object->comments);
-			printf("\n");
-		}
-
 		return std::make_shared<value>(nullptr, type, state.new_object(x86_64_f->this_object));
 	} else {
 		// host

@@ -21,8 +21,6 @@
 
 #include <gmpxx.h>
 
-#include "libudis86/extern.h"
-
 #include "ast.hh"
 #include "ast_serializer.hh"
 #include "bytecode.hh"
@@ -205,40 +203,6 @@ struct compile_state {
 
 static value_ptr compile(const compile_state &state, ast_node_ptr node);
 
-static void disassemble(const uint8_t *buf, size_t len, uint64_t pc, const std::vector<comment> &comments)
-{
-	ud_t u;
-	ud_init(&u);
-	ud_set_input_buffer(&u, buf, len);
-	ud_set_mode(&u, 64);
-	ud_set_pc(&u, pc);
-	ud_set_syntax(&u, UD_SYN_ATT);
-
-	printf("Disassembly at 0x%08lx:\n", pc);
-
-	auto comments_it = comments.begin();
-	auto comments_end = comments.end();
-
-	unsigned int indentation = 0;
-	while (ud_disassemble(&u)) {
-		uint64_t offset = ud_insn_off(&u) - pc;
-
-		while (comments_it != comments_end) {
-			const auto &c = *comments_it;
-			if (c.offset > offset)
-				break;
-
-			indentation = c.indentation;
-			printf("\e[33m%4s//%*.s %s\n", "", 2 * indentation, "", c.text.c_str());
-			++comments_it;
-		}
-
-		printf("\e[0m %4lx: %*.s%s\n", offset, 2 * indentation, "", ud_insn_asm(&u));
-	}
-
-	printf("\e[0m\n");
-}
-
 #if 0 // not needed when we can run bytecode
 static void *map(std::shared_ptr<x86_64_function> f)
 {
@@ -262,9 +226,6 @@ static void *map(std::shared_ptr<x86_64_function> f)
 static void run(std::shared_ptr<x86_64_function> f)
 {
 	void *mem = map(f);
-
-	if (global_disassemble)
-		disassemble((const uint8_t *) mem, f->bytes.size(), (uint64_t) mem, f->this_object->comments);
 
 	// TODO: ABI
 	auto ret = f->return_value;

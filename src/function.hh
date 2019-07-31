@@ -42,6 +42,15 @@ typedef std::shared_ptr<function> function_ptr;
 
 struct function
 {
+	enum compare_op {
+		CMP_EQ,
+		CMP_NEQ,
+		CMP_LESS,
+		CMP_LESS_EQUAL,
+		CMP_GREATER,
+		CMP_GREATER_EQUAL,
+	};
+
 	std::vector<value_type_ptr> args_types;
 	value_type_ptr return_type;
 
@@ -90,22 +99,7 @@ struct function
 
 	virtual void emit_move(value_ptr source, value_ptr dest) = 0;
 
-	enum {
-		// sete
-		CMP_EQ = 0x94,
-		// setne
-		CMP_NEQ = 0x95,
-		// setb
-		CMP_LESS = 0x92,
-		// setbe
-		CMP_LESS_EQUAL = 0x96,
-		// seta
-		CMP_GREATER = 0x97,
-		// setae
-		CMP_GREATER_EQUAL= 0x93,
-	};
-
-	virtual void emit_eq(uint8_t opcode, value_ptr source1, value_ptr source2, value_ptr dest)
+	virtual void emit_compare(compare_op op, value_ptr source1, value_ptr source2, value_ptr dest)
 	{
 		assert(false);
 	}
@@ -656,13 +650,29 @@ struct x86_64_function:
 		emit_cmp_reg_reg(RAX, RBX);
 	}
 
-	void emit_eq(uint8_t opcode, value_ptr source1, value_ptr source2, value_ptr dest)
+	void emit_compare(compare_op op, value_ptr source1, value_ptr source2, value_ptr dest)
 	{
+		static const uint8_t opcodes[] = {
+			// sete
+			[CMP_EQ] = 0x94,
+			// setne
+			[CMP_NEQ] = 0x95,
+			// setb
+			[CMP_LESS] = 0x92,
+			// setbe
+			[CMP_LESS_EQUAL] = 0x96,
+			// seta
+			[CMP_GREATER] = 0x97,
+			// setae
+			[CMP_GREATER_EQUAL] = 0x93,
+		};
+
 		emit_compare(source1, source2);
 
 		// set[n]e %al
+		assert(op < sizeof(opcodes) / sizeof(*opcodes));
 		emit_byte(0x0f);
-		emit_byte(opcode);
+		emit_byte(opcodes[op]);
 		emit_byte(0xc0);
 
 		// bools are size 8 for now, just to simplify things

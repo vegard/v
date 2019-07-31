@@ -563,33 +563,22 @@ struct bytecode_function:
 		}
 	}
 
-	void emit_eq(uint8_t opcode, value_ptr source1, value_ptr source2, value_ptr dest)
+	void emit_compare(compare_op op, value_ptr source1, value_ptr source2, value_ptr dest)
 	{
+		static const uint8_t opcodes[] = {
+			[CMP_EQ] = EQ,
+			[CMP_NEQ] = NEQ,
+			[CMP_LESS] = LT,
+			[CMP_LESS_EQUAL] = LTE,
+			[CMP_GREATER] = GT,
+			[CMP_GREATER_EQUAL] = GTE,
+		};
+
 		emit_load(source1);
 		emit_load(source2);
 
-		switch (opcode) {
-		case CMP_EQ:
-			emit(EQ);
-			break;
-		case CMP_NEQ:
-			emit(NEQ);
-			break;
-		case CMP_LESS:
-			emit(LT);
-			break;
-		case CMP_LESS_EQUAL:
-			emit(LTE);
-			break;
-		case CMP_GREATER:
-			emit(GT);
-			break;
-		case CMP_GREATER_EQUAL:
-			emit(GTE);
-			break;
-		default:
-			assert(false);
-		}
+		assert(op < sizeof(opcodes) / sizeof(*opcodes));
+		emit(opcodes[op]);
 
 		emit_store(dest);
 	}

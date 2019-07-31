@@ -103,7 +103,7 @@ static value_ptr builtin_type_u64_less(const compile_state &state, value_ptr lhs
 		state.error(node, "expected u64");
 
 	auto ret = state.function->alloc_local_value(state.context, builtin_type_boolean);
-	state.function->emit_eq(function::CMP_LESS, lhs, rhs, ret);
+	state.function->emit_compare(function::CMP_LESS, lhs, rhs, ret);
 	return ret;
 }
 

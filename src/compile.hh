@@ -239,6 +239,7 @@ static void disassemble(const uint8_t *buf, size_t len, uint64_t pc, const std::
 	printf("\e[0m\n");
 }
 
+#if 0 // not needed when we can run bytecode
 static void *map(std::shared_ptr<x86_64_function> f)
 {
 	size_t length = (f->bytes.size() + 4095) & ~4095;
@@ -287,6 +288,7 @@ static void run(std::shared_ptr<x86_64_function> f)
 	size_t length = (f->bytes.size() + 4095) & ~4095;
 	munmap(mem, length);
 }
+#endif
 
 static void run(std::shared_ptr<bytecode_function> f)
 {

@@ -88,7 +88,7 @@ struct value_type {
 	// TODO
 	value_ptr (*constructor)(value_type_ptr, const compile_state &, ast_node_ptr);
 
-	// Operators
+	// Callable
 	std::vector<value_type_ptr> argument_types;
 	value_type_ptr return_type;
 

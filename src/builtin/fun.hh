@@ -99,7 +99,13 @@ static value_ptr __construct_fun(value_type_ptr type, const compile_state &state
 	auto &argument_types = type->argument_types;
 	auto &return_type = type->return_type;
 
-	auto new_f = std::make_shared<x86_64_function>(c, !state.objects, argument_types, return_type);
+	// TODO: this is a bit ugly, especially with the downcasting afterwards
+	function_ptr new_f;
+	if (state.objects)
+		new_f = std::make_shared<x86_64_function>(c, !state.objects, argument_types, return_type);
+	else
+		new_f = std::make_shared<bytecode_function>(c, !state.objects, argument_types, return_type);
+
 	auto new_scope = std::make_shared<scope>(state.scope);
 
 	auto return_label = new_f->new_label();
@@ -129,26 +135,34 @@ static value_ptr __construct_fun(value_type_ptr type, const compile_state &state
 
 	if (state.objects) {
 		// target
-		return std::make_shared<value>(nullptr, type, state.new_object(new_f->this_object));
+		auto x86_64_f = std::dynamic_pointer_cast<x86_64_function>(new_f);
+
+		if (global_disassemble) {
+			printf("target fun:\n");
+			disassemble((const uint8_t *) &x86_64_f->bytes[0], x86_64_f->bytes.size(), 0, x86_64_f->this_object->comments);
+			printf("\n");
+		}
+
+		return std::make_shared<value>(nullptr, type, state.new_object(x86_64_f->this_object));
 	} else {
 		// host
+		auto bytecode_f = std::dynamic_pointer_cast<bytecode_function>(new_f);
 
 		// We need this to keep the new function from getting freed when this
 		// function returns.
 		// TODO: Another solution?
 		static std::set<function_ptr> functions;
-		functions.insert(new_f);
+		functions.insert(bytecode_f);
 
 		auto ret = std::make_shared<value>(nullptr, VALUE_GLOBAL, type);
-		void *mem = map(new_f);
+		auto jf = new jit_function(bytecode_f);
+		ret->global.host_address = new void *(jf);
 
-		// XXX: why the indirection? I forgot why I did it this way.
-		auto global = new void *;
-		*global = mem;
-		ret->global.host_address = (void *) global;
-
-		if (global_disassemble)
-			disassemble((const uint8_t *) mem, new_f->bytes.size(), (uint64_t) mem, new_f->this_object->comments);
+		if (global_disassemble) {
+			printf("host fun: %p\n", jf);
+			disassemble_bytecode(&bytecode_f->constants[0], &bytecode_f->bytes[0], bytecode_f->bytes.size(), bytecode_f->this_object->comments);
+			printf("\n");
+		}
 
 		return ret;
 	}
@@ -183,7 +197,7 @@ static value_ptr _construct_fun(value_type_ptr type, const compile_state &state,
 }
 
 // Low-level helper (for use after data has been extracted from syntax)
-static value_ptr __call_fun(const compile_state &state, value_ptr fn, ast_node_ptr node, std::vector<std::pair<ast_node_ptr, value_ptr>> args)
+static value_ptr __call_fun(const compile_state &state, value_ptr fn, ast_node_ptr node, std::vector<std::pair<ast_node_ptr, value_ptr>> args, bool c_call)
 {
 	auto f = state.function;
 
@@ -212,7 +226,11 @@ static value_ptr __call_fun(const compile_state &state, value_ptr fn, ast_node_p
 		args_values.push_back(arg_value);
 	}
 
-	f->emit_call(fn, args_values, return_value);
+	if (c_call)
+		f->emit_c_call(fn, args_values, return_value);
+	else
+		f->emit_call(fn, args_values, return_value);
+
 	return return_value;
 }
 
@@ -225,7 +243,7 @@ static value_ptr _call_fun(const compile_state &state, value_ptr fn, ast_node_pt
 	for (auto arg_node: traverse<AST_COMMA>(state.source->tree, state.get_node(node->unop)))
 		args.push_back(std::make_pair(arg_node, compile(state, arg_node)));
 
-	return __call_fun(state, fn, node, args);
+	return __call_fun(state, fn, node, args, false);
 }
 
 // Low-level helper (for use after data has been extracted from syntax)

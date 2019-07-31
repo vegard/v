@@ -58,13 +58,15 @@ extern "C" {
 #include "scope.hh"
 #include "value.hh"
 
-static void _print_u64(uint64_t x)
+static void _print_u64(uint64_t *args)
 {
+	auto x = args[0];
 	printf("%lu\n", x);
 }
 
-static void _print_str(std::string s)
+static void _print_str(uint64_t *args)
 {
+	auto s = *(std::string *) args[0];
 	printf("%s\n", s.c_str());
 }
 
@@ -73,23 +75,19 @@ static value_ptr builtin_macro_print(const compile_state &state, ast_node_ptr no
 	// TODO: save registers
 	auto arg = compile(state, node);
 	if (arg->type == builtin_type_u64) {
-		auto print_fn = std::make_shared<value>(state.context, VALUE_GLOBAL, builtin_type_u64);
-		auto global = new void *;
-		*global = (void *) &_print_u64;
-		print_fn->global.host_address = (void *) global;
+		auto print_fn = std::make_shared<value>(state.context, VALUE_CONSTANT, builtin_type_u64);
+		print_fn->constant.u64 = (uint64_t) &_print_u64;
 
 		state.use_value(node, arg);
-		state.function->emit_call(print_fn, { arg }, builtin_value_void);
+		state.function->emit_c_call(print_fn, { arg }, builtin_value_void);
 	} else if (arg->type == builtin_type_str) {
-		auto print_fn = std::make_shared<value>(state.context, VALUE_GLOBAL, builtin_type_str);
-		auto global = new void *;
-		*global = (void *) &_print_str;
-		print_fn->global.host_address = (void *) global;
+		auto print_fn = std::make_shared<value>(state.context, VALUE_CONSTANT, builtin_type_u64);
+		print_fn->constant.u64 = (uint64_t) &_print_str;
 
 		// TODO: I think this only works by pure coincidence,
 		// the problem is we're passing (part of) a std::string as char *
 		state.use_value(node, arg);
-		state.function->emit_call(print_fn, { arg }, builtin_value_void);
+		state.function->emit_c_call(print_fn, { arg }, builtin_value_void);
 	} else {
 		state.error(node, "expected value of type u64");
 	}
@@ -112,7 +110,7 @@ static auto builtin_value_namespace_lang = std::make_shared<value>(nullptr, VALU
 	})
 );
 
-static std::shared_ptr<x86_64_function> compile_metaprogram(source_file_ptr source, ast_node_ptr root)
+static std::shared_ptr<bytecode_function> compile_metaprogram(source_file_ptr source, ast_node_ptr root)
 {
 	auto global_scope = std::make_shared<scope>();
 
@@ -154,7 +152,7 @@ static std::shared_ptr<x86_64_function> compile_metaprogram(source_file_ptr sour
 	global_scope->define_builtin_macro("print", builtin_macro_print);
 
 	auto c = std::make_shared<context>(nullptr);
-	auto f = std::make_shared<x86_64_function>(c, true, std::vector<value_type_ptr>(), builtin_type_void);
+	auto f = std::make_shared<bytecode_function>(c, true, std::vector<value_type_ptr>(), builtin_type_void);
 	f->emit_prologue();
 	compile(compile_state(source, c, f, global_scope), root);
 	f->emit_epilogue();
@@ -173,7 +171,7 @@ static bool compile_and_run(source_file_ptr source)
 		auto node = source->parse();
 		assert(node != -1);
 
-		std::shared_ptr<x86_64_function> f;
+		std::shared_ptr<bytecode_function> f;
 
 		if (do_compile)
 			f = compile_metaprogram(source, source->tree.get(node));
@@ -181,6 +179,12 @@ static bool compile_and_run(source_file_ptr source)
 		if (do_dump_ast) {
 			ast_serializer(source).serialize(std::cout, source->tree.get(node));
 			std::cout << std::endl;
+		}
+
+		if (global_disassemble) {
+			printf("metaprogram:\n");
+			disassemble_bytecode(&f->constants[0], &f->bytes[0], f->bytes.size(), f->this_object->comments);
+			printf("\n");
 		}
 
 		if (do_compile && do_run)

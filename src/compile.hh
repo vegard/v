@@ -290,8 +290,7 @@ static void run(std::shared_ptr<x86_64_function> f)
 
 static void run(std::shared_ptr<bytecode_function> f)
 {
-
-	run(&f->constants[0], &f->bytes[0], nullptr, 0);
+	run_bytecode(&f->constants[0], &f->bytes[0], nullptr, 0);
 }
 
 static value_ptr eval(const compile_state &state, ast_node_ptr node)

@@ -25,8 +25,6 @@
 #include "./fun.hh"
 #include "./value.hh"
 
-typedef value_ptr (*user_macro_fn_type)(compile_state_ptr state, ast_node_ptr node);
-
 // Macros defined by a program we're compiling
 struct user_macro: macro {
 	value_ptr fn_value;
@@ -40,7 +38,7 @@ struct user_macro: macro {
 	value_ptr invoke(const compile_state &state, ast_node_ptr node)
 	{
 		assert(fn_value->storage_type == VALUE_GLOBAL);
-		auto fn = *(user_macro_fn_type *) fn_value->global.host_address;
+		auto fn = *(jit_function **) fn_value->global.host_address;
 
 		// NOTE: it's easier for us to pass a shared_ptr to compiled
 		// code, that's why we create one here (from a copy of the
@@ -50,8 +48,18 @@ struct user_macro: macro {
 		// proper pointers.
 		auto new_state = std::make_shared<compile_state>(state);
 
-		// XXX: why the indirection? I forgot why I did it this way.
-		return (*fn)(new_state, node);
+		value_ptr result;
+		uint64_t args[] = {
+			// XXX: uint64 vs. unsigned long?
+			(uint64_t) &result,
+			(uint64_t) &new_state,
+			(uint64_t) node,
+		};
+
+		run_bytecode(&fn->constants[0], &fn->bytecode[0], &args[0], sizeof(args) / sizeof(*args));
+
+		assert(result);
+		return result;
 	}
 };
 

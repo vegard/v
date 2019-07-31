@@ -90,10 +90,6 @@ struct function
 
 	virtual void emit_move(value_ptr source, value_ptr dest) = 0;
 
-	virtual void emit_eq(uint8_t opcode, value_ptr source1, value_ptr source2, value_ptr dest)
-	{
-	}
-
 	enum {
 		// sete
 		CMP_EQ = 0x94,
@@ -109,10 +105,9 @@ struct function
 		CMP_GREATER_EQUAL= 0x93,
 	};
 
-	template<uint8_t opcode>
-	void emit_eq(value_ptr source1, value_ptr source2, value_ptr dest)
+	virtual void emit_eq(uint8_t opcode, value_ptr source1, value_ptr source2, value_ptr dest)
 	{
-		emit_eq(opcode, source1, source2, dest);
+		assert(false);
 	}
 
 	virtual label_ptr new_label() = 0;
@@ -133,8 +128,11 @@ struct function
 	{
 	}
 
-	virtual void emit_call(value_ptr target, std::vector<value_ptr> args_values, value_ptr return_value)
+	virtual void emit_call(value_ptr target, std::vector<value_ptr> args_values, value_ptr return_value) = 0;
+
+	virtual void emit_c_call(value_ptr target, std::vector<value_ptr> args_values, value_ptr return_value)
 	{
+		assert(false);
 	}
 
 	virtual void emit_add(value_ptr source1, value_ptr source2, value_ptr dest)
@@ -143,6 +141,7 @@ struct function
 
 	virtual void emit_sub(value_ptr source1, value_ptr source2, value_ptr dest)
 	{
+		assert(false);
 	}
 
 	virtual void run()

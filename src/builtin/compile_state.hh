@@ -25,10 +25,14 @@
 
 // TODO for this whole file: provide helper for calling a function!
 
-static compile_state_ptr _compile_state_new_scope(compile_state_ptr state)
+static void _compile_state_new_scope(uint64_t *args)
 {
+	auto &retval = *(compile_state_ptr *) args[0];
+	auto state = *(compile_state_ptr *) args[1];
+
 	auto new_scope = std::make_shared<scope>(state->scope);
-	return std::make_shared<compile_state>(state->set_scope(new_scope));
+
+	new (&retval) compile_state_ptr(std::make_shared<compile_state>(state->set_scope(new_scope)));
 }
 
 static value_ptr builtin_type_compile_state_new_scope(const compile_state &state, value_ptr this_state, ast_node_ptr node)
@@ -56,11 +60,15 @@ static value_ptr builtin_type_compile_state_new_scope(const compile_state &state
 	*global = (void *) &_compile_state_new_scope;
 	val->global.host_address = global;
 
-	return __call_fun(state, val, node, args);
+	return __call_fun(state, val, node, args, true);
 }
 
-static void _compile_state_define(compile_state_ptr state, ast_node_ptr name, value_ptr value)
+static void _compile_state_define(uint64_t *args)
 {
+	auto state = *(compile_state_ptr *) args[0];
+	auto name = (ast_node_ptr) args[1];
+	auto value = *(value_ptr *) args[2];
+
 	if (name->type != AST_SYMBOL_NAME)
 		state->error(name, "expected symbol");
 
@@ -94,12 +102,16 @@ static value_ptr builtin_type_compile_state_define(const compile_state &state, v
 	*global = (void *) &_compile_state_define;
 	val->global.host_address = global;
 
-	return __call_fun(state, val, node, args);
+	return __call_fun(state, val, node, args, true);
 }
 
-static value_ptr _compile_state_eval(compile_state_ptr state, ast_node_ptr node)
+static void _compile_state_eval(uint64_t *args)
 {
-	return eval(*state, node);
+	auto &retval = *(value_ptr *) args[0];
+	auto state = *(compile_state_ptr *) args[1];
+	auto node = (ast_node_ptr) args[2];
+
+	new (&retval) value_ptr(eval(*state, node));
 }
 
 static value_ptr builtin_type_compile_state_eval(const compile_state &state, value_ptr this_state, ast_node_ptr node)
@@ -128,12 +140,16 @@ static value_ptr builtin_type_compile_state_eval(const compile_state &state, val
 	*global = (void *) &_compile_state_eval;
 	val->global.host_address = global;
 
-	return __call_fun(state, val, node, args);
+	return __call_fun(state, val, node, args, true);
 }
 
-static value_ptr _compile_state_compile(compile_state_ptr state, ast_node_ptr node)
+static void _compile_state_compile(uint64_t *args)
 {
-	return compile(*state, node);
+	auto &retval = *(value_ptr *) args[0];
+	auto state = *(compile_state_ptr *) args[1];
+	auto node = (ast_node_ptr) args[2];
+
+	new (&retval) value_ptr(compile(*state, node));
 }
 
 static value_ptr builtin_type_compile_state_compile(const compile_state &state, value_ptr this_state, ast_node_ptr node)
@@ -162,7 +178,7 @@ static value_ptr builtin_type_compile_state_compile(const compile_state &state, 
 	*global = (void *) &_compile_state_compile;
 	val->global.host_address = global;
 
-	return __call_fun(state, val, node, args);
+	return __call_fun(state, val, node, args, true);
 }
 
 #endif

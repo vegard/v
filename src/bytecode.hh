@@ -19,7 +19,10 @@
 #ifndef V_BYTECODE_HH
 #define V_BYTECODE_HH
 
+#include <stdarg.h>
+
 #include "function.hh"
+#include "globals.hh"
 #include "value.hh"
 
 // Bytecode design:
@@ -50,53 +53,66 @@
 // STORE_ARG // place 'x + y' in args[0]
 // RETURN
 
-enum bytecode_opcode {
-	LOAD_CONSTANT,
-	LOAD_CONSTANT2,
-	LOAD_LOCAL,
-	LOAD_LOCAL2,
-	LOAD_LOCAL_ADDRESS,
-	LOAD_LOCAL2_ADDRESS,
-	LOAD_GLOBAL8,
-	LOAD_GLOBAL16,
-	LOAD_GLOBAL32,
-	LOAD_GLOBAL64,
-	LOAD_ARG,
-	LOAD_ARG_ADDRESS,
-	STORE_LOCAL,
-	STORE_LOCAL2,
-	STORE_GLOBAL8,
-	STORE_GLOBAL16,
-	STORE_GLOBAL32,
-	STORE_GLOBAL64,
-	STORE_ARG,
+#define _DEFINE_ENUM_NAME(name) name,
+#define _DEFINE_ENUM_STR(name) #name,
+#define DEFINE_ENUM(name) \
+	enum name { \
+		name(_DEFINE_ENUM_NAME) \
+	}; \
+	\
+	const char *name##_names[] = { \
+		name(_DEFINE_ENUM_STR) \
+	}; \
+	\
+	const unsigned int nr_##name##s = sizeof(name##_names) / sizeof(*name##_names);
 
-	ADD,
-	SUB,
-	MUL,
-	DIV,
+#define bytecode_opcode(X) \
+	X(LOAD_CONSTANT) \
+	X(LOAD_CONSTANT2) \
+	X(LOAD_LOCAL) \
+	X(LOAD_LOCAL2) \
+	X(LOAD_LOCAL_ADDRESS) \
+	X(LOAD_LOCAL2_ADDRESS) \
+	X(LOAD_GLOBAL8) \
+	X(LOAD_GLOBAL16) \
+	X(LOAD_GLOBAL32) \
+	X(LOAD_GLOBAL64) \
+	X(LOAD_ARG) \
+	X(LOAD_ARG_ADDRESS) \
+	X(LOAD_RET) \
+	\
+	X(STORE_LOCAL) \
+	X(STORE_LOCAL2) \
+	X(STORE_GLOBAL8) \
+	X(STORE_GLOBAL16) \
+	X(STORE_GLOBAL32) \
+	X(STORE_GLOBAL64) \
+	X(STORE_ARG) \
+	\
+	X(ADD) \
+	X(SUB) \
+	X(MUL) \
+	X(DIV) \
+	\
+	X(NOT) \
+	X(AND) \
+	X(OR) \
+	X(XOR) \
+	\
+	X(EQ) \
+	X(NEQ) \
+	X(LT) \
+	X(LTE) \
+	X(GT) \
+	X(GTE) \
+	\
+	X(JUMP) \
+	X(JUMP_IF_ZERO) \
+	X(CALL) \
+	X(C_CALL) \
+	X(RETURN)
 
-	NOT,
-	AND,
-	OR,
-	XOR,
-
-	EQ,
-	NEQ,
-	LT,
-	LTE,
-	GT,
-	GTE,
-
-	JUMP,
-	JUMP_IF_ZERO,
-	CALL,
-	// no SYSCALL -- it's better if we have a uniform interface to the
-	// host environment, in this case we can limit ourselves to calling
-	// C functions (but using which ABI?)
-	C_CALL,
-	RETURN,
-};
+DEFINE_ENUM(bytecode_opcode)
 
 struct bytecode_label:
 	label
@@ -122,6 +138,17 @@ struct bytecode_function:
 	unsigned int max_nr_args;
 	unsigned int nr_locals;
 
+	// Ok, so this is how return values work. We have one "return_value"
+	// (in the parent class) which is the actual return value that all
+	// the users (fun/return/etc. macros) deal with directly.
+	//
+	// We also have this "local_return_value" which is what we actually
+	// use to return a value to the caller (it is passed as the first
+	// argument).
+	//
+	// When we return, we copy "return_value" into "local_return_value".
+	value_ptr local_return_value;
+
 	bytecode_function(context_ptr c, bool host, std::vector<value_type_ptr> args_types, value_type_ptr return_type):
 		function(args_types, return_type),
 		this_object(std::make_shared<object>()),
@@ -130,18 +157,55 @@ struct bytecode_function:
 		max_nr_args(0),
 		nr_locals(0)
 	{
+		// XXX: bytecode ABI..?
+
+		for (auto arg_type: args_types) {
+			assert(arg_type);
+
+			// TODO: assert(arg_type->size > 0) ?
+			if (arg_type->size == 0)
+				args_values.push_back(builtin_value_void);
+			else if (arg_type->size <= 8)
+				args_values.push_back(alloc_local_value(c, arg_type));
+			else
+				args_values.push_back(alloc_local_pointer_value(c, arg_type));
+		}
+
+		assert(return_type);
+
+		if (return_type->size == 0) {
+			return_value = builtin_value_void;
+			local_return_value = builtin_value_void;
+		} else {
+			return_value = alloc_local_value(c, return_type);
+			local_return_value = alloc_local_pointer_value(c, return_type);
+		}
 	}
 
 	value_ptr alloc_local_value(context_ptr c, value_type_ptr type)
 	{
 		auto result = std::make_shared<value>(c, VALUE_LOCAL, type);
 
-		// TODO: we could try to rearrange/pack values to avoid wasting stack space
-		// TODO
-		unsigned int offset = (nr_locals + type->size + type->alignment - 1) & ~(type->alignment - 1);
-		assert(offset > 0);
-		result->local.offset = offset;
-		nr_locals += type->size;
+		// TODO: alignment!
+		unsigned int size = (type->size + 7) & ~7;
+		unsigned int alignment = type->alignment;
+
+		result->local.offset = nr_locals;
+		nr_locals += size / 8;
+
+		return result;
+	}
+
+	value_ptr alloc_local_pointer_value(context_ptr c, value_type_ptr type)
+	{
+		auto result = std::make_shared<value>(c, VALUE_LOCAL_POINTER, type);
+
+		// TODO: alignment!
+		unsigned int size = (sizeof(uint64_t) + 7) & ~7;
+		unsigned int alignment = alignof(uint64_t);
+
+		result->local.offset = nr_locals;
+		nr_locals += size / 8;
 
 		return result;
 	}
@@ -177,11 +241,43 @@ struct bytecode_function:
 
 	void emit_prologue()
 	{
+		comment("emit_prologue() {");
+		enter();
+
+		unsigned int arg = 0;
+
+		if (return_type->size != 0) {
+			emit(LOAD_ARG);
+			emit(arg++);
+			emit_store_address(local_return_value);
+		}
+
+		for (auto arg_value: args_values) {
+			if (arg_value->type->size != 0) {
+				emit(LOAD_ARG);
+				emit(arg++);
+
+				if (arg_value->type->size <= 8)
+					emit_store(arg_value);
+				else
+					emit_store_address(arg_value);
+			}
+		}
+
+		leave();
+		comment("}");
 	}
 
 	void emit_epilogue()
 	{
+		comment("emit_epilogue() {");
+		enter();
+
+		emit_move(return_value, local_return_value);
 		emit(RETURN);
+
+		leave();
+		comment("}");
 	}
 
 	void emit_load_global(unsigned int size)
@@ -224,7 +320,7 @@ struct bytecode_function:
 			assert(offset % 8 == 0);
 
 			{
-				unsigned int local_offset = value->local.offset + offset;
+				unsigned int local_offset = value->local.offset + offset / 8;
 				if (local_offset < 256) {
 					emit(LOAD_LOCAL);
 					emit(local_offset);
@@ -238,32 +334,23 @@ struct bytecode_function:
 			}
 			break;
 		case VALUE_LOCAL_POINTER:
-			assert(offset % 8 == 0);
-
-			{
-				unsigned int local_offset = value->local.offset + offset;
-				if (local_offset < 256) {
-					emit(LOAD_LOCAL_ADDRESS);
-					emit(local_offset);
-				} else if (local_offset < 65536) {
-					emit(LOAD_LOCAL2_ADDRESS);
-					emit(local_offset);
-					emit(local_offset >> 8);
-				} else {
-					assert(false);
-				}
-			}
+			// TODO
+			assert(false);
 			break;
 		case VALUE_CONSTANT:
 			// TODO
 			assert(offset == 0);
 
-			unsigned int index = constants.size();
-			constants.push_back(value->constant.u64);
+			{
+				unsigned int index = constants.size();
+				constants.push_back(value->constant.u64);
 
-			emit(LOAD_CONSTANT);
-			emit(index);
+				emit(LOAD_CONSTANT);
+				emit(index);
+			}
 			break;
+		default:
+			assert(false);
 		}
 	}
 
@@ -279,6 +366,60 @@ struct bytecode_function:
 		auto l = std::dynamic_pointer_cast<bytecode_label>(super_label);
 		emit(LOAD_CONSTANT);
 		emit(l->constant_i);
+	}
+
+	void emit_load_address(value_ptr value, unsigned int offset)
+	{
+		switch (value->storage_type) {
+		case VALUE_GLOBAL:
+			{
+				unsigned int index = constants.size();
+				constants.push_back((uint64_t) value->global.host_address + offset);
+
+				emit(LOAD_CONSTANT);
+				emit(index);
+			}
+			break;
+		case VALUE_LOCAL:
+			{
+				unsigned int local_offset = value->local.offset + offset / 8;
+				if (local_offset < 256) {
+					emit(LOAD_LOCAL_ADDRESS);
+					emit(local_offset);
+				} else if (local_offset < 65536) {
+					emit(LOAD_LOCAL2_ADDRESS);
+					emit(local_offset);
+					emit(local_offset >> 8);
+				} else {
+					assert(false);
+				}
+			}
+			break;
+		case VALUE_LOCAL_POINTER:
+			assert(offset % 8 == 0);
+
+			{
+				unsigned int local_offset = value->local.offset + offset / 8;
+				if (local_offset < 256) {
+					emit(LOAD_LOCAL);
+					emit(local_offset);
+				} else if (local_offset < 65536) {
+					emit(LOAD_LOCAL2);
+					emit(local_offset);
+					emit(local_offset >> 8);
+				} else {
+					assert(false);
+				}
+			}
+			break;
+		default:
+			assert(false);
+		}
+	}
+
+	void emit_load_address(value_ptr value)
+	{
+		emit_load_address(value, 0);
 	}
 
 	void emit_store_global(unsigned int size)
@@ -314,14 +455,16 @@ struct bytecode_function:
 				emit_store_global(size);
 			}
 			break;
+
 		case VALUE_TARGET_GLOBAL:
 			assert(false);
 			break;
+
 		case VALUE_LOCAL:
 			assert(offset % 8 == 0);
 
 			{
-				unsigned int local_offset = value->local.offset + offset;
+				unsigned int local_offset = value->local.offset + offset / 8;
 				if (local_offset < 256) {
 					emit(STORE_LOCAL);
 					emit(local_offset);
@@ -334,10 +477,38 @@ struct bytecode_function:
 				}
 			}
 			break;
+
 		case VALUE_LOCAL_POINTER:
-			assert(offset % 8 == 0);
-			assert(false);
+			assert(size == 8);
+
+			{
+				unsigned int local_offset = value->local.offset;
+				if (local_offset < 256) {
+					emit(LOAD_LOCAL);
+					emit(local_offset);
+				} else if (local_offset < 65536) {
+					emit(LOAD_LOCAL2);
+					emit(local_offset);
+					emit(local_offset >> 8);
+				} else {
+					assert(false);
+				}
+			}
+
+			// XXX: not so happy about this... pretty inefficient
+			{
+				unsigned int index = constants.size();
+				constants.push_back((uint64_t) offset);
+
+				emit(LOAD_CONSTANT);
+				emit(index);
+			}
+
+			emit(ADD);
+
+			emit_store_global(size);
 			break;
+
 		case VALUE_CONSTANT:
 			assert(false);
 			break;
@@ -351,6 +522,30 @@ struct bytecode_function:
 		emit_store_offset(value, 0, value->type->size);
 	}
 
+	void emit_store_address(value_ptr value)
+	{
+		switch (value->storage_type) {
+		case VALUE_LOCAL_POINTER:
+			{
+				unsigned int local_offset = value->local.offset;
+				if (local_offset < 256) {
+					emit(STORE_LOCAL);
+					emit(local_offset);
+				} else if (local_offset < 65536) {
+					emit(STORE_LOCAL2);
+					emit(local_offset);
+					emit(local_offset >> 8);
+				} else {
+					assert(false);
+				}
+			}
+			break;
+		default:
+			assert(false);
+		}
+
+	}
+
 	void emit_move(value_ptr source, value_ptr dest)
 	{
 		// TODO: check for compatible types?
@@ -360,36 +555,65 @@ struct bytecode_function:
 		assert(source->type->size % 8 == 0);
 
 		// Poor man's memcpy
+		// TODO: instead of doing this word by word, we can do a lot better
+		// (e.g. loading constant + global addresses only once)
 		for (unsigned int i = 0; i < source->type->size; i += 8) {
 			emit_load_offset(source, i, 8);
 			emit_store_offset(dest, i, 8);
 		}
 	}
 
-	void emit_eq(value_ptr lhs, value_ptr rhs, value_ptr dest)
+	void emit_eq(uint8_t opcode, value_ptr source1, value_ptr source2, value_ptr dest)
 	{
-		emit_load(lhs);
-		emit_load(rhs);
-		emit(EQ);
+		emit_load(source1);
+		emit_load(source2);
+
+		switch (opcode) {
+		case CMP_EQ:
+			emit(EQ);
+			break;
+		case CMP_NEQ:
+			emit(NEQ);
+			break;
+		case CMP_LESS:
+			emit(LT);
+			break;
+		case CMP_LESS_EQUAL:
+			emit(LTE);
+			break;
+		case CMP_GREATER:
+			emit(GT);
+			break;
+		case CMP_GREATER_EQUAL:
+			emit(GTE);
+			break;
+		default:
+			assert(false);
+		}
+
 		emit_store(dest);
 	}
 
 	label_ptr new_label()
 	{
-		return std::make_shared<bytecode_label>();
+		auto l = std::make_shared<bytecode_label>();
+		l->constant_i = constants.size();
+		constants.push_back(/* Dummy */ 0);
+		return l;
 	}
 
 	void emit_label(label_ptr super_label)
 	{
 		auto l = std::dynamic_pointer_cast<bytecode_label>(super_label);
-		l->constant_i = constants.size();
-		constants.push_back(/* Dummy */ 0);
+		constants[l->constant_i] = bytes.size();
 	}
 
 	void link_label(label_ptr super_label)
 	{
-		auto l = std::dynamic_pointer_cast<bytecode_label>(super_label);
-		constants[l->constant_i] = bytes.size();
+		// This function intentionally left blank!
+		//
+		// (Instructions already refer to a constant pool index which
+		// is updated in emit_label().)
 	}
 
 	void emit_jump(label_ptr super_target)
@@ -405,24 +629,61 @@ struct bytecode_function:
 		emit(JUMP_IF_ZERO);
 	}
 
-	void emit_call(value_ptr fn, std::vector<value_ptr> args)
+	void emit_call(value_ptr fn, std::vector<value_ptr> args, value_ptr return_value)
 	{
+		comment("emit_call() {");
+		enter();
+
 		auto nr_args = args.size();
 		if (nr_args > max_nr_args)
 			max_nr_args = nr_args;
 
+		// We pass a pointer to the return value as the first
+		// argument
+		if (return_value->type->size > 0) {
+			emit_load_address(return_value);
+			emit(STORE_ARG);
+		}
+
 		for (auto arg: args) {
-			emit_load(arg);
+			if (arg->type->size <= 8)
+				emit_load(arg);
+			else
+				emit_load_address(arg);
+
 			emit(STORE_ARG);
 		}
 
 		emit_load(fn);
 		emit(CALL);
+
+		leave();
+		comment("}");
 	}
 
-	void emit_c_call(value_ptr fn, std::vector<value_ptr> args)
+	void emit_c_call(value_ptr fn, std::vector<value_ptr> args, value_ptr return_value)
 	{
-		// TODO
+		auto nr_args = args.size();
+		if (nr_args > max_nr_args)
+			max_nr_args = nr_args;
+
+		// We pass a pointer to the return value as the first
+		// argument
+		if (return_value->type->size > 0) {
+			emit_load_address(return_value);
+			emit(STORE_ARG);
+		}
+
+		for (auto arg: args) {
+			if (arg->type->size <= 8)
+				emit_load(arg);
+			else
+				emit_load_address(arg);
+
+			emit(STORE_ARG);
+		}
+
+		emit_load(fn);
 		emit(C_CALL);
 	}
 
@@ -433,17 +694,39 @@ struct bytecode_function:
 		emit(ADD);
 		emit_store(dest);
 	}
+
+	void emit_sub(value_ptr source1, value_ptr source2, value_ptr dest)
+	{
+		emit_load(source1);
+		emit_load(source2);
+		emit(SUB);
+		emit_store(dest);
+	}
 };
 
-void disassemble_bytecode(uint64_t *constants, uint8_t *bytecode, unsigned int size, const std::vector<comment> &comments)
+struct jit_function {
+	std::unique_ptr<uint64_t[]> constants;
+	std::unique_ptr<uint8_t[]> bytecode;
+
+	jit_function(std::shared_ptr<bytecode_function> f):
+		constants(new uint64_t[f->constants.size()]),
+		bytecode(new uint8_t[f->bytes.size()])
+	{
+		//printf("making jit function with bytecode at addr %p constants %p\n", &bytecode[0], &constants[0]);
+		memcpy(&constants[0], &f->constants[0], sizeof(f->constants[0]) * f->constants.size());
+		memcpy(&bytecode[0], &f->bytes[0], f->bytes.size());
+	}
+};
+
+void disassemble_bytecode(uint64_t *constants, uint8_t *bytecode, unsigned int size, const std::vector<comment> &comments, unsigned int ip = 0)
 {
         auto comments_it = comments.begin();
         auto comments_end = comments.end();
 
 	unsigned int indentation = 0;
 
-	unsigned int i = 0;
-	while (i < size) {
+	unsigned int i = ip;
+	if (i < size) do {
 		while (comments_it != comments_end) {
 			const auto &c = *comments_it;
 			if (c.offset > i)
@@ -454,71 +737,64 @@ void disassemble_bytecode(uint64_t *constants, uint8_t *bytecode, unsigned int s
 			++comments_it;
 		}
 
-		printf("\e[0m%3u: %*.s", i, 2 * indentation, "");
+		if (i >= size)
+			break;
 
-		switch (bytecode[i]) {
-		case LOAD_CONSTANT:
-			{
-				unsigned int index = bytecode[++i];
-				printf("LOAD_CONSTANT %lu (0x%lx)\n", constants[index], constants[index]);
-			}
-			break;
-		case LOAD_LOCAL:
-			{
-				unsigned int index = bytecode[++i];
-				printf("LOAD_LOCAL %lu\n", index);
-			}
-			break;
-		case LOAD_GLOBAL32:
-			printf("LOAD_GLOBAL32\n");
-			break;
-		case LOAD_GLOBAL64:
-			printf("LOAD_GLOBAL64\n");
-			break;
-		case LOAD_ARG:
-			{
-				unsigned int index = bytecode[++i];
-				printf("LOAD_ARG %lu\n", index);
-			}
-			break;
-		case STORE_LOCAL:
-			{
-				unsigned int index = bytecode[++i];
-				printf("STORE_LOCAL %lu\n", index);
-			}
-			break;
-		case STORE_GLOBAL8:
-			printf("STORE_GLOBAL8\n");
-			break;
-		case STORE_GLOBAL16:
-			printf("STORE_GLOBAL16\n");
-			break;
-		case STORE_GLOBAL32:
-			printf("STORE_GLOBAL32\n");
-			break;
-		case STORE_GLOBAL64:
-			printf("STORE_GLOBAL64\n");
-			break;
-		case ADD:
-			printf("ADD\n");
-			break;
-		case RETURN:
-			printf("RETURN\n");
-			break;
-		default:
+		printf("\e[0m%4u: %*.s %s", i, 2 * indentation, "", bytecode_opcode_names[bytecode[i]]);
+
+		uint8_t opcode = bytecode[i];
+		if (opcode >= sizeof(bytecode_opcode_names) / sizeof(*bytecode_opcode_names)) {
 			printf("(unrecognised opcode %u)\n", bytecode[i]);
-			break;
+		} else {
+			switch (opcode) {
+			case LOAD_CONSTANT:
+				{
+					unsigned int index = bytecode[++i];
+					printf(" %lu (0x%lx)\n", constants[index], constants[index]);
+				}
+				break;
+
+			case LOAD_LOCAL:
+			case LOAD_LOCAL_ADDRESS:
+			case LOAD_ARG:
+			case STORE_LOCAL:
+				{
+					unsigned int index = bytecode[++i];
+					printf(" %lu\n", index);
+				}
+				break;
+
+			default:
+				printf("\n");
+				break;
+			}
 		}
 
 		++i;
-	}
+	} while (true);
+
+	printf("\e[0m");
 }
 
-void run(uint64_t *constants, uint8_t *bytecode, uint64_t *args, unsigned int nr_args)
+static void trace_bytecode(const char *fmt, ...)
+{
+	printf("\e[33m[trace-bytecode] ");
+
+	va_list ap;
+	va_start(ap, fmt);
+	vprintf(fmt, ap);
+	va_end(ap);
+
+	printf("\e[0m");
+}
+
+template<bool debug>
+void run_bytecode(uint64_t *constants, uint8_t *bytecode,
+	uint64_t *args, unsigned int nr_args)
 {
 	unsigned int ip = 0;
 
-	uint64_t operands[3];
+	uint64_t operands[5];
 	unsigned int nr_operands = 0;
 
 	// XXX!!!!!
@@ -529,7 +805,19 @@ void run(uint64_t *constants, uint8_t *bytecode, uint64_t *args, unsigned int nr
 	uint64_t new_args[max_nr_args];
 	unsigned int nr_new_args = 0;
 
+	unsigned int ret_index = 0;
+
+	if (debug)
+		trace_bytecode("running bytecode at addr %p with constants at addr %p\n", bytecode, constants);
+
 	while (true) {
+		if (debug) {
+			trace_bytecode("");
+			std::vector<comment> comments;
+			disassemble_bytecode(constants, bytecode, ip + 1, comments, ip);
+			fflush(stdout);
+		}
+
 		switch (bytecode[ip++]) {
 
 			// Operands
@@ -537,6 +825,8 @@ void run(uint64_t *constants, uint8_t *bytecode, uint64_t *args, unsigned int nr
 		case LOAD_CONSTANT:
 			{
 				unsigned int index = bytecode[ip++];
+				if (debug)
+					trace_bytecode("constant %u = 0x%lx\n", index, constants[index]);
 				operands[nr_operands++] = constants[index];
 			}
 			break;
@@ -552,6 +842,8 @@ void run(uint64_t *constants, uint8_t *bytecode, uint64_t *args, unsigned int nr
 		case LOAD_LOCAL:
 			{
 				unsigned int index = bytecode[ip++];
+				if (debug)
+					trace_bytecode("local %u = 0x%lx\n", index, locals[index]);
 				operands[nr_operands++] = locals[index];
 			}
 			break;
@@ -579,161 +871,204 @@ void run(uint64_t *constants, uint8_t *bytecode, uint64_t *args, unsigned int nr
 
 		case LOAD_GLOBAL8:
 			{
-				operands[0] = *(uint8_t *) operands[0];
+				operands[nr_operands - 1] = *(uint8_t *) operands[nr_operands - 1];
 			}
 			break;
 		case LOAD_GLOBAL16:
 			{
-				assert((operands[0] & 1) == 0);
-				operands[0] = *(uint16_t *) operands[0];
+				assert((operands[nr_operands - 1] & 1) == 0);
+				operands[nr_operands - 1] = *(uint16_t *) operands[nr_operands - 1];
 			}
 			break;
 		case LOAD_GLOBAL32:
 			{
-				assert((operands[0] & 3) == 0);
-				operands[0] = *(uint32_t *) operands[0];
+				assert((operands[nr_operands - 1] & 3) == 0);
+				operands[nr_operands - 1] = *(uint32_t *) operands[nr_operands - 1];
 			}
 			break;
 		case LOAD_GLOBAL64:
 			{
-				assert((operands[0] & 7) == 0);
-				operands[0] = *(uint64_t *) operands[0];
+				assert((operands[nr_operands - 1] & 7) == 0);
+				operands[nr_operands - 1] = *(uint64_t *) operands[nr_operands - 1];
+				if (debug)
+					trace_bytecode("op[%u] = 0x%llx\n", nr_operands - 1, operands[nr_operands - 1]);
 			}
 			break;
 
 		case LOAD_ARG:
-			// TODO
+			{
+				unsigned int index = bytecode[ip++];
+				if (debug)
+					trace_bytecode("arg %u = 0x%lx\n", index, args[index]);
+				operands[nr_operands++] = args[index];
+			}
 			break;
 		case LOAD_ARG_ADDRESS:
 			// TODO
+			assert(false);
 			break;
 
 		case STORE_LOCAL:
 			{
 				unsigned int index = bytecode[ip++];
-				locals[index] = operands[0];
+				if (debug)
+					trace_bytecode("local %u = 0x%lx\n", index, operands[nr_operands - 1]);
+				locals[index] = operands[nr_operands - 1];
 			}
+			nr_operands -= 1;
 			break;
 
+		// XXX: rename to just STORE?
 		case STORE_GLOBAL8:
-			*(uint8_t *) operands[1] = operands[0];
-			nr_operands = 0;
+			*(uint8_t *) operands[nr_operands - 1] = operands[nr_operands - 2];
+			nr_operands -= 2;
 			break;
 		case STORE_GLOBAL16:
-			*(uint16_t *) operands[1] = operands[0];
-			nr_operands = 0;
+			*(uint16_t *) operands[nr_operands - 1] = operands[nr_operands - 2];
+			nr_operands -= 2;
 			break;
 		case STORE_GLOBAL32:
-			*(uint32_t *) operands[1] = operands[0];
-			nr_operands = 0;
+			*(uint32_t *) operands[nr_operands - 1] = operands[nr_operands - 2];
+			nr_operands -= 2;
 			break;
 		case STORE_GLOBAL64:
-			*(uint64_t *) operands[1] = operands[0];
-			nr_operands = 0;
+			assert(nr_operands >= 2);
+			if (debug)
+				trace_bytecode("*%p = 0x%lx\n", operands[nr_operands - 1], operands[nr_operands - 2]);
+			*(uint64_t *) operands[nr_operands - 1] = operands[nr_operands - 2];
+			nr_operands -= 2;
 			break;
 
 		case STORE_ARG:
-			new_args[++nr_new_args] = operands[0];
+			assert(nr_operands >= 1);
+			if (debug)
+				trace_bytecode("arg %u = 0x%lx\n", nr_new_args, operands[nr_operands - 1]);
+			new_args[nr_new_args++] = operands[nr_operands - 1];
+			nr_operands -= 1;
 			break;
 
 			// Arithmetic
 
 		case ADD:
-			operands[0] += operands[1];
-			nr_operands = 0;
+			if (debug) {
+				trace_bytecode("%lx + %lx = %lx\n",
+					operands[nr_operands - 2],
+					operands[nr_operands - 1],
+					operands[nr_operands - 2] + operands[nr_operands - 1]);
+			}
+			operands[nr_operands - 2] += operands[nr_operands - 1];
+			nr_operands -= 1;
 			break;
 		case SUB:
-			operands[0] -= operands[1];
-			nr_operands = 0;
+			operands[nr_operands - 2] -= operands[nr_operands - 1];
+			nr_operands -= 1;
 			break;
 		case MUL:
-			operands[0] *= operands[1];
-			nr_operands = 0;
+			operands[nr_operands - 2] *= operands[nr_operands - 1];
+			nr_operands -= 1;
 			break;
 		case DIV:
-			operands[0] /= operands[1];
-			nr_operands = 0;
+			operands[nr_operands - 2] /= operands[nr_operands - 1];
+			nr_operands -= 1;
 			break;
 
 			// Bitwise
 
 		case NOT:
-			operands[0] = ~operands[1];
-			nr_operands = 0;
+			operands[nr_operands - 2] = ~operands[nr_operands - 1];
+			nr_operands -= 1;
 			break;
 		case AND:
-			operands[0] &= operands[1];
-			nr_operands = 0;
+			operands[nr_operands - 2] &= operands[nr_operands - 1];
+			nr_operands -= 1;
 			break;
 		case OR:
-			operands[0] |=  operands[1];
-			nr_operands = 0;
+			operands[nr_operands - 2] |= operands[nr_operands - 1];
+			nr_operands -= 1;
 			break;
 		case XOR:
-			operands[0] ^= operands[1];
-			nr_operands = 0;
+			operands[nr_operands - 2] ^= operands[nr_operands - 1];
+			nr_operands -= 1;
 			break;
 
 			// Relational
 
 		case EQ:
-			operands[0] = (operands[0] == operands[1]);
-			nr_operands = 0;
+			operands[nr_operands - 2] = (operands[nr_operands - 2] == operands[nr_operands - 1]);
+			nr_operands -= 1;
 			break;
 		case NEQ:
-			operands[0] = (operands[0] != operands[1]);
-			nr_operands = 0;
+			operands[nr_operands - 2] = (operands[nr_operands - 2] != operands[nr_operands - 1]);
+			nr_operands -= 1;
 			break;
 		case LT:
-			operands[0] = (operands[0] < operands[1]);
-			nr_operands = 0;
+			operands[nr_operands - 2] = (operands[nr_operands - 2] < operands[nr_operands - 1]);
+			nr_operands -= 1;
 			break;
 		case LTE:
-			operands[0] = (operands[0] <= operands[1]);
-			nr_operands = 0;
+			operands[nr_operands - 2] = (operands[nr_operands - 2] <= operands[nr_operands - 1]);
+			nr_operands -= 1;
 			break;
 		case GT:
-			operands[0] = (operands[0] > operands[1]);
-			nr_operands = 0;
+			operands[nr_operands - 2] = (operands[nr_operands - 2] > operands[nr_operands - 1]);
+			nr_operands -= 1;
 			break;
 		case GTE:
-			operands[0] = (operands[0] >= operands[1]);
-			nr_operands = 0;
+			operands[nr_operands - 2] = (operands[nr_operands - 2] >= operands[nr_operands - 1]);
+			nr_operands -= 1;
 			break;
 
 			// Control flow
 
 		case JUMP:
+			assert(nr_operands == 1);
 			ip = operands[0];
 			nr_operands = 0;
 			break;
 		case JUMP_IF_ZERO:
+			assert(nr_operands == 2);
 			if (!operands[1])
 				ip = operands[0];
 			nr_operands = 0;
 			break;
 		case CALL:
-			// XXX
-			//((bytecode_function *) operands[0])->run(new_args, nr_new_args);
+			assert(nr_operands == 1);
+			{
+				auto fn = (jit_function *) operands[0];
+				run_bytecode<debug>(&fn->constants[0], &fn->bytecode[0], new_args, nr_new_args);
+			}
+
 			nr_operands = 0;
 			nr_new_args = 0;
 			break;
 		case C_CALL:
-			// TODO
-			if (nr_operands == 0)
-				// XXX
-				//((uint64_t (*)()) operands[0])->run();
-				;
-			else
-				assert(false);
+			assert(nr_operands == 1);
+
+			{
+				auto fn = (void (*)(uint64_t *)) operands[0];
+				fn(new_args);
+			}
 
 			nr_operands = 0;
 			nr_new_args = 0;
 			break;
 		case RETURN:
+			assert(nr_operands == 0);
 			return;
 		}
 	}
+}
+
+void run_bytecode(uint64_t *constants, uint8_t *bytecode,
+	uint64_t *args, unsigned int nr_args)
+{
+	// Do the check here and rely on the compiler to constant propagate
+	// and inline so the fast path doesn't need to check this variable
+	// more than once per eval().
+	if (global_trace_bytecode)
+		run_bytecode<true>(constants, bytecode, args, nr_args);
+	else
+		run_bytecode<false>(constants, bytecode, args, nr_args);
 }
 
 #endif

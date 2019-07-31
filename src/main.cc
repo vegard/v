@@ -212,6 +212,10 @@ int main(int argc, char *argv[])
 				do_run = false;
 			else if (!strcmp(argv[i], "--disassemble"))
 				global_disassemble = true;
+			else if (!strcmp(argv[i], "-Xtrace-eval"))
+				global_trace_eval = true;
+			else if (!strcmp(argv[i], "-Xtrace-bytecode"))
+				global_trace_bytecode = true;
 			else
 				error(EXIT_FAILURE, 0, "Unrecognised option: %s", argv[i]);
 		} else {

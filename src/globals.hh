@@ -25,4 +25,7 @@
 
 bool global_disassemble = false;
 
+bool global_trace_eval = false;
+bool global_trace_bytecode = false;
+
 #endif

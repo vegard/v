@@ -176,10 +176,8 @@ static bool compile_and_run(source_file_ptr source)
 		if (do_compile)
 			f = compile_metaprogram(source, source->tree.get(node));
 
-		if (do_dump_ast) {
-			ast_serializer(source).serialize(std::cout, source->tree.get(node));
-			std::cout << std::endl;
-		}
+		if (do_dump_ast)
+			printf("%s\n", serialize(source, source->tree.get(node)).c_str());
 
 		if (global_disassemble) {
 			printf("metaprogram:\n");

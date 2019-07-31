@@ -146,6 +146,15 @@ struct ast_serializer {
 	}
 };
 
+std::string serialize(const source_file_ptr source, const ast_node_ptr node)
+{
+	ast_serializer s(source);
+
+	std::ostringstream ss;
+	s.serialize(ss, node);
+	return ss.str();
+}
+
 // Create a "one-line" abbreviation of the serialized AST node, useful
 // for debugging where you just want to show a part of the tree (e.g. the
 // node and its children, but not grandchildren).

@@ -31,8 +31,7 @@
 static value_ptr builtin_macro_debug(const compile_state &state, ast_node_ptr node)
 {
 	// TODO: need context so we can print line numbers and stuff too
-	ast_serializer(state.source).serialize(std::cout, node);
-	std::cout << std::endl;
+	printf("%s\n", serialize(state.source, node).c_str());
 
 	return builtin_value_void;
 }

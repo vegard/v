@@ -297,12 +297,8 @@ static void run(std::shared_ptr<bytecode_function> f)
 
 static value_ptr eval(const compile_state &state, ast_node_ptr node)
 {
-	if (global_trace_eval) {
-		// TODO: switch to printf()
-		std::cout << "\e[32m[trace-eval] ";
-		ast_serializer(state.source).serialize(std::cout, node);
-		std::cout << "\e[0m" << std::endl;
-	}
+	if (global_trace_eval)
+		printf("\e[32m[trace-eval] %s\e[0m\n", serialize(state.source, node).c_str());
 
 	auto new_c = std::make_shared<context>(state.context);
 	auto new_f = std::make_shared<bytecode_function>(new_c, true, std::vector<value_type_ptr>(), builtin_type_void);

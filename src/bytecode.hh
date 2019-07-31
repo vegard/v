@@ -78,7 +78,6 @@
 	X(LOAD_GLOBAL32) \
 	X(LOAD_GLOBAL64) \
 	X(LOAD_ARG) \
-	X(LOAD_ARG_ADDRESS) \
 	X(LOAD_RET) \
 	\
 	X(STORE_LOCAL) \
@@ -889,10 +888,6 @@ void run_bytecode(uint64_t *constants, uint8_t *bytecode,
 					trace_bytecode("arg %u = 0x%lx\n", index, args[index]);
 				operands[nr_operands++] = args[index];
 			}
-			break;
-		case LOAD_ARG_ADDRESS:
-			// TODO
-			assert(false);
 			break;
 
 		case STORE_LOCAL:

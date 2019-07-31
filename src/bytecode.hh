@@ -749,7 +749,7 @@ void disassemble_bytecode(uint64_t *constants, uint8_t *bytecode, unsigned int s
 			case STORE_LOCAL:
 				{
 					unsigned int index = bytecode[++i];
-					printf(" %lu\n", index);
+					printf(" %u\n", index);
 				}
 				break;
 
@@ -793,8 +793,6 @@ void run_bytecode(uint64_t *constants, uint8_t *bytecode,
 	uint64_t locals[nr_locals];
 	uint64_t new_args[max_nr_args];
 	unsigned int nr_new_args = 0;
-
-	unsigned int ret_index = 0;
 
 	if (debug)
 		trace_bytecode("running bytecode at addr %p with constants at addr %p\n", bytecode, constants);

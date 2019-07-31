@@ -466,6 +466,7 @@ static value_ptr compile(const compile_state &state, ast_node_ptr node)
 	case AST_SEMICOLON:
 		return compile_semicolon(state, node);
 	default:
+		// TODO: abort() instead of throwing exception?
 		state.error(node, "internal compiler error: unrecognised AST node type $: $", node->type, abbreviate(state.source, node));
 	}
 

@@ -186,11 +186,11 @@ struct bytecode_function:
 	{
 		auto result = std::make_shared<value>(c, VALUE_LOCAL, type);
 
-		// TODO: alignment!
 		unsigned int size = (type->size + 7) & ~7;
 		unsigned int alignment = type->alignment;
 
-		result->local.offset = nr_locals;
+		unsigned int offset = (8 * nr_locals + alignment - 1) & ~(alignment - 1);
+		result->local.offset = offset / 8;
 		nr_locals += size / 8;
 
 		return result;
@@ -200,11 +200,11 @@ struct bytecode_function:
 	{
 		auto result = std::make_shared<value>(c, VALUE_LOCAL_POINTER, type);
 
-		// TODO: alignment!
 		unsigned int size = (sizeof(uint64_t) + 7) & ~7;
 		unsigned int alignment = alignof(uint64_t);
 
-		result->local.offset = nr_locals;
+		unsigned int offset = (8 * nr_locals + alignment - 1) & ~(alignment - 1);
+		result->local.offset = offset / 8;
 		nr_locals += size / 8;
 
 		return result;

@@ -171,23 +171,8 @@ struct compile_state {
 	std::string get_literal_string(ast_node_ptr node) const
 	{
 		assert(node->type == AST_LITERAL_STRING);
-		assert(node->pos < node->end);
-		assert(source->data[node->pos] == '\"');
-		assert(source->data[node->end - 1] == '\"');
 
-		// We don't need to do any input validation here, it should
-		// all have been done in the parser. We just have to do the
-		// minimal amount of work to extract the unescaped string.
-
-		std::vector<char> result;
-		for (unsigned int i = node->pos + 1; i < node->end - 1; ++i) {
-			if (source->data[i] == '\\')
-				++i;
-
-			result.push_back(source->data[i]);
-		}
-
-		return std::string(&result[0], result.size());
+		return source->tree.strings[node->string_index];
 	}
 
 	std::string get_symbol_name(ast_node_ptr node) const

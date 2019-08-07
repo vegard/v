@@ -98,6 +98,7 @@ struct syntax_error: parse_error {
 struct parser {
 	const char *buf;
 	unsigned int len;
+
 	ast_tree &tree;
 
 	parser(const char *buf, size_t len, ast_tree &tree):
@@ -223,12 +224,16 @@ int parser::parse_literal_string(unsigned int &pos)
 		return -1;
 	++i;
 
+	std::vector<char> str;
+
 	while (i < len && buf[i] != '\"') {
 		if (buf[i] == '\\') {
 			++i;
 			if (i == len)
 				throw syntax_error("unterminated string literal", pos, i);
 		}
+
+		str.push_back(buf[i]);
 
 		++i;
 	}
@@ -238,6 +243,8 @@ int parser::parse_literal_string(unsigned int &pos)
 	++i;
 
 	auto node_index = tree.new_node(AST_LITERAL_STRING, pos, i);
+	auto node = tree.get(node_index);
+	node->string_index = tree.new_string(std::string(&str[0], str.size()));
 
 	pos = i;
 	return node_index;

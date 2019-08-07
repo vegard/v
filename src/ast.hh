@@ -80,6 +80,8 @@ struct ast_node {
 		// if this is nullptr, then we use pos/end to get the name
 		const char *symbol_name;
 
+		unsigned int string_index;
+
 		int unop;
 
 		struct {
@@ -105,6 +107,7 @@ struct ast_node {
 
 struct ast_tree {
 	std::vector<ast_node> nodes;
+	std::vector<std::string> strings;
 
 	ast_tree()
 	{
@@ -115,6 +118,13 @@ struct ast_tree {
 	{
 		int result = nodes.size();
 		nodes.push_back(ast_node(args...));
+		return result;
+	}
+
+	unsigned int new_string(std::string s)
+	{
+		unsigned int result = strings.size();
+		strings.push_back(s);
 		return result;
 	}
 

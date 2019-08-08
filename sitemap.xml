@@ -7,15 +7,19 @@
                         http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
  <url>
   <loc>https://www.v-lang.org/</loc>
-  <lastmod>2019-08-08T07:01:00Z</lastmod>
+  <lastmod>2019-08-08T15:09:00Z</lastmod>
  </url>
  <url>
   <loc>https://www.v-lang.org/archive.html</loc>
-  <lastmod>2019-08-08T13:03:00Z</lastmod>
+  <lastmod>2019-08-08T15:10:00Z</lastmod>
  </url>
  <url>
   <loc>https://www.v-lang.org/categories/</loc>
   <lastmod>2019-08-08T07:01:00Z</lastmod>
+ </url>
+ <url>
+  <loc>https://www.v-lang.org/community/</loc>
+  <lastmod>2019-08-08T15:09:00Z</lastmod>
  </url>
  <url>
   <loc>https://www.v-lang.org/faq/</loc>

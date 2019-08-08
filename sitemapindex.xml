@@ -6,15 +6,11 @@
     xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
                         http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
  <sitemap>
-  <loc>https://www.v-lang.org/galleries/rss.xml</loc>
-  <lastmod>2019-08-08T06:01:00Z</lastmod>
- </sitemap>
- <sitemap>
   <loc>https://www.v-lang.org/rss.xml</loc>
   <lastmod>2019-08-08T06:01:00Z</lastmod>
  </sitemap>
  <sitemap>
   <loc>https://www.v-lang.org/sitemap.xml</loc>
-  <lastmod>2019-08-08T06:01:00Z</lastmod>
+  <lastmod>2019-08-08T06:09:00Z</lastmod>
  </sitemap>
 </sitemapindex>

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html prefix="        og: http://ogp.me/ns# article: http://ogp.me/ns/article#     " vocab="http://ogp.me/ns" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>Frequently Asked Questions | The V programming language</title>
+<link href="https://fonts.googleapis.com/css?family=Bitter:400,400i,700" rel="stylesheet" type="text/css">
+<link href="../assets/css/all-nocdn.css" rel="stylesheet" type="text/css">
+<meta name="theme-color" content="#5670d4">
+<meta name="generator" content="Nikola (getnikola.com)">
+<link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="../rss.xml">
+<link rel="canonical" href="https://www.v-lang.org/faq/">
+<!--[if lt IE 9]><script src="../assets/js/html5shiv-printshiv.min.js"></script><![endif]--><meta name="author" content="Vegard Nossum">
+<meta property="og:site_name" content="The V programming language">
+<meta property="og:title" content="Frequently Asked Questions">
+<meta property="og:url" content="https://www.v-lang.org/faq/">
+<meta property="og:description" content="Frquently Asked Questions
+
+Contents
+
+Frquently Asked Questions
+Meta
+What's wrong with C++?
+Is it V or v?
+Why the name &quot;V&quot;?
+Is there any connection to vlang.io (by Alex Medvednikov)?
+
+
+Syntax
+What is t">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2019-08-08T05:21:31Z">
+</head>
+<body>
+    <a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
+    <div id="container">
+         
+    <header id="header"><h1 id="brand"><a href="https://www.v-lang.org/" title="The V programming language" rel="home">
+        <img src="../title.png" alt="The V programming language" id="logo"></a></h1>
+
+        
+
+        
+    <nav id="menu"><ul>
+<li><a href="../">Home</a></li>
+                <li class="active"><a href=".">FAQ<span class="sr-only"> (active)</span></a></li>
+                <li><a href="https://v-lang.readthedocs.io/">Documentation</a></li>
+                <li><a href="https://github.com/vegard/v/">Source code</a></li>
+
+    
+
+    
+    
+    </ul></nav></header><main id="content"><article class="post-text storypage" itemscope="itemscope" itemtype="http://schema.org/Article"><header></header><div class="e-content entry-content" itemprop="articleBody text">
+    <div class="section" id="frquently-asked-questions">
+<h2><a class="toc-backref" href="#id1">Frquently Asked Questions</a></h2>
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
+<ul class="simple">
+<li>
+<a class="reference internal" href="#frquently-asked-questions" id="id1">Frquently Asked Questions</a><ul>
+<li>
+<a class="reference internal" href="#meta" id="id2">Meta</a><ul>
+<li><a class="reference internal" href="#what-s-wrong-with-c" id="id3">What's wrong with C++?</a></li>
+<li><a class="reference internal" href="#is-it-v-or-v" id="id4">Is it V or v?</a></li>
+<li><a class="reference internal" href="#why-the-name-v" id="id5">Why the name "V"?</a></li>
+<li><a class="reference internal" href="#is-there-any-connection-to-vlang-io-by-alex-medvednikov" id="id6">Is there any connection to vlang.io (by Alex Medvednikov)?</a></li>
+</ul>
+</li>
+<li>
+<a class="reference internal" href="#syntax" id="id7">Syntax</a><ul>
+<li><a class="reference internal" href="#what-is-the-difference-between-x-and-x" id="id8">What is the difference between <tt class="docutils literal">x</tt> and <tt class="docutils literal">@x</tt>?</a></li>
+<li><a class="reference internal" href="#what-is-the-juxtaposition-operator" id="id9">What is the juxtaposition operator?</a></li>
+<li><a class="reference internal" href="#what-are-the-language-s-keywords" id="id10">What are the language's keywords?</a></li>
+</ul>
+</li>
+<li>
+<a class="reference internal" href="#compiler" id="id11">Compiler</a><ul>
+<li><a class="reference internal" href="#is-v-a-compiled-or-interpreted-language" id="id12">Is V a compiled or interpreted language?</a></li>
+<li><a class="reference internal" href="#is-v-a-compiler-or-an-interpreter" id="id13">Is "v" a compiler or an interpreter?</a></li>
+<li><a class="reference internal" href="#any-plans-to-make-the-compiler-self-hosting" id="id14">Any plans to make the compiler self-hosting?</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="meta">
+<h3><a class="toc-backref" href="#id2">Meta</a></h3>
+<p></p>
+<div class="section" id="what-s-wrong-with-c">
+<h4><a class="toc-backref" href="#id3">What's wrong with C++?</a></h4>
+<p>It inevitably leads to <a class="reference external" href="https://github.com/vegard/satxx11/blob/master/include/satxx11/plugin_list.hh">code like this</a>
+if you want to do certain things at compile time. (Yes, that is my code,
+and no, I'm not proud of it.) In this case, I was trying create a
+compile-time plugin infrastructure using the (at the time) new C++11
+features such as variadic templates and perfect forwarding (before,
+it would not have been possible to do this at all).</p>
+<p>C++ templates are generally a train wreck. You cannot pass composite
+objects (like struct or class instances) as template arguments; in
+fact, you cannot even pass string literals or floating-point values.</p>
+<p>Aside from all this, C++ generally suffers from the same problem as
+C with regards to compile times (because the same headers are read
+and parsed thousands of times over), except that C++'s templates
+exacerbate the problem.</p>
+</div>
+<div class="section" id="is-it-v-or-v">
+<h4><a class="toc-backref" href="#id4">Is it V or v?</a></h4>
+<p>I use "V" for the name of the language and "v" for the name of the
+V compiler/interpreter (and its executable).</p>
+</div>
+<div class="section" id="why-the-name-v">
+<h4><a class="toc-backref" href="#id5">Why the name "V"?</a></h4>
+<p>One-letter names are a staple of programming languages. I just wanted
+something short (both for the compiler and the file extension) and V
+(as well as the domain v-lang.org) seemed free. It's my language after
+all :-D</p>
+</div>
+<div class="section" id="is-there-any-connection-to-vlang-io-by-alex-medvednikov">
+<h4><a class="toc-backref" href="#id6">Is there any connection to vlang.io (by Alex Medvednikov)?</a></h4>
+<p>There is no connection whatsoever.</p>
+<p>My project started earlier (the first commit is from February 2017 and
+has been available on GitHub since around the same time; the domain name
+was registered in March 2017), whereas vlang.io does not seem to have
+existed before February 2019.</p>
+<p>The namespace of programming languages is a bit of a free-for-all
+(there have already been a few other projects calling themselves "V" and
+there's only 26 single-letter names possible after all!) and I don't
+think it will cause too much confusion.</p>
+<p>In any case, we are different projects by different people with completely
+different goals and philosophies, and there is no ill will between us.</p>
+</div>
+</div>
+<div class="section" id="syntax">
+<h3><a class="toc-backref" href="#id7">Syntax</a></h3>
+<p></p>
+<div class="section" id="what-is-the-difference-between-x-and-x">
+<h4><a class="toc-backref" href="#id8">What is the difference between <tt class="docutils literal">x</tt> and <tt class="docutils literal">@x</tt>?</a></h4>
+<p><tt class="docutils literal">x</tt> is evaluated at run-time, whereas <tt class="docutils literal">@x</tt> is evaluated at compile-time.</p>
+<p>For example, given a function <tt class="docutils literal">fib(n)</tt> returning the <tt class="docutils literal">n</tt>-th fibonacci
+number, you can <tt class="docutils literal">@</tt> in several different places for different behaviours:</p>
+<ul class="simple">
+<li>
+<tt class="docutils literal">print fib(10);</tt> — <tt class="docutils literal">fib(10)</tt> is evaluated and printed at run-time</li>
+<li>
+<tt class="docutils literal">@print fib(10);</tt> — <tt class="docutils literal">fib(10)</tt> is evaluated and printed at compile-time</li>
+<li>
+<tt class="docutils literal">print @fib(10);</tt> — <tt class="docutils literal">fib(10)</tt> is evaluated at compile-time but printed at run-time</li>
+</ul>
+<p><tt class="docutils literal">@</tt> is a prefix operator with low precedence, meaning that e.g.
+<tt class="docutils literal">@print fib(10);</tt> is semantically the same as <tt class="docutils literal">@(print <span class="pre">fib(10));</span></tt> and
+<strong>not</strong> the same as <tt class="docutils literal">(@print) fib(10);</tt>.</p>
+<p>Note that macros are already evaluated at compile-time, which means you
+don't need to use <tt class="docutils literal">@</tt> when invoking macros; for example, since <tt class="docutils literal">ptr</tt>
+is a (built-in) macro, you don't need to write <tt class="docutils literal">@ptr(int)</tt> in order to
+evaluate the type at compile-time.</p>
+</div>
+<div class="section" id="what-is-the-juxtaposition-operator">
+<h4><a class="toc-backref" href="#id9">What is the juxtaposition operator?</a></h4>
+<p>What I call the juxtaposition operator is when you have two expressions
+next to each other without anything in between, like this: <tt class="docutils literal">x y</tt>. The
+parse tree for this is <tt class="docutils literal">(juxtapose (symbol x) (symbol y))</tt>. The slightly
+unusual thing about this operator is that it is the only operator that
+doesn't actually have a symbol.</p>
+<p>The juxtaposition operator is most commonly used for function calls and
+macro invocations: for example, <tt class="docutils literal">f(x)</tt> parses as
+<tt class="docutils literal">(juxtapose (symbol f) (brackets (symbol <span class="pre">x)))</span></tt>.</p>
+<p>Of course, juxtaposition is not always interpreted as a call; it depends
+on the context. <tt class="docutils literal">quote x y</tt> is parsed as
+<tt class="docutils literal">(juxtapose (symbol quote) (juxtapose (symbol x) (symbol <span class="pre">y)))</span></tt>, and
+since <tt class="docutils literal">quote</tt> is a macro, <tt class="docutils literal">(juxtapose (symbol x) (symbol y))</tt> is not
+evaluated at all. Similarly, the expression <tt class="docutils literal">if x then y else z</tt> is
+a tree of juxtapositions, but only the outermost one is actually evaluated
+at compile time (since <tt class="docutils literal">if</tt> is a macro).</p>
+</div>
+<div class="section" id="what-are-the-language-s-keywords">
+<h4><a class="toc-backref" href="#id10">What are the language's keywords?</a></h4>
+<p>There are no keywords in V per se. What you typically see in other languages
+as keywords are instead implemented using certain symbols defined as built-in
+macros. I decided to do things this way for multiple reasons:</p>
+<ul class="simple">
+<li>to keep the parser small and generic,</li>
+<li>to allow the programmer to refer to and redefine the variables naming the
+built-in macros, and</li>
+<li>to allow the programmer to define his/her own "keywords" at will.</li>
+</ul>
+<p>In particular, this means that you can reuse the syntax and the parser for
+generic data that you want to store, i.e. something like this is completely
+valid code and does not differentiate between "keywords" and other symbols:
+<tt class="docutils literal">data := quote [if, while, return];</tt>.</p>
+<p>Overall, I just found it more elegant to reuse the macro mechanism where
+other languages have keywords.</p>
+<p>That said, we do define a number of symbols such as <tt class="docutils literal">if</tt>, <tt class="docutils literal">return</tt>, etc.
+at the top-level scope. Please see the handbook for more information.</p>
+</div>
+</div>
+<div class="section" id="compiler">
+<h3><a class="toc-backref" href="#id11">Compiler</a></h3>
+<p></p>
+<div class="section" id="is-v-a-compiled-or-interpreted-language">
+<h4><a class="toc-backref" href="#id12">Is V a compiled or interpreted language?</a></h4>
+<p>Either and both.</p>
+<p>In theory, you can interpret any "typically compiled" language (like C)
+simply by first compiling the code and then executing the result. Similarly,
+you could also compile any "typically interpreted" language (like Python)
+by combining the interpreter with the to-be-interpreted source code into a
+binary. Although both of these could be considered cheating a bit.</p>
+<p>What you probably wanted to ask was whether the "v" program is a compiler
+or an interpreter. See the next question :-)</p>
+<p>That said, V is statically typed and so naturally lends itself to compilation
+to fast native/machine code.</p>
+</div>
+<div class="section" id="is-v-a-compiler-or-an-interpreter">
+<h4><a class="toc-backref" href="#id13">Is "v" a compiler or an interpreter?</a></h4>
+<p>Both!</p>
+<p>Because you can evaluate arbitrary code at compile-time, you could view the
+V compiler as an interpreter.</p>
+<p>The top-level program that you pass to "v" is interpreted by compiling it
+and then immediately executing the result of the compilation.</p>
+<p>As opposed to e.g. C where functions are defined declaratively, in V they
+are the result of actually executing code; when you pass
+<tt class="docutils literal">f := function (a: int, b: int) { ... }</tt> to the compiler, this is not just
+a fancy way of declaring a function, it is actually an assignment like any
+other assignment, and it is compiled like any other assignment; <tt class="docutils literal">function</tt>
+is a macro that returns a function pointer and <tt class="docutils literal">f</tt> is a local variable.</p>
+</div>
+<div class="section" id="any-plans-to-make-the-compiler-self-hosting">
+<h4><a class="toc-backref" href="#id14">Any plans to make the compiler self-hosting?</a></h4>
+<p>Not at this time.</p>
+<p>Having a stable base language is important before writing any substantial
+amount of code in it, and neither syntax nor libraries are currently anywhere
+near finished.</p>
+<p>C++ is already widespread and also makes it easier to build/install/bootstrap
+on other systems/architectures.</p>
+</div>
+</div>
+</div>
+    </div>
+    
+
+</article></main><footer id="footer"><p>Contents © 2019 <a href="mailto:vegard.nossum@gmail.com">Vegard Nossum</a> - Powered by <a href="https://getnikola.com" rel="nofollow">Nikola</a></p>
+            
+        </footer>
+</div>
+    
+            <script src="../assets/js/all-nocdn.js"></script><script>
+    baguetteBox.run('div#content', {
+        ignoreClass: 'islink',
+        captions: function(element) {
+            return element.getElementsByTagName('img')[0].alt;
+    }});
+    </script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+Sitemap: https://www.v-lang.org/sitemapindex.xml
+
+User-Agent: *
+Host: www.v-lang.org

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html prefix="        og: http://ogp.me/ns# article: http://ogp.me/ns/article#     " vocab="http://ogp.me/ns" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>The V programming language</title>
+<link href="https://fonts.googleapis.com/css?family=Bitter:400,400i,700" rel="stylesheet" type="text/css">
+<link href="assets/css/all-nocdn.css" rel="stylesheet" type="text/css">
+<meta name="theme-color" content="#5670d4">
+<meta name="generator" content="Nikola (getnikola.com)">
+<link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="rss.xml">
+<link rel="canonical" href="https://www.v-lang.org/">
+<!--[if lt IE 9]><script src="assets/js/html5shiv-printshiv.min.js"></script><![endif]--><meta name="author" content="Vegard Nossum">
+<meta property="og:site_name" content="The V programming language">
+<meta property="og:title" content="The V programming language">
+<meta property="og:url" content="https://www.v-lang.org/">
+<meta property="og:description" content="Hi there! V is a programming language that I'm working on in my spare time (it won't be big and professional like D and Go ;-)).
+V is statically typed and has very powerful metaprogramming capabilitie">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2019-08-08T05:21:28Z">
+</head>
+<body>
+    <a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
+    <div id="container">
+         
+    <header id="header"><h1 id="brand"><a href="https://www.v-lang.org/" title="The V programming language" rel="home">
+        <img src="title.png" alt="The V programming language" id="logo"></a></h1>
+
+        
+
+        
+    <nav id="menu"><ul>
+<li class="active"><a href=".">Home<span class="sr-only"> (active)</span></a></li>
+                <li><a href="faq/">FAQ</a></li>
+                <li><a href="https://v-lang.readthedocs.io/">Documentation</a></li>
+                <li><a href="https://github.com/vegard/v/">Source code</a></li>
+
+    
+
+    
+    
+    </ul></nav></header><main id="content"><article class="post-text storypage" itemscope="itemscope" itemtype="http://schema.org/Article"><header></header><div class="e-content entry-content" itemprop="articleBody text">
+    <div>
+<p>Hi there! <strong>V</strong> is a programming language that I'm working on in my spare time (it won't be big and professional like D and Go ;-)).</p>
+<p><strong>V</strong> is statically typed and has very powerful metaprogramming capabilities. In fact, one of the main goals is to let the programmer use the exact same syntax and libraries for both their code and their metacode. Another explicit goal (which is made possible by making compiler internals available to the programmer) is to keep both the language and the compiler small and instead move as much functionality as possible into libraries (including a standard library).</p>
+<p>Highlights:</p>
+<ul class="simple">
+<li>Metaprogramming done right<ul>
+<li>Hygienic macros</li>
+<li>Same syntax for program and metaprogram</li>
+<li>Compile-time execution</li>
+<li>Access to compiler internals</li>
+</ul>
+</li>
+<li>Compiles to machine code</li>
+<li>Fast compiler</li>
+<li>Familiar (C-like) syntax</li>
+</ul>
+<p>Status:</p>
+<ul class="simple">
+<li>Some simple programs like Hello World, GCD calculation, Fibonacci numbers, etc. work</li>
+<li>Very simple non-optimising bytecode backend for compile-time evaluation</li>
+<li>Very simple non-optimising x86-64 backend</li>
+<li>Direct output to ELF executables</li>
+</ul>
+<p>It's currently just me working on the project and it's very far from finished.</p>
+<p>The project is Free Software and you can find <a class="reference external" href="https://github.com/vegard/v/">the complete source code on GitHub</a>.</p>
+</div>
+    </div>
+    
+
+</article></main><footer id="footer"><p>Contents © 2019 <a href="mailto:vegard.nossum@gmail.com">Vegard Nossum</a> - Powered by <a href="https://getnikola.com" rel="nofollow">Nikola</a></p>
+            
+        </footer>
+</div>
+    
+            <script src="assets/js/all-nocdn.js"></script><script>
+    baguetteBox.run('div#content', {
+        ignoreClass: 'islink',
+        captions: function(element) {
+            return element.getElementsByTagName('img')[0].alt;
+    }});
+    </script>
+</body>
+</html>

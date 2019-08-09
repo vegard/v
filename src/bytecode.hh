@@ -213,11 +213,13 @@ struct bytecode_function:
 	void enter()
 	{
 		++indentation;
+		this_object->comments.push_back(::comment(bytes.size(), indentation, ""));
 	}
 
 	void leave()
 	{
 		--indentation;
+		this_object->comments.push_back(::comment(bytes.size(), indentation, ""));
 	}
 
 	void comment(std::string s)
@@ -721,7 +723,8 @@ void disassemble_bytecode(uint64_t *constants, uint8_t *bytecode, unsigned int s
 				break;
 
 			indentation = c.indentation;
-			printf("\e[33m%4s//%*.s %s\n", "", 2 * indentation, "", c.text.c_str());
+			if (c.text.size())
+				printf("\e[33m%4s//%*.s %s\n", "", 2 * indentation, "", c.text.c_str());
 			++comments_it;
 		}
 

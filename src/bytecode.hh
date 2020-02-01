@@ -221,8 +221,7 @@ struct bytecode_function:
 
 	void emit_prologue()
 	{
-		comment("emit_prologue() {");
-		enter();
+		function_enter(this, "emit_prologue");
 
 		unsigned int arg = 0;
 
@@ -243,21 +242,14 @@ struct bytecode_function:
 					emit_store_address(arg_value);
 			}
 		}
-
-		leave();
-		comment("}");
 	}
 
 	void emit_epilogue()
 	{
-		comment("emit_epilogue() {");
-		enter();
+		function_enter(this, "emit_epilogue");
 
 		emit_move(return_value, local_return_value);
 		emit(RETURN);
-
-		leave();
-		comment("}");
 	}
 
 	void emit_load_global(unsigned int size)
@@ -600,8 +592,7 @@ struct bytecode_function:
 
 	void emit_call(value_ptr fn, std::vector<value_ptr> args, value_ptr return_value)
 	{
-		comment("emit_call() {");
-		enter();
+		function_enter(this, "emit_call");
 
 		auto nr_args = args.size();
 		if (nr_args > max_nr_args)
@@ -625,9 +616,6 @@ struct bytecode_function:
 
 		emit_load(fn);
 		emit(CALL);
-
-		leave();
-		comment("}");
 	}
 
 	void emit_c_call(value_ptr fn, std::vector<value_ptr> args, value_ptr return_value)

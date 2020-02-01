@@ -830,10 +830,17 @@ struct x86_64_function:
 };
 
 struct function_block {
-	function_ptr f;
+	function *f;
+
+	function_block(function *f, std::string name, std::string args = ""):
+		f(f)
+	{
+		f->comment(format("$($) {", name, args));
+		f->enter();
+	}
 
 	function_block(const function_ptr &f, std::string name, std::string args = ""):
-		f(f)
+		f(f.get())
 	{
 		f->comment(format("$($) {", name, args));
 		f->enter();
@@ -846,6 +853,8 @@ struct function_block {
 	}
 };
 
+// This takes a weak reference on 'f', so you need to make sure it cannot be
+// destroyed before the end of the scope if you use this.
 #define function_enter(f, args...) \
 	function_block __function_enter(f, __FUNCTION__, ##args)
 

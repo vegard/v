@@ -374,7 +374,7 @@ struct x86_64_function:
 
 	void emit_prologue()
 	{
-		comment("prologue");
+		function_enter(this, "emit_prologue");
 
 		// pushq %rbp
 		emit_byte(0x55);
@@ -422,13 +422,11 @@ struct x86_64_function:
 				emit_move_reg_to_mreg_offset(reg, RBP, arg_value->local.offset);
 			}
 		}
-
-		comment("end prologue");
 	}
 
 	void emit_epilogue()
 	{
-		comment("epilogue");
+		function_enter(this, "emit_epilogue");
 
 		overwrite_long(frame_size_addr, next_local_slot);
 
@@ -825,12 +823,13 @@ struct x86_64_function:
 
 	void emit_add(value_ptr source1, value_ptr source2, value_ptr dest)
 	{
+		function_enter(this, "emit_add");
+
 		assert(source1->type->size == dest->type->size);
 		assert(source2->type->size == dest->type->size);
 		// TODO: handle other sizes?
 		assert(dest->type->size == 8);
 
-		comment("add");
 		emit_move(source1, 0, RAX);
 		emit_move(source2, 0, RBX);
 		// hardcoded: addq %rbx, %rax
@@ -842,12 +841,13 @@ struct x86_64_function:
 
 	void emit_sub(value_ptr source1, value_ptr source2, value_ptr dest)
 	{
+		function_enter(this, "mit_sub");
+
 		assert(source1->type->size == dest->type->size);
 		assert(source2->type->size == dest->type->size);
 		// TODO: handle other sizes?
 		assert(dest->type->size == 8);
 
-		comment("sub");
 		emit_move(source1, 0, RAX);
 		emit_move(source2, 0, RBX);
 		// hardcoded: subq %rbx, %rax

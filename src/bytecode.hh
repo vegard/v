@@ -670,8 +670,8 @@ struct jit_function {
 		bytecode(new uint8_t[f->bytes.size()])
 	{
 		//printf("making jit function with bytecode at addr %p constants %p\n", &bytecode[0], &constants[0]);
-		memcpy(&constants[0], &f->constants[0], sizeof(f->constants[0]) * f->constants.size());
-		memcpy(&bytecode[0], &f->bytes[0], f->bytes.size());
+		memcpy(&constants[0], f->constants.data(), sizeof(f->constants[0]) * f->constants.size());
+		memcpy(&bytecode[0], f->bytes.data(), f->bytes.size());
 	}
 };
 

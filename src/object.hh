@@ -92,7 +92,7 @@ struct object {
 		bytes(sizeof(t))
 	{
 		// TODO: is there a better C++ way to do this?
-		memcpy(&bytes[0], &value, sizeof(t));
+		memcpy(bytes.data(), &value, sizeof(t));
 	}
 };
 

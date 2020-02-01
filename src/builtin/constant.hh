@@ -60,7 +60,7 @@ struct constant_define_macro: macro {
 				auto obj = (*state.objects)[rhs->target_global.object_id];
 				assert(obj->relocations.empty());
 				// XXX: Oh man, this is so wrong.
-				val->constant.u64 = *(uint64_t *) &obj->bytes[0];
+				val->constant.u64 = *(uint64_t *) obj->bytes.data();
 			}
 			break;
 		case VALUE_CONSTANT:

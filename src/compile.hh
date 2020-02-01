@@ -198,7 +198,7 @@ static void *map(std::shared_ptr<x86_64_function> f)
 	if (mem == MAP_FAILED)
 		throw std::runtime_error(format("mmap() failed: $", strerror(errno)));
 
-	memcpy(mem, &f->bytes[0], f->bytes.size());
+	memcpy(mem, f->bytes.data(), f->bytes.size());
 
 	// Flush instruction cache so we know we'll
 	// execute what we compiled and not some
@@ -238,7 +238,7 @@ static void run(std::shared_ptr<x86_64_function> f)
 
 static void run(std::shared_ptr<bytecode_function> f)
 {
-	run_bytecode(&f->constants[0], &f->bytes[0], nullptr, 0);
+	run_bytecode(f->constants.data(), f->bytes.data(), nullptr, 0);
 }
 
 static value_ptr eval(const compile_state &state, ast_node_ptr node)
@@ -271,7 +271,7 @@ static value_ptr eval(const compile_state &state, ast_node_ptr node)
 
 	if (global_disassemble) {
 		printf("eval:\n");
-		disassemble_bytecode(&new_f->constants[0], &new_f->bytes[0], new_f->bytes.size(), new_f->comments);
+		disassemble_bytecode(new_f->constants.data(), new_f->bytes.data(), new_f->bytes.size(), new_f->comments);
 		printf("\n");
 	}
 

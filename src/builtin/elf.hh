@@ -529,7 +529,7 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 		for (const auto object_id: segment.objects) {
 			const auto obj = (*objects)[object_id];
 			const auto &info = object_infos[object_id];
-			memcpy(bytes + info.segment_offset, &obj->bytes[0], obj->bytes.size());
+			memcpy(bytes + info.segment_offset, obj->bytes.data(), obj->bytes.size());
 		}
 
 		segment.bytes = bytes;
@@ -567,7 +567,7 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 				}
 			}
 
-			//disassemble(&obj->bytes[0], obj->bytes.size(), object_infos[object_id].addr, obj->comments);
+			//disassemble(obj->bytes.data(), obj->bytes.size(), object_infos[object_id].addr, obj->comments);
 		}
 	}
 

@@ -134,6 +134,35 @@ struct function
 	}
 };
 
+struct function_block {
+	function *f;
+
+	function_block(function *f, std::string name, std::string args = ""):
+		f(f)
+	{
+		f->comment(format("$($) {", name, args));
+		f->enter();
+	}
+
+	function_block(const function_ptr &f, std::string name, std::string args = ""):
+		f(f.get())
+	{
+		f->comment(format("$($) {", name, args));
+		f->enter();
+	}
+
+	~function_block()
+	{
+		f->leave();
+		f->comment("}");
+	}
+};
+
+// This takes a weak reference on 'f', so you need to make sure it cannot be
+// destroyed before the end of the scope if you use this.
+#define function_enter(f, args...) \
+	function_block __function_enter(f, __FUNCTION__, ##args)
+
 // TODO: arch-specific
 
 // Instruction encoding
@@ -828,34 +857,5 @@ struct x86_64_function:
 		emit_move(RAX, dest, 0);
 	}
 };
-
-struct function_block {
-	function *f;
-
-	function_block(function *f, std::string name, std::string args = ""):
-		f(f)
-	{
-		f->comment(format("$($) {", name, args));
-		f->enter();
-	}
-
-	function_block(const function_ptr &f, std::string name, std::string args = ""):
-		f(f.get())
-	{
-		f->comment(format("$($) {", name, args));
-		f->enter();
-	}
-
-	~function_block()
-	{
-		f->leave();
-		f->comment("}");
-	}
-};
-
-// This takes a weak reference on 'f', so you need to make sure it cannot be
-// destroyed before the end of the scope if you use this.
-#define function_enter(f, args...) \
-	function_block __function_enter(f, __FUNCTION__, ##args)
 
 #endif

@@ -34,13 +34,14 @@ static value_ptr builtin_macro_import(const compile_state &state, ast_node_ptr n
 	// XXX: restrict accessible paths?
 	// TODO: search multiple paths rather than just the current dir
 	auto literal_string = state.get_literal_string(node);
-	source_file_ptr source = std::make_shared<mmap_source_file>(literal_string.c_str());
 
+	source_file_ptr source;
 	int source_node;
 	try {
+		source = std::make_shared<mmap_source_file>(literal_string.c_str());
 		source_node = source->parse();
-	} catch (const parse_error &e) {
-		throw compile_error(source, e.pos, e.end, "parse error: $", e.what());
+	} catch (const std::runtime_error &e) {
+		state.error(node, e.what());
 	}
 
 	auto new_scope = std::make_shared<scope>(state.scope);

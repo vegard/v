@@ -34,6 +34,7 @@ extern "C" {
 #include <memory>
 
 #include "ast.hh"
+#include "format.hh"
 #include "line_number_info.hh"
 #include "parser.hh"
 
@@ -90,18 +91,22 @@ struct mmap_source_file: source_file {
 		filename(filename),
 		mem(nullptr)
 	{
-		// TODO: throw exceptions instead of exiting
-
 		int fd = open(filename, O_RDONLY);
 		if (fd == -1)
-			error(EXIT_FAILURE, errno, "%s: open()", filename);
+			throw std::runtime_error(format("$: open(): $", filename, strerror(errno)));
 
-		if (fstat(fd, &stbuf) == -1)
-			error(EXIT_FAILURE, errno, "%s: fstat()", filename);
+		if (fstat(fd, &stbuf) == -1) {
+			auto e = std::runtime_error(format("$: fstat(): $", filename, strerror(errno)));
+			close(fd);
+			throw e;
+		}
 
 		mem = mmap(nullptr, stbuf.st_size, PROT_READ, MAP_SHARED, fd, 0);
-		if (mem == MAP_FAILED)
-			error(EXIT_FAILURE, errno, "%s: mmap()", filename);
+		if (mem == MAP_FAILED) {
+			auto e = std::runtime_error(format("$: mmap(): $", filename, strerror(errno)));
+			close(fd);
+			throw e;
+		}
 
 		close(fd);
 

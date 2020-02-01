@@ -181,7 +181,7 @@ static bool compile_and_run(source_file_ptr source)
 
 		if (global_disassemble) {
 			printf("metaprogram:\n");
-			disassemble_bytecode(&f->constants[0], &f->bytes[0], f->bytes.size(), f->this_object->comments);
+			disassemble_bytecode(&f->constants[0], &f->bytes[0], f->bytes.size(), f->comments);
 			printf("\n");
 		}
 

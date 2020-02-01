@@ -59,12 +59,12 @@ struct relocation {
 	}
 };
 
-struct comment {
+struct function_comment {
 	size_t offset;
 	unsigned int indentation;
 	std::string text;
 
-	comment(size_t offset, unsigned int indentation, std::string text):
+	function_comment(size_t offset, unsigned int indentation, std::string text):
 		offset(offset),
 		indentation(indentation),
 		text(text)
@@ -82,8 +82,6 @@ struct object {
 	// TODO: should this be actual full-fledged relocations or just
 	// references? See http://www.ucw.cz/~hubicka/papers/abi/node19.html
 	std::vector<relocation> relocations;
-
-	std::vector<comment> comments;
 
 	object()
 	{

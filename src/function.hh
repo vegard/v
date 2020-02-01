@@ -51,6 +51,10 @@ struct function
 		CMP_GREATER_EQUAL,
 	};
 
+	object_ptr this_object;
+	std::vector<function_comment> comments;
+	unsigned int indentation;
+
 	std::vector<value_type_ptr> args_types;
 	value_type_ptr return_type;
 
@@ -58,6 +62,8 @@ struct function
 	value_ptr return_value;
 
 	function(std::vector<value_type_ptr> args_types, value_type_ptr return_type):
+		this_object(std::make_shared<object>()),
+		indentation(0),
 		args_types(args_types),
 		return_type(return_type)
 	{
@@ -77,16 +83,22 @@ struct function
 
 	#define NOT_IMPLEMENTED not_implemented(__FILE__, __LINE__, __func__)
 
-	virtual void comment(std::string s)
+	void comment(std::string s)
 	{
+		comments.push_back(function_comment(this_object->bytes.size(), indentation, s));
 	}
 
-	virtual void enter()
+
+	void enter()
 	{
+		++indentation;
+		comments.push_back(function_comment(this_object->bytes.size(), indentation, ""));
 	}
 
-	virtual void leave()
+	void leave()
 	{
+		--indentation;
+		comments.push_back(function_comment(this_object->bytes.size(), indentation, ""));
 	}
 
 	virtual void emit_prologue()
@@ -191,10 +203,7 @@ struct x86_64_function:
 
 	// XXX: the double indirection is bad, we should collect bytes
 	// ourselves directly and then move it into the object at the end
-	object_ptr this_object;
 	std::vector<uint8_t> &bytes;
-
-	unsigned int indentation;
 
 	// offset (into "bytes") where we need to write the final frame size
 	// after we know how many locals we have.
@@ -205,9 +214,7 @@ struct x86_64_function:
 	explicit x86_64_function(context_ptr c, bool host, std::vector<value_type_ptr> args_types, value_type_ptr return_type):
 		function(args_types, return_type),
 		host(host),
-		this_object(std::make_shared<object>()),
 		bytes(this_object->bytes),
-		indentation(0),
 		// slot 0 is the return address
 		// slot 1 is the saved rbx
 		next_local_slot(16)
@@ -273,22 +280,6 @@ struct x86_64_function:
 		next_local_slot = next_local_slot + size;
 
 		return result;
-	}
-
-	// Helpers for indenting code + comments
-	void enter()
-	{
-		++indentation;
-	}
-
-	void leave()
-	{
-		--indentation;
-	}
-
-	void comment(std::string s)
-	{
-		this_object->comments.push_back(::comment(bytes.size(), indentation, s));
 	}
 
 	void emit_byte(uint8_t v)

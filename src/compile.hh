@@ -271,7 +271,7 @@ static value_ptr eval(const compile_state &state, ast_node_ptr node)
 
 	if (global_disassemble) {
 		printf("eval:\n");
-		disassemble_bytecode(&new_f->constants[0], &new_f->bytes[0], new_f->bytes.size(), new_f->this_object->comments);
+		disassemble_bytecode(&new_f->constants[0], &new_f->bytes[0], new_f->bytes.size(), new_f->comments);
 		printf("\n");
 	}
 

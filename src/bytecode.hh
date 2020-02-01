@@ -129,7 +129,6 @@ struct bytecode_function:
 
 	// XXX: the double indirection is bad, we should collect bytes
 	// ourselves directly and then move it into the object at the end
-	object_ptr this_object;
 	std::vector<uint8_t> &bytes;
 
 	unsigned int indentation;
@@ -150,9 +149,7 @@ struct bytecode_function:
 
 	bytecode_function(context_ptr c, bool host, std::vector<value_type_ptr> args_types, value_type_ptr return_type):
 		function(args_types, return_type),
-		this_object(std::make_shared<object>()),
 		bytes(this_object->bytes),
-		indentation(0),
 		max_nr_args(0),
 		nr_locals(0)
 	{
@@ -207,24 +204,6 @@ struct bytecode_function:
 		nr_locals += size / 8;
 
 		return result;
-	}
-
-	// Helpers for indenting code + comments
-	void enter()
-	{
-		++indentation;
-		this_object->comments.push_back(::comment(bytes.size(), indentation, ""));
-	}
-
-	void leave()
-	{
-		--indentation;
-		this_object->comments.push_back(::comment(bytes.size(), indentation, ""));
-	}
-
-	void comment(std::string s)
-	{
-		this_object->comments.push_back(::comment(bytes.size(), indentation, s));
 	}
 
 	void emit(uint8_t v)
@@ -708,7 +687,7 @@ struct jit_function {
 	}
 };
 
-void disassemble_bytecode(uint64_t *constants, uint8_t *bytecode, unsigned int size, const std::vector<comment> &comments, unsigned int ip = 0)
+void disassemble_bytecode(uint64_t *constants, uint8_t *bytecode, unsigned int size, const std::vector<function_comment> &comments, unsigned int ip = 0)
 {
         auto comments_it = comments.begin();
         auto comments_end = comments.end();
@@ -802,7 +781,7 @@ void run_bytecode(uint64_t *constants, uint8_t *bytecode,
 	while (true) {
 		if (debug) {
 			trace_bytecode("");
-			std::vector<comment> comments;
+			std::vector<function_comment> comments;
 			disassemble_bytecode(constants, bytecode, ip + 1, comments, ip);
 			fflush(stdout);
 		}

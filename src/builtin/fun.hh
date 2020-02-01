@@ -153,7 +153,7 @@ static value_ptr __construct_fun(value_type_ptr type, const compile_state &state
 
 		if (global_disassemble) {
 			printf("host fun: %p\n", jf);
-			disassemble_bytecode(&bytecode_f->constants[0], &bytecode_f->bytes[0], bytecode_f->bytes.size(), bytecode_f->this_object->comments);
+			disassemble_bytecode(&bytecode_f->constants[0], &bytecode_f->bytes[0], bytecode_f->bytes.size(), bytecode_f->comments);
 			printf("\n");
 		}
 

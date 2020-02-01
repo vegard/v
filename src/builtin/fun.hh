@@ -85,7 +85,7 @@ static value_ptr fun_define_macro(const compile_state &state, ast_node_ptr node)
 
 	auto rhs = compile(state, state.get_node(node->binop.rhs));
 	auto val = state.function->alloc_local_value(state.context, rhs->type);
-	state.scope->define(state.function, node, symbol_name, val);
+	state.scope->define(state.function, state.source, node, symbol_name, val);
 	state.function->emit_move(rhs, val);
 	return val;
 }
@@ -118,7 +118,7 @@ static value_ptr __construct_fun(value_type_ptr type, const compile_state &state
 	new_f->emit_prologue();
 
 	for (unsigned int i = 0; i < args.size(); ++i)
-		new_scope->define(new_f, node, args[i], new_f->args_values[i]);
+		new_scope->define(new_f, state.source, node, args[i], new_f->args_values[i]);
 
 	new_scope->define_builtin_macro("_define", fun_define_macro);
 	new_scope->define_builtin_macro("return", std::make_shared<return_macro>(new_f, new_scope, return_type, new_f->return_value, return_label));

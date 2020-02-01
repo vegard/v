@@ -56,6 +56,7 @@ struct context {
 struct scope {
 	struct entry {
 		function_ptr f;
+		source_file_ptr source;
 		ast_node_ptr node;
 		value_ptr val;
 	};
@@ -72,10 +73,11 @@ struct scope {
 	{
 	}
 
-	void define(function_ptr f, ast_node_ptr node, const std::string name, value_ptr val)
+	void define(function_ptr f, source_file_ptr source, ast_node_ptr node, const std::string name, value_ptr val)
 	{
 		entry e = {
 			.f = f,
+			.source = source,
 			.node = node,
 			.val = val,
 		};
@@ -110,7 +112,7 @@ struct scope {
 		auto type_value = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_type);
 		auto type_copy = new value_type_ptr(type);
 		type_value->global.host_address = (void *) type_copy;
-		define(nullptr, nullptr, name, type_value);
+		define(nullptr, nullptr, nullptr, name, type_value);
 	}
 
 	// Helper for defining builtin macros
@@ -120,7 +122,7 @@ struct scope {
 		auto macro_value = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_macro);
 		auto macro_copy = new macro_ptr(m);
 		macro_value->global.host_address = (void *) macro_copy;
-		define(nullptr, nullptr, name, macro_value);
+		define(nullptr, nullptr, nullptr, name, macro_value);
 	}
 
 	void define_builtin_macro(const std::string name, value_ptr (*fn)(const compile_state &, ast_node_ptr))
@@ -130,7 +132,7 @@ struct scope {
 
 	void define_builtin_namespace(const std::string name, value_ptr val)
 	{
-		define(nullptr, nullptr, name, val);
+		define(nullptr, nullptr, nullptr, name, val);
 	}
 
 	template<typename t>
@@ -139,7 +141,7 @@ struct scope {
 		auto type_value = std::make_shared<value>(nullptr, VALUE_GLOBAL, type);
 		auto copy = new t(constant_value);
 		type_value->global.host_address = (void *) copy;
-		define(nullptr, nullptr, name, type_value);
+		define(nullptr, nullptr, nullptr, name, type_value);
 	}
 
 	bool lookup(const std::string name, entry &result)

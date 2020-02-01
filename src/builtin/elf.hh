@@ -96,7 +96,7 @@ struct define_macro: macro {
 
 		// TODO: create new value?
 		auto rhs = compile(state.set_scope(s), state.get_node(node->binop.rhs));
-		s->define(state.function, node, symbol_name, rhs);
+		s->define(state.function, state.source, node, symbol_name, rhs);
 
 		if (do_export)
 			elf.exports[symbol_name] = rhs;

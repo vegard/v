@@ -70,7 +70,7 @@ struct constant_define_macro: macro {
 			assert(false);
 		}
 
-		s->define(state.function, node, symbol_name, val);
+		s->define(state.function, state.source, node, symbol_name, val);
 		return builtin_value_void;
 	}
 };

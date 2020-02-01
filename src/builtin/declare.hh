@@ -52,7 +52,7 @@ static value_ptr builtin_macro_declare(const compile_state &state, ast_node_ptr 
 	auto global = new uint8_t[rhs_type->size];
 	val->global.host_address = (void *) global;
 
-	state.scope->define(state.function, node, symbol_name, val);
+	state.scope->define(state.function, state.source, node, symbol_name, val);
 	return val;
 }
 

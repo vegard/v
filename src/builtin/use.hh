@@ -35,7 +35,7 @@ static value_ptr builtin_macro_use(const compile_state &state, ast_node_ptr node
 		// XXX: what about shadowed variables? should probably be an error
 		// XXX: preserve location of original definition
 		// XXX: should we really invoke the macro here?
-		state.scope->define(nullptr, nullptr, it.first, it.second->invoke(state, v, node));
+		state.scope->define(nullptr, nullptr, nullptr, it.first, it.second->invoke(state, v, node));
 	}
 
 	return builtin_value_void;

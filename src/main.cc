@@ -165,7 +165,6 @@ static std::shared_ptr<bytecode_function> compile_metaprogram(scope_ptr scope, s
 	return f;
 }
 
-static bool do_repl = false;
 static bool do_dump_ast = false;
 static bool do_compile = true;
 static bool do_run = true;
@@ -242,9 +241,7 @@ int main(int argc, char *argv[])
 
 	for (int i = 1; i < argc; ++i) {
 		if (argv[i][0] == '-') {
-			if (!strcmp(argv[i], "--repl"))
-				do_repl = true;
-			else if (!strcmp(argv[i], "--dump-ast"))
+			if (!strcmp(argv[i], "--dump-ast"))
 				do_dump_ast = true;
 			else if (!strcmp(argv[i], "--no-compile"))
 				do_compile = false;
@@ -263,7 +260,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (filenames.empty() || do_repl) {
+	if (filenames.empty()) {
 		repl();
 	} else {
 		for (const char *filename: filenames) {

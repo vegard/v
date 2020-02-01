@@ -33,6 +33,7 @@ extern "C" {
 #include "../scope.hh"
 #include "../value.hh"
 #include "../builtin/str.hh"
+#include "../x86_64.hh"
 
 struct elf_data {
 	value_ptr entry_point;

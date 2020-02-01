@@ -31,6 +31,7 @@
 #include "scope.hh"
 #include "source_file.hh"
 #include "value.hh"
+#include "x86_64.hh"
 
 typedef std::shared_ptr<std::vector<object_ptr>> objects_ptr;
 

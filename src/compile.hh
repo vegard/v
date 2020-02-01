@@ -189,54 +189,6 @@ struct compile_state {
 
 static value_ptr compile(const compile_state &state, ast_node_ptr node);
 
-#if 0 // not needed when we can run bytecode
-static void *map(std::shared_ptr<x86_64_function> f)
-{
-	size_t length = (f->bytes.size() + 4095) & ~4095;
-	void *mem = mmap(NULL, length,
-		PROT_READ | PROT_WRITE | PROT_EXEC,
-		MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-	if (mem == MAP_FAILED)
-		throw std::runtime_error(format("mmap() failed: $", strerror(errno)));
-
-	memcpy(mem, f->bytes.data(), f->bytes.size());
-
-	// Flush instruction cache so we know we'll
-	// execute what we compiled and not some
-	// garbage that happened to be in the cache.
-	__builtin___clear_cache((char *) mem, (char *) mem + length);
-
-	return mem;
-}
-
-static void run(std::shared_ptr<x86_64_function> f)
-{
-	void *mem = map(f);
-
-	// TODO: ABI
-	auto ret = f->return_value;
-	if (!ret || ret->type->size == 0) {
-		// No return value
-		auto fn = (void (*)()) mem;
-		fn();
-	} else if (ret->type->size > sizeof(unsigned long)) {
-		// TODO
-		// If the return value is bigger than a long, we need to pass
-		// a pointer to it as the first argument.
-		//auto fn = (void (*)(void *)) mem;
-		//fn();
-		assert(false);
-	} else {
-		// The return value fits in a long
-		auto fn = (long (*)()) mem;
-		fn();
-	}
-
-	size_t length = (f->bytes.size() + 4095) & ~4095;
-	munmap(mem, length);
-}
-#endif
-
 static void run(std::shared_ptr<bytecode_function> f)
 {
 	run_bytecode(f->constants.data(), f->bytes.data(), nullptr, 0);

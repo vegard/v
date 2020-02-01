@@ -110,7 +110,7 @@ static auto builtin_value_namespace_lang = std::make_shared<value>(nullptr, VALU
 	})
 );
 
-static std::shared_ptr<bytecode_function> compile_metaprogram(source_file_ptr source, ast_node_ptr root)
+static scope_ptr make_toplevel_scope()
 {
 	auto global_scope = std::make_shared<scope>();
 
@@ -151,10 +151,15 @@ static std::shared_ptr<bytecode_function> compile_metaprogram(source_file_ptr so
 
 	global_scope->define_builtin_macro("print", builtin_macro_print);
 
+	return global_scope;
+}
+
+static std::shared_ptr<bytecode_function> compile_metaprogram(scope_ptr scope, source_file_ptr source, ast_node_ptr root)
+{
 	auto c = std::make_shared<context>(nullptr);
 	auto f = std::make_shared<bytecode_function>(c, true, std::vector<value_type_ptr>(), builtin_type_void);
 	f->emit_prologue();
-	compile(compile_state(source, c, f, global_scope), root);
+	compile(compile_state(source, c, f, scope), root);
 	f->emit_epilogue();
 
 	return f;
@@ -167,6 +172,8 @@ static bool do_run = true;
 
 static bool compile_and_run(source_file_ptr source)
 {
+	auto scope = make_toplevel_scope();
+
 	try {
 		auto node = source->parse();
 		assert(node != -1);
@@ -174,7 +181,7 @@ static bool compile_and_run(source_file_ptr source)
 		std::shared_ptr<bytecode_function> f;
 
 		if (do_compile)
-			f = compile_metaprogram(source, source->tree.get(node));
+			f = compile_metaprogram(scope, source, source->tree.get(node));
 
 		if (do_dump_ast)
 			printf("%s\n", serialize(source, source->tree.get(node)).c_str());
@@ -196,6 +203,37 @@ static bool compile_and_run(source_file_ptr source)
 	}
 
 	return false;
+}
+
+static void repl()
+{
+	auto scope = make_toplevel_scope();
+
+	// TODO: use std::cin or something that doesn't limit line length
+	static char line[1024];
+	while (true) {
+		fprintf(stdout, ">>> ");
+		fflush(stdout);
+
+		if (!fgets(line, sizeof(line), stdin))
+			break;
+
+		auto source = std::make_shared<source_file>("<stdin>", line, strlen(line));
+		try {
+			auto node = source->parse();
+			assert(node != -1);
+
+			auto f = compile_metaprogram(scope, source, source->tree.get(node));
+			run(f);
+		} catch (const parse_error &e) {
+			print_message(source, e.pos, e.end, e.what());
+		} catch (const compile_error &e) {
+			print_message(e.source, e.pos, e.end, e.what());
+		}
+	}
+
+	fprintf(stdout, "\n");
+	fflush(stdout);
 }
 
 int main(int argc, char *argv[])
@@ -225,25 +263,14 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (do_repl) {
-		// TODO: use std::cin or something that doesn't limit line length
-		static char line[1024];
-		while (true) {
-			fprintf(stdout, ">>> ");
-			fflush(stdout);
-
-			if (!fgets(line, sizeof(line), stdin))
-				break;
-
-			auto source = std::make_shared<source_file>("<stdin>", line, strlen(line));
-			compile_and_run(source);
+	if (filenames.empty() || do_repl) {
+		repl();
+	} else {
+		for (const char *filename: filenames) {
+			auto source = std::make_shared<mmap_source_file>(filename);
+			if (compile_and_run(source))
+				return EXIT_FAILURE;
 		}
-	}
-
-	for (const char *filename: filenames) {
-		auto source = std::make_shared<mmap_source_file>(filename);
-		if (compile_and_run(source))
-			return EXIT_FAILURE;
 	}
 
 	return EXIT_SUCCESS;

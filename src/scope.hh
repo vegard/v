@@ -64,6 +64,8 @@ struct scope {
 	scope_ptr parent;
 	std::map<std::string, entry> contents;
 
+	std::vector<value_ptr> values;
+
 	scope(scope_ptr parent = nullptr):
 		parent(parent)
 	{
@@ -71,6 +73,29 @@ struct scope {
 
 	~scope()
 	{
+		for (auto it: values)
+			delete it;
+	}
+
+	value_ptr make_value()
+	{
+		auto v = new value();
+		values.push_back(v);
+		return v;
+	}
+
+	value_ptr make_value(context_ptr context, value_storage_type storage_type, value_type_ptr type)
+	{
+		auto v = new value(context, storage_type, type);
+		values.push_back(v);
+		return v;
+	}
+
+	value_ptr make_value(context_ptr context, value_type_ptr type, unsigned int object_id)
+	{
+		auto v = new value(context, type, object_id);
+		values.push_back(v);
+		return v;
 	}
 
 	void define(function_ptr f, source_file_ptr source, ast_node_ptr node, const std::string name, value_ptr val)
@@ -109,7 +134,7 @@ struct scope {
 	// NOTE: builtin types are always global
 	void define_builtin_type(const std::string name, value_type_ptr type)
 	{
-		auto type_value = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_type);
+		auto type_value = make_value(nullptr, VALUE_GLOBAL, builtin_type_type);
 		auto type_copy = new value_type_ptr(type);
 		type_value->global.host_address = (void *) type_copy;
 		define(nullptr, nullptr, nullptr, name, type_value);
@@ -119,7 +144,7 @@ struct scope {
 	// NOTE: builtin macros are always global
 	void define_builtin_macro(const std::string name, macro_ptr m)
 	{
-		auto macro_value = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_macro);
+		auto macro_value = make_value(nullptr, VALUE_GLOBAL, builtin_type_macro);
 		auto macro_copy = new macro_ptr(m);
 		macro_value->global.host_address = (void *) macro_copy;
 		define(nullptr, nullptr, nullptr, name, macro_value);
@@ -138,7 +163,7 @@ struct scope {
 	template<typename t>
 	void define_builtin_constant(const std::string name, value_type_ptr type, const t &constant_value)
 	{
-		auto type_value = std::make_shared<value>(nullptr, VALUE_GLOBAL, type);
+		auto type_value = make_value(nullptr, VALUE_GLOBAL, type);
 		auto copy = new t(constant_value);
 		type_value->global.host_address = (void *) copy;
 		define(nullptr, nullptr, nullptr, name, type_value);

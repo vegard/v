@@ -41,7 +41,7 @@ static value_ptr builtin_macro_define(const compile_state &state, ast_node_ptr n
 	// a new global value. The _name_ is still scoped as usual,
 	// though.
 	auto rhs = compile(state, state.get_node(node->binop.rhs));
-	auto val = std::make_shared<value>(state.context, VALUE_GLOBAL, rhs->type);
+	auto val = state.scope->make_value(state.context, VALUE_GLOBAL, rhs->type);
 	auto global = new uint8_t[rhs->type->size];
 	val->global.host_address = (void *) global;
 

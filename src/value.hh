@@ -37,7 +37,7 @@ struct value_type;
 typedef std::shared_ptr<value_type> value_type_ptr;
 
 struct value;
-typedef std::shared_ptr<value> value_ptr;
+typedef value *value_ptr;
 
 struct context;
 typedef std::shared_ptr<context> context_ptr;
@@ -150,7 +150,7 @@ struct value {
 // Some builtin types
 
 static auto builtin_type_void = std::make_shared<value_type>(value_type{0, 0});
-static auto builtin_value_void = std::make_shared<value>(nullptr, VALUE_CONSTANT, builtin_type_void);
+static auto builtin_value_void = new value(nullptr, VALUE_CONSTANT, builtin_type_void);
 
 static auto builtin_type_type = std::make_shared<value_type>(value_type{alignof(value_type_ptr), sizeof(value_type_ptr)});
 

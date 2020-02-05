@@ -35,7 +35,7 @@ static value_ptr builtin_macro_equals(const compile_state &state, ast_node_ptr n
 	if (lhs->type != rhs->type)
 		state.error(node, "cannot compare values of different types");
 
-	auto ret = state.function->alloc_local_value(state.context, builtin_type_boolean);
+	auto ret = state.function->alloc_local_value(state.scope, state.context, builtin_type_boolean);
 	state.function->emit_compare(function::CMP_EQ, lhs, rhs, ret);
 	return ret;
 }
@@ -50,7 +50,7 @@ static value_ptr builtin_macro_notequals(const compile_state &state, ast_node_pt
 	if (lhs->type != rhs->type)
 		state.error(node, "cannot compare values of different types");
 
-	auto ret = state.function->alloc_local_value(state.context, builtin_type_boolean);
+	auto ret = state.function->alloc_local_value(state.scope, state.context, builtin_type_boolean);
 	state.function->emit_compare(function::CMP_NEQ, lhs, rhs, ret);
 	return ret;
 }

@@ -70,7 +70,7 @@ static value_ptr builtin_type_macro_constructor(value_type_ptr type, const compi
 		builtin_type_ast_node,
 	};
 
-	static auto macro_fun_type_value = _builtin_macro_fun(state.context, builtin_type_value, argument_types);
+	static auto macro_fun_type_value = _builtin_macro_fun(state, builtin_type_value, argument_types);
 	static auto macro_fun_type = *(value_type_ptr *) macro_fun_type_value->global.host_address;
 
 	std::vector<std::string> args;
@@ -81,7 +81,7 @@ static value_ptr builtin_type_macro_constructor(value_type_ptr type, const compi
 
 	auto m = std::make_shared<user_macro>(macro_fun);
 
-	auto ret = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_macro);
+	auto ret = state.scope->make_value(nullptr, VALUE_GLOBAL, builtin_type_macro);
 	auto global = new macro_ptr(m);
 	ret->global.host_address = (void *) global;
 	return ret;

@@ -55,7 +55,7 @@ static value_ptr builtin_type_compile_state_new_scope(const compile_state &state
 	});
 	fun_type->return_type = builtin_type_compile_state;
 
-	auto val = std::make_shared<value>(nullptr, VALUE_GLOBAL, fun_type);
+	auto val = state.scope->make_value(nullptr, VALUE_GLOBAL, fun_type);
 	auto global = new void *;
 	*global = (void *) &_compile_state_new_scope;
 	val->global.host_address = global;
@@ -63,15 +63,58 @@ static value_ptr builtin_type_compile_state_new_scope(const compile_state &state
 	return __call_fun(state, val, node, args, true);
 }
 
+static void _compile_state_new_value(uint64_t *args)
+{
+	auto &retval = *(value_ptr *) args[0];
+	auto state = *(compile_state_ptr *) args[1];
+	auto node = (ast_node_ptr) args[2];
+
+	auto v = compile(*state, node);
+
+	// XXX: leak
+	new (&retval) value_ptr(state->scope->make_value(nullptr, VALUE_GLOBAL, builtin_type_value));
+	retval->global.host_address = (void *) new value_ptr(v);
+}
+
+// "value" is a macro that evaluates an expression and returns a "value_ptr"
+// rather than the value itself (is this the same as "compile"?)
+static value_ptr builtin_type_compile_state_new_value(const compile_state &state, value_ptr this_state, ast_node_ptr node)
+{
+	state.expect_type(node, this_state, builtin_type_compile_state);
+	state.expect_type(node, AST_BRACKETS);
+
+	std::vector<std::pair<ast_node_ptr, value_ptr>> args;
+	args.push_back(std::make_pair(node, this_state));
+	for (auto arg_node: traverse<AST_COMMA>(state.source->tree, state.get_node(node->unop)))
+		args.push_back(std::make_pair(arg_node, compile(state, arg_node)));
+
+	auto fun_type = std::make_shared<value_type>();
+	fun_type->alignment = alignof(void *);
+	fun_type->size = alignof(void *);
+	fun_type->argument_types = std::vector<value_type_ptr>({
+		builtin_type_compile_state,
+	});
+	fun_type->return_type = builtin_type_value;
+
+	auto val = state.scope->make_value(nullptr, VALUE_GLOBAL, fun_type);
+	auto global = new void *;
+	*global = (void *) &_compile_state_new_value;
+	val->global.host_address = global;
+
+	return __call_fun(state, val, node, args, true);
+
+}
+
 static void _compile_state_define(uint64_t *args)
 {
 	auto state = *(compile_state_ptr *) args[0];
 	auto name = (ast_node_ptr) args[1];
-	auto value = *(value_ptr *) args[2];
+	auto value = (value_ptr) args[2];
 
 	if (name->type != AST_SYMBOL_NAME)
 		state->error(name, "expected symbol");
 
+	assert(value);
 	state->scope->define(state->function, state->source, name, state->get_symbol_name(name), value);
 }
 
@@ -97,7 +140,7 @@ static value_ptr builtin_type_compile_state_define(const compile_state &state, v
 	});
 	fun_type->return_type = builtin_type_void;
 
-	auto val = std::make_shared<value>(nullptr, VALUE_GLOBAL, fun_type);
+	auto val = state.scope->make_value(nullptr, VALUE_GLOBAL, fun_type);
 	auto global = new void *;
 	*global = (void *) &_compile_state_define;
 	val->global.host_address = global;
@@ -135,7 +178,7 @@ static value_ptr builtin_type_compile_state_eval(const compile_state &state, val
 	});
 	fun_type->return_type = builtin_type_value;
 
-	auto val = std::make_shared<value>(nullptr, VALUE_GLOBAL, fun_type);
+	auto val = state.scope->make_value(nullptr, VALUE_GLOBAL, fun_type);
 	auto global = new void *;
 	*global = (void *) &_compile_state_eval;
 	val->global.host_address = global;
@@ -173,7 +216,7 @@ static value_ptr builtin_type_compile_state_compile(const compile_state &state, 
 	});
 	fun_type->return_type = builtin_type_value;
 
-	auto val = std::make_shared<value>(nullptr, VALUE_GLOBAL, fun_type);
+	auto val = state.scope->make_value(nullptr, VALUE_GLOBAL, fun_type);
 	auto global = new void *;
 	*global = (void *) &_compile_state_compile;
 	val->global.host_address = global;

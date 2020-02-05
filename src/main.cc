@@ -75,13 +75,13 @@ static value_ptr builtin_macro_print(const compile_state &state, ast_node_ptr no
 	// TODO: save registers
 	auto arg = compile(state, node);
 	if (arg->type == builtin_type_u64) {
-		auto print_fn = std::make_shared<value>(state.context, VALUE_CONSTANT, builtin_type_u64);
+		auto print_fn = state.scope->make_value(state.context, VALUE_CONSTANT, builtin_type_u64);
 		print_fn->constant.u64 = (uint64_t) &_print_u64;
 
 		state.use_value(node, arg);
 		state.function->emit_c_call(print_fn, { arg }, builtin_value_void);
 	} else if (arg->type == builtin_type_str) {
-		auto print_fn = std::make_shared<value>(state.context, VALUE_CONSTANT, builtin_type_u64);
+		auto print_fn = state.scope->make_value(state.context, VALUE_CONSTANT, builtin_type_u64);
 		print_fn->constant.u64 = (uint64_t) &_print_str;
 
 		// TODO: I think this only works by pure coincidence,
@@ -95,7 +95,7 @@ static value_ptr builtin_macro_print(const compile_state &state, ast_node_ptr no
 	return builtin_value_void;
 }
 
-static auto builtin_value_namespace_lang = std::make_shared<value>(nullptr, VALUE_CONSTANT,
+static auto builtin_value_namespace_lang = new value(nullptr, VALUE_CONSTANT,
 	std::make_shared<value_type>(value_type {
 		.alignment = 0,
 		.size = 0,
@@ -157,7 +157,7 @@ static scope_ptr make_toplevel_scope()
 static std::shared_ptr<bytecode_function> compile_metaprogram(scope_ptr scope, source_file_ptr source, ast_node_ptr root)
 {
 	auto c = std::make_shared<context>(nullptr);
-	auto f = std::make_shared<bytecode_function>(c, true, std::vector<value_type_ptr>(), builtin_type_void);
+	auto f = std::make_shared<bytecode_function>(scope, c, true, std::vector<value_type_ptr>(), builtin_type_void);
 	f->emit_prologue();
 	compile(compile_state(source, c, f, scope), root);
 	f->emit_epilogue();

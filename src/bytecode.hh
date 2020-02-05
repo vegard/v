@@ -23,6 +23,7 @@
 
 #include "function.hh"
 #include "globals.hh"
+#include "scope.hh"
 #include "value.hh"
 
 // Bytecode design:
@@ -147,7 +148,7 @@ struct bytecode_function:
 	// When we return, we copy "return_value" into "local_return_value".
 	value_ptr local_return_value;
 
-	bytecode_function(context_ptr c, bool host, std::vector<value_type_ptr> args_types, value_type_ptr return_type):
+	bytecode_function(scope_ptr scope, context_ptr c, bool host, std::vector<value_type_ptr> args_types, value_type_ptr return_type):
 		function(args_types, return_type),
 		bytes(this_object->bytes),
 		max_nr_args(0),
@@ -162,9 +163,9 @@ struct bytecode_function:
 			if (arg_type->size == 0)
 				args_values.push_back(builtin_value_void);
 			else if (arg_type->size <= 8)
-				args_values.push_back(alloc_local_value(c, arg_type));
+				args_values.push_back(alloc_local_value(scope, c, arg_type));
 			else
-				args_values.push_back(alloc_local_pointer_value(c, arg_type));
+				args_values.push_back(alloc_local_pointer_value(scope, c, arg_type));
 		}
 
 		assert(return_type);
@@ -173,14 +174,18 @@ struct bytecode_function:
 			return_value = builtin_value_void;
 			local_return_value = builtin_value_void;
 		} else {
-			return_value = alloc_local_value(c, return_type);
-			local_return_value = alloc_local_pointer_value(c, return_type);
+			return_value = alloc_local_value(scope, c, return_type);
+			local_return_value = alloc_local_pointer_value(scope, c, return_type);
 		}
 	}
 
-	value_ptr alloc_local_value(context_ptr c, value_type_ptr type)
+	~bytecode_function()
 	{
-		auto result = std::make_shared<value>(c, VALUE_LOCAL, type);
+	}
+
+	value_ptr alloc_local_value(scope_ptr scope, context_ptr c, value_type_ptr type)
+	{
+		auto result = scope->make_value(c, VALUE_LOCAL, type);
 
 		unsigned int size = (type->size + 7) & ~7;
 		unsigned int alignment = type->alignment;
@@ -192,9 +197,9 @@ struct bytecode_function:
 		return result;
 	}
 
-	value_ptr alloc_local_pointer_value(context_ptr c, value_type_ptr type)
+	value_ptr alloc_local_pointer_value(scope_ptr scope, context_ptr c, value_type_ptr type)
 	{
-		auto result = std::make_shared<value>(c, VALUE_LOCAL_POINTER, type);
+		auto result = scope->make_value(c, VALUE_LOCAL_POINTER, type);
 
 		unsigned int size = (sizeof(uint64_t) + 7) & ~7;
 		unsigned int alignment = alignof(uint64_t);

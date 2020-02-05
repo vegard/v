@@ -53,6 +53,7 @@ static auto builtin_type_ast_node = std::make_shared<value_type>(value_type {
 });
 
 static value_ptr builtin_type_compile_state_new_scope(const compile_state &, value_ptr, ast_node_ptr);
+static value_ptr builtin_type_compile_state_new_value(const compile_state &, value_ptr, ast_node_ptr);
 static value_ptr builtin_type_compile_state_define(const compile_state &, value_ptr, ast_node_ptr);
 static value_ptr builtin_type_compile_state_eval(const compile_state &, value_ptr, ast_node_ptr);
 static value_ptr builtin_type_compile_state_compile(const compile_state &, value_ptr, ast_node_ptr);
@@ -66,6 +67,7 @@ static auto builtin_type_compile_state = std::make_shared<value_type>(value_type
 	.members = std::map<std::string, member_ptr>({
 		// TODO: get rid of the triple indirection for methods
 		{"new_scope", std::make_shared<macrofy_callback_member>(builtin_type_compile_state_new_scope)},
+		{"new_value", std::make_shared<macrofy_callback_member>(builtin_type_compile_state_new_value)},
 		{"define", std::make_shared<macrofy_callback_member>(builtin_type_compile_state_define)},
 		{"eval", std::make_shared<macrofy_callback_member>(builtin_type_compile_state_eval)},
 		{"compile", std::make_shared<macrofy_callback_member>(builtin_type_compile_state_compile)},

@@ -84,7 +84,7 @@ static value_ptr fun_define_macro(const compile_state &state, ast_node_ptr node)
 	auto symbol_name = state.get_symbol_name(lhs);
 
 	auto rhs = compile(state, state.get_node(node->binop.rhs));
-	auto val = state.function->alloc_local_value(state.context, rhs->type);
+	auto val = state.function->alloc_local_value(state.scope, state.context, rhs->type);
 	state.scope->define(state.function, state.source, node, symbol_name, val);
 	state.function->emit_move(rhs, val);
 	return val;
@@ -102,9 +102,9 @@ static value_ptr __construct_fun(value_type_ptr type, const compile_state &state
 	// TODO: this is a bit ugly, especially with the downcasting afterwards
 	function_ptr new_f;
 	if (state.objects)
-		new_f = std::make_shared<x86_64_function>(c, !state.objects, argument_types, return_type);
+		new_f = std::make_shared<x86_64_function>(state.scope, c, !state.objects, argument_types, return_type);
 	else
-		new_f = std::make_shared<bytecode_function>(c, !state.objects, argument_types, return_type);
+		new_f = std::make_shared<bytecode_function>(state.scope, c, !state.objects, argument_types, return_type);
 
 	auto new_scope = std::make_shared<scope>(state.scope);
 
@@ -136,7 +136,8 @@ static value_ptr __construct_fun(value_type_ptr type, const compile_state &state
 	if (state.objects) {
 		// target
 		auto x86_64_f = std::dynamic_pointer_cast<x86_64_function>(new_f);
-		return std::make_shared<value>(nullptr, type, state.new_object(x86_64_f->this_object));
+		// TODO: use new_state/new_scope?
+		return state.scope->make_value(nullptr, type, state.new_object(x86_64_f->this_object));
 	} else {
 		// host
 		auto bytecode_f = std::dynamic_pointer_cast<bytecode_function>(new_f);
@@ -147,7 +148,7 @@ static value_ptr __construct_fun(value_type_ptr type, const compile_state &state
 		static std::set<function_ptr> functions;
 		functions.insert(bytecode_f);
 
-		auto ret = std::make_shared<value>(nullptr, VALUE_GLOBAL, type);
+		auto ret = state.scope->make_value(nullptr, VALUE_GLOBAL, type);
 		auto jf = new jit_function(bytecode_f);
 		ret->global.host_address = new void *(jf);
 
@@ -205,7 +206,7 @@ static value_ptr __call_fun(const compile_state &state, value_ptr fn, ast_node_p
 	if (return_type == builtin_type_void)
 		return_value = builtin_value_void;
 	else
-		return_value = f->alloc_local_value(state.context, return_type);
+		return_value = f->alloc_local_value(state.scope, state.context, return_type);
 
 	std::vector<value_ptr> args_values;
 	for (unsigned int i = 0; i < args.size(); ++i) {
@@ -240,7 +241,7 @@ static value_ptr _call_fun(const compile_state &state, value_ptr fn, ast_node_pt
 }
 
 // Low-level helper (for use after data has been extracted from syntax)
-static value_ptr _builtin_macro_fun(context_ptr c, value_type_ptr ret_type, const std::vector<value_type_ptr> &argument_types)
+static value_ptr _builtin_macro_fun(const compile_state &state, value_type_ptr ret_type, const std::vector<value_type_ptr> &argument_types)
 {
 	value_type_ptr type;
 
@@ -255,7 +256,7 @@ static value_ptr _builtin_macro_fun(context_ptr c, value_type_ptr ret_type, cons
 	type->members["_call"] = std::make_shared<callback_member>(_call_fun);
 
 	// XXX: refcounting
-	auto type_value = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_type);
+	auto type_value = state.scope->make_value(nullptr, VALUE_GLOBAL, builtin_type_type);
 	auto type_copy = new value_type_ptr(type);
 	type_value->global.host_address = (void *) type_copy;
 	return type_value;
@@ -294,7 +295,7 @@ static value_ptr builtin_macro_fun(const compile_state &state, ast_node_ptr node
 		argument_types.push_back(arg_type);
 	}
 
-	return _builtin_macro_fun(state.context, ret_type, argument_types);
+	return _builtin_macro_fun(state, ret_type, argument_types);
 }
 
 #endif

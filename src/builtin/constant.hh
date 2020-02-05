@@ -46,10 +46,11 @@ struct constant_define_macro: macro {
 
 		// TODO: should this be compile() instead of eval()?
 		// We shouldn't be generating any code -- it must be a compile-time constant expression.
-		auto rhs = eval(state.set_scope(s), state.get_node(node->binop.rhs));
+		//auto rhs = eval(state.set_scope(s), state.get_node(node->binop.rhs));
+		auto rhs = compile(state.set_scope(s), state.get_node(node->binop.rhs));
 		assert(rhs->type->size == 8);
 
-		auto val = std::make_shared<value>(state.context, VALUE_CONSTANT, rhs->type);
+		auto val = s->make_value(state.context, VALUE_CONSTANT, rhs->type);
 		switch (rhs->storage_type) {
 		case VALUE_GLOBAL:
 			// XXX: Oh man, this is so wrong.

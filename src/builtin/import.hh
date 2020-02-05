@@ -54,7 +54,7 @@ static value_ptr builtin_macro_import(const compile_state &state, ast_node_ptr n
 		members[it.first] = std::make_shared<namespace_member>(it.second.val);
 	}
 
-	auto new_namespace = std::make_shared<value>(nullptr, VALUE_CONSTANT,
+	auto new_namespace = state.scope->make_value(nullptr, VALUE_CONSTANT,
 		std::make_shared<value_type>(value_type {
 			.alignment = 0,
 			.size = 0,

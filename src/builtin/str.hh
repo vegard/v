@@ -41,7 +41,7 @@ static value_ptr builtin_type_str_constructor(value_type_ptr, const compile_stat
 	if (node->type != AST_LITERAL_STRING)
 		state.error(node, "expected literal string");
 
-	auto ret = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_str);
+	auto ret = state.scope->make_value(nullptr, VALUE_GLOBAL, builtin_type_str);
 
 	auto global = new std::string;
 	*global = state.get_literal_string(node);

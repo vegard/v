@@ -74,7 +74,7 @@ static value_ptr builtin_macro_if(const compile_state &state, ast_node_ptr node)
 
 	// Got all the bits that we need, now try to compile it.
 
-	value_ptr return_value;
+	value_ptr return_value(nullptr);
 
 	// "if" condition
 	auto condition_value = compile(state, condition_node);
@@ -87,7 +87,7 @@ static value_ptr builtin_macro_if(const compile_state &state, ast_node_ptr node)
 	// "if" block
 	auto true_value = compile(state, true_node);
 	if (true_value->type != builtin_type_void) {
-		return_value = f->alloc_local_value(c, true_value->type);
+		return_value = f->alloc_local_value(state.scope, c, true_value->type);
 		f->emit_move(true_value, return_value);
 	}
 
@@ -96,7 +96,7 @@ static value_ptr builtin_macro_if(const compile_state &state, ast_node_ptr node)
 
 	// "else" block
 	f->emit_label(false_label);
-	value_ptr false_value;
+	value_ptr false_value(nullptr);
 	if (false_node) {
 		false_value = compile(state, false_node);
 		if (false_value->type != builtin_type_void && false_value->type == true_value->type)

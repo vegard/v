@@ -21,24 +21,9 @@
 
 #include "../compile.hh"
 
-static value_ptr builtin_macro_value_constructor(value_type_ptr type, const compile_state &state, ast_node_ptr node);
-
 static auto builtin_type_value = std::make_shared<value_type>(value_type {
 	.alignment = alignof(value_ptr),
 	.size = sizeof(value_ptr),
-	.constructor = &builtin_macro_value_constructor,
 });
-
-// "value" is a macro that evaluates an expression and returns a "value_ptr"
-// rather than the value itself (is this the same as "compile"?)
-static value_ptr builtin_macro_value_constructor(value_type_ptr type, const compile_state &state, ast_node_ptr node)
-{
-	auto v = compile(state, node);
-
-	auto value_value = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_value);
-	auto value_copy = new value_ptr(v);
-	value_value->global.host_address = (void *) value_copy;
-	return value_value;
-}
 
 #endif

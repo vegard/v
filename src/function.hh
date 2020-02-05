@@ -73,7 +73,7 @@ struct function
 	{
 	}
 
-	virtual value_ptr alloc_local_value(context_ptr c, value_type_ptr type) = 0;
+	virtual value_ptr alloc_local_value(scope_ptr scope, context_ptr c, value_type_ptr type) = 0;
 
 	void not_implemented(const char *file, unsigned int line, const char *func)
 	{

@@ -456,7 +456,7 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 
 			// XXX: this is obviously highly Linux/x86-64-specific.
 
-			auto new_f = std::make_shared<x86_64_function>(state.context, false, std::vector<value_type_ptr>(), builtin_type_void);
+			auto new_f = std::make_shared<x86_64_function>(state.scope, state.context, false, std::vector<value_type_ptr>(), builtin_type_void);
 
 			new_f->emit_call(elf.entry_point);
 			new_f->emit_move_reg_to_reg(RAX, RDI);

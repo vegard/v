@@ -200,7 +200,7 @@ static value_ptr eval(const compile_state &state, ast_node_ptr node)
 		printf("\e[32m[trace-eval] %s\e[0m\n", serialize(state.source, node).c_str());
 
 	auto new_c = std::make_shared<context>(state.context);
-	auto new_f = std::make_shared<bytecode_function>(new_c, true, std::vector<value_type_ptr>(), builtin_type_void);
+	auto new_f = std::make_shared<bytecode_function>(state.scope, new_c, true, std::vector<value_type_ptr>(), builtin_type_void);
 
 	new_f->emit_prologue();
 
@@ -211,7 +211,7 @@ static value_ptr eval(const compile_state &state, ast_node_ptr node)
 		// Make sure we copy the value out to a new global in case the
 		// returned value is a local (which cannot be accessed outside
 		// "new_f" itself).
-		ret = std::make_shared<value>(new_c, VALUE_GLOBAL, v->type);
+		ret = state.scope->make_value(new_c, VALUE_GLOBAL, v->type);
 		auto global = new uint8_t[v->type->size];
 		ret->global.host_address = (void *) global;
 		new_f->emit_move(v, ret);
@@ -244,9 +244,13 @@ static value_ptr compile_curly_brackets(const compile_state &state, ast_node_ptr
 {
 	function_enter(state.function, get_source_for(state.source, node));
 
+	auto ret = state.scope->make_value();
+
 	// Curly brackets create a new scope parented to the old one
 	auto new_scope = std::make_shared<scope>(state.scope);
-	return compile(state.set_scope(new_scope), state.source->tree.get(node->unop));
+	auto v = compile(state.set_scope(new_scope), state.source->tree.get(node->unop));
+	*ret = *v;
+	return ret;
 }
 
 static value_ptr compile_member(const compile_state &state, ast_node_ptr node)

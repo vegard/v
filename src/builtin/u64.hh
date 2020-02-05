@@ -33,7 +33,7 @@ struct macrofy_callback_member: member {
 	value_ptr invoke(const compile_state &state, value_ptr v, ast_node_ptr node)
 	{
 		auto m = std::make_shared<val_macro>(fn, v);
-		auto macro_value = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_macro);
+		auto macro_value = state.scope->make_value(nullptr, VALUE_GLOBAL, builtin_type_macro);
 		auto macro_copy = new macro_ptr(m);
 		macro_value->global.host_address = (void *) macro_copy;
 		return macro_value;
@@ -68,7 +68,7 @@ static value_ptr builtin_type_u64_constructor(value_type_ptr, const compile_stat
 	if (!literal_integer.fits_ulong_p())
 		state.error(node, "literal integer is too large to fit in u64");
 
-	auto ret = std::make_shared<value>(nullptr, VALUE_CONSTANT, builtin_type_u64);
+	auto ret = state.scope->make_value(nullptr, VALUE_CONSTANT, builtin_type_u64);
 	ret->constant.u64 = literal_integer.get_si();
 	return ret;
 }
@@ -80,7 +80,7 @@ static value_ptr builtin_type_u64_add(const compile_state &state, value_ptr lhs,
 	if (rhs->type != lhs->type)
 		state.error(node, "expected u64");
 
-	auto ret = state.function->alloc_local_value(state.context, lhs->type);
+	auto ret = state.function->alloc_local_value(state.scope, state.context, lhs->type);
 	state.function->emit_add(lhs, rhs, ret);
 	return ret;
 }
@@ -91,7 +91,7 @@ static value_ptr builtin_type_u64_subtract(const compile_state &state, value_ptr
 	if (rhs->type != lhs->type)
 		state.error(node, "expected u64");
 
-	auto ret = state.function->alloc_local_value(state.context, lhs->type);
+	auto ret = state.function->alloc_local_value(state.scope, state.context, lhs->type);
 	state.function->emit_sub(lhs, rhs, ret);
 	return ret;
 }
@@ -102,7 +102,7 @@ static value_ptr builtin_type_u64_less(const compile_state &state, value_ptr lhs
 	if (rhs->type != lhs->type)
 		state.error(node, "expected u64");
 
-	auto ret = state.function->alloc_local_value(state.context, builtin_type_boolean);
+	auto ret = state.function->alloc_local_value(state.scope, state.context, builtin_type_boolean);
 	state.function->emit_compare(function::CMP_LESS, lhs, rhs, ret);
 	return ret;
 }

@@ -32,7 +32,8 @@ struct namespace_member: member {
 
 	namespace_member(value_type_ptr type)
 	{
-		val = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_type);
+		// XXX: this leaks
+		val = new value(nullptr, VALUE_GLOBAL, builtin_type_type);
 		val->global.host_address = (void *) new value_type_ptr(type);
 	}
 

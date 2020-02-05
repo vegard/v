@@ -48,7 +48,7 @@ static value_ptr builtin_macro_declare(const compile_state &state, ast_node_ptr 
 	// For functions that are run at compile-time, we allocate
 	// a new global value. The _name_ is still scoped as usual,
 	// though.
-	auto val = std::make_shared<value>(state.context, VALUE_GLOBAL, rhs_type);
+	auto val = state.scope->make_value(state.context, VALUE_GLOBAL, rhs_type);
 	auto global = new uint8_t[rhs_type->size];
 	val->global.host_address = (void *) global;
 

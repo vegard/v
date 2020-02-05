@@ -37,7 +37,7 @@ struct struct_field: member {
 
 	value_ptr invoke(const compile_state &state, value_ptr v, ast_node_ptr node)
 	{
-		auto ret_value = std::make_shared<value>(state.context, v->storage_type, field_type);
+		auto ret_value = state.scope->make_value(state.context, v->storage_type, field_type);
 		switch (v->storage_type) {
 		case VALUE_GLOBAL:
 			ret_value->global.host_address = (void *) ((unsigned long) v->global.host_address + offset);
@@ -63,7 +63,7 @@ static value_ptr _struct_constructor(value_type_ptr v, const compile_state &stat
 {
 	// TODO: zero value
 	// TODO: move allocation out!
-	return state.function->alloc_local_value(state.context, v);
+	return state.function->alloc_local_value(state.scope, state.context, v);
 }
 
 // handle 'x := y' in structs
@@ -130,7 +130,7 @@ static value_ptr builtin_macro_struct(const compile_state &state, ast_node_ptr n
 	type->size = (macro->offset + type->alignment - 1) & ~(type->alignment - 1);
 
 	// XXX: refcounting
-	auto type_value = std::make_shared<value>(state.context, VALUE_GLOBAL, builtin_type_type);
+	auto type_value = state.scope->make_value(state.context, VALUE_GLOBAL, builtin_type_type);
 	auto type_copy = new value_type_ptr(type);
 	type_value->global.host_address = (void *) type_copy;
 	return type_value;

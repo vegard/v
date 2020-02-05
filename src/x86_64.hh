@@ -23,6 +23,7 @@
 
 #include "function.hh"
 #include "globals.hh"
+#include "scope.hh"
 #include "value.hh"
 
 // Instruction encoding
@@ -100,7 +101,7 @@ struct x86_64_function:
 
 	unsigned int next_local_slot;
 
-	explicit x86_64_function(context_ptr c, bool host, std::vector<value_type_ptr> args_types, value_type_ptr return_type):
+	explicit x86_64_function(scope_ptr scope, context_ptr c, bool host, std::vector<value_type_ptr> args_types, value_type_ptr return_type):
 		function(args_types, return_type),
 		host(host),
 		bytes(this_object->bytes),
@@ -116,9 +117,9 @@ struct x86_64_function:
 			if (arg_type->size == 0)
 				args_values.push_back(builtin_value_void);
 			else if (arg_type->size <= 8)
-				args_values.push_back(alloc_local_value(c, arg_type));
+				args_values.push_back(alloc_local_value(scope, c, arg_type));
 			else
-				args_values.push_back(alloc_local_pointer_value(c, arg_type));
+				args_values.push_back(alloc_local_pointer_value(scope, c, arg_type));
 		}
 
 		assert(return_type);
@@ -126,21 +127,21 @@ struct x86_64_function:
 		if (return_type->size == 0)
 			return_value = builtin_value_void;
 		else if (return_type->size <= 8)
-			return_value = alloc_local_value(c, return_type);
+			return_value = alloc_local_value(scope, c, return_type);
 		else
-			return_value = alloc_local_pointer_value(c, return_type);
+			return_value = alloc_local_pointer_value(scope, c, return_type);
 	}
 
 	~x86_64_function()
 	{
 	}
 
-	value_ptr alloc_local_value(context_ptr c, value_type_ptr type)
+	value_ptr alloc_local_value(scope_ptr scope, context_ptr c, value_type_ptr type)
 	{
 		if (type->size == 0 || type->alignment == 0)
-			return std::make_shared<value>(c, VALUE_CONSTANT, type);
+			return scope->make_value(c, VALUE_CONSTANT, type);
 
-		auto result = std::make_shared<value>(c, VALUE_LOCAL, type);
+		auto result = scope->make_value(c, VALUE_LOCAL, type);
 
 		// TODO: we could try to rearrange/pack values to avoid wasting stack space
 		unsigned int offset = (next_local_slot + type->size + type->alignment - 1) & ~(type->alignment - 1);
@@ -151,13 +152,13 @@ struct x86_64_function:
 		return result;
 	}
 
-	value_ptr alloc_local_pointer_value(context_ptr c, value_type_ptr type)
+	value_ptr alloc_local_pointer_value(scope_ptr scope, context_ptr c, value_type_ptr type)
 	{
 		assert(type != builtin_type_void);
 		assert(type->size > 0);
 		assert(type->alignment > 0);
 
-		auto result = std::make_shared<value>(c, VALUE_LOCAL_POINTER, type);
+		auto result = scope->make_value(c, VALUE_LOCAL_POINTER, type);
 
 		unsigned int size = sizeof(void *);
 		unsigned int alignment = alignof(void *);

@@ -28,7 +28,7 @@
 
 static value_ptr builtin_macro_quote(const compile_state &state, ast_node_ptr node)
 {
-	auto ret = std::make_shared<value>(nullptr, VALUE_GLOBAL, builtin_type_ast_node);
+	auto ret = state.scope->make_value(nullptr, VALUE_GLOBAL, builtin_type_ast_node);
 	auto global = new ast_node_ptr(node);
 	ret->global.host_address = (void *) global;
 	return ret;

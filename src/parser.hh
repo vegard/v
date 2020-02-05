@@ -117,17 +117,12 @@ struct parser {
 	int parse_symbol_name(unsigned int &pos);
 	int parse_atom(unsigned int &pos);
 
-	template<ast_node_type type, unsigned int left_size, unsigned int right_size>
-	int parse_outfix(const char (&left)[left_size], const char (&right)[right_size], unsigned int &pos);
+	int parse_outfix(ast_node_type type, const char *left, const char *right, unsigned int &pos);
 
-	template<precedence prec, unsigned int op_size>
-	int parse_unop_prefix_as_call(const char (&op)[op_size], const char *symbol_name, unsigned int &pos);
+	int parse_unop_prefix_as_call(precedence prec, const char *op, const char *symbol_name, unsigned int &pos);
 
-	template<ast_node_type type, precedence prec, associativity assoc, bool allow_trailing, unsigned int op_size>
-	int parse_binop(const char (&op)[op_size], int lhs, unsigned int &pos, unsigned int min_precedence);
-
-	template<precedence prec, associativity assoc, bool allow_trailing, unsigned int op_size>
-	int parse_binop_as_call(const char (&op)[op_size], const char *symbol_name,
+	int parse_binop(ast_node_type type, precedence prec, associativity assoc, bool allow_trailing, const char *op, int lhs, unsigned int &pos, unsigned int min_precedence);
+	int parse_binop_as_call(precedence prec, associativity assoc, bool allow_trailing, const char *op, const char *symbol_name,
 		int lhs, unsigned int &pos, unsigned int min_precedence);
 
 	int parse_expr(unsigned int &pos, unsigned int min_precedence = 0);
@@ -284,14 +279,16 @@ int parser::parse_atom(unsigned int &pos)
 	return ptr;
 }
 
-template<ast_node_type type, unsigned int left_size, unsigned int right_size>
-int parser::parse_outfix(const char (&left)[left_size], const char (&right)[right_size], unsigned int &pos)
+int parser::parse_outfix(ast_node_type type, const char *left, const char *right, unsigned int &pos)
 {
+	unsigned int left_size = strlen(left);
+	unsigned int right_size = strlen(right);
+
 	unsigned int i = pos;
 
-	if (i + left_size - 1 >= len || strncmp(buf + i, left, left_size - 1))
+	if (i + left_size >= len || strncmp(buf + i, left, left_size))
 		return -1;
-	i += left_size - 1;
+	i += left_size;
 
 	skip_whitespace_and_comments(i);
 
@@ -300,9 +297,9 @@ int parser::parse_outfix(const char (&left)[left_size], const char (&right)[righ
 
 	skip_whitespace_and_comments(i);
 
-	if (i + right_size - 1 > len || strncmp(buf + i, right, right_size - 1))
-		throw syntax_error("expected terminator", i, i + right_size - 1);
-	i += right_size - 1;
+	if (i + right_size > len || strncmp(buf + i, right, right_size))
+		throw syntax_error("expected terminator", i, i + right_size);
+	i += right_size;
 
 	auto node_index = tree.new_node(type, pos, i);
 	auto node = tree.get(node_index);
@@ -314,14 +311,15 @@ int parser::parse_outfix(const char (&left)[left_size], const char (&right)[righ
 	return node_index;
 }
 
-template<precedence prec, unsigned int op_size>
-int parser::parse_unop_prefix_as_call(const char (&op)[op_size], const char *symbol_name, unsigned int &pos)
+int parser::parse_unop_prefix_as_call(precedence prec, const char *op, const char *symbol_name, unsigned int &pos)
 {
+	unsigned int op_size = strlen(op);
+
 	unsigned int i = pos;
 
-	if (i + op_size - 1 >= len || strncmp(buf + i, op, op_size - 1))
+	if (i + op_size >= len || strncmp(buf + i, op, op_size))
 		return -1;
-	i += op_size - 1;
+	i += op_size;
 
 	skip_whitespace_and_comments(i);
 
@@ -345,19 +343,20 @@ int parser::parse_unop_prefix_as_call(const char (&op)[op_size], const char *sym
 }
 
 // NOTE: We expect the caller to have parsed the left hand side already
-template<ast_node_type type, precedence prec, associativity assoc, bool allow_trailing, unsigned int op_size>
-int parser::parse_binop(const char (&op)[op_size], int lhs, unsigned int &pos, unsigned int min_precedence)
+int parser::parse_binop(ast_node_type type, precedence prec, associativity assoc, bool allow_trailing, const char *op, int lhs, unsigned int &pos, unsigned int min_precedence)
 {
 	assert(lhs != -1);
+
+	unsigned int op_size = strlen(op);
 
 	if (prec < min_precedence)
 		return -1;
 
 	unsigned int i = pos;
 
-	if (i + op_size - 1 >= len || strncmp(buf + i, op, op_size - 1))
+	if (i + op_size >= len || strncmp(buf + i, op, op_size))
 		return -1;
-	i += op_size - 1;
+	i += op_size;
 
 	skip_whitespace_and_comments(i);
 
@@ -388,13 +387,12 @@ int parser::parse_binop(const char (&op)[op_size], int lhs, unsigned int &pos, u
 // putting it here simplifies anything that needs to traverse the AST later,
 // since it can handle these operators in a uniform way (as opposed to
 // handling separate AST types for each built-in operator).
-template<precedence prec, associativity assoc, bool allow_trailing, unsigned int op_size>
-int parser::parse_binop_as_call(const char (&op)[op_size], const char *symbol_name,
+int parser::parse_binop_as_call(precedence prec, associativity assoc, bool allow_trailing, const char *op, const char *symbol_name,
 	int lhs, unsigned int &pos, unsigned int min_precedence)
 {
 	unsigned int i = pos;
 
-	auto args = parse_binop<AST_JUXTAPOSE, prec, assoc, allow_trailing>(op, lhs, i, min_precedence);
+	auto args = parse_binop(AST_JUXTAPOSE, prec, assoc, allow_trailing, op, lhs, i, min_precedence);
 	if (args == -1)
 		return -1;
 
@@ -420,15 +418,15 @@ int parser::parse_expr(unsigned int &pos, unsigned int min_precedence)
 	/* Outfix unary operators */
 	int lhs = -1;
 	if (lhs == -1)
-		lhs = parse_outfix<AST_BRACKETS>("(", ")", i);
+		lhs = parse_outfix(AST_BRACKETS, "(", ")", i);
 	if (lhs == -1)
-		lhs = parse_outfix<AST_SQUARE_BRACKETS>("[", "]", i);
+		lhs = parse_outfix(AST_SQUARE_BRACKETS, "[", "]", i);
 	if (lhs == -1)
-		lhs = parse_outfix<AST_CURLY_BRACKETS>("{", "}", i);
+		lhs = parse_outfix(AST_CURLY_BRACKETS, "{", "}", i);
 
 	/* Unary prefix operators */
 	if (lhs == -1)
-		lhs = parse_unop_prefix_as_call<PREC_AT>("@", "_eval", i);
+		lhs = parse_unop_prefix_as_call(PREC_AT, "@", "_eval", i);
 
 	/* Infix binary operators (basically anything that starts with a literal) */
 	if (lhs == -1)
@@ -448,43 +446,43 @@ int parser::parse_expr(unsigned int &pos, unsigned int min_precedence)
 
 		// This must appear before ":" since that's a prefix
 		if (result == -1)
-			result = parse_binop_as_call<PREC_DEFINE, ASSOC_LEFT, false>(":=", "_define", lhs, i, min_precedence);
+			result = parse_binop_as_call(PREC_DEFINE, ASSOC_LEFT, false, ":=", "_define", lhs, i, min_precedence);
 
 		if (result == -1)
-			result = parse_binop<AST_MEMBER, PREC_MEMBER, ASSOC_LEFT, false>(".", lhs, i, min_precedence);
+			result = parse_binop(AST_MEMBER, PREC_MEMBER, ASSOC_LEFT, false, ".", lhs, i, min_precedence);
 		if (result == -1)
-			result = parse_binop_as_call<PREC_PAIR, ASSOC_LEFT, false>(":", "_declare", lhs, i, min_precedence);
+			result = parse_binop_as_call(PREC_PAIR, ASSOC_LEFT, false, ":", "_declare", lhs, i, min_precedence);
 		if (result == -1)
-			result = parse_binop_as_call<PREC_MULTIPLY_DIVIDE, ASSOC_LEFT, false>("*", "_multiply", lhs, i, min_precedence);
+			result = parse_binop_as_call(PREC_MULTIPLY_DIVIDE, ASSOC_LEFT, false, "*", "_multiply", lhs, i, min_precedence);
 		if (result == -1)
-			result = parse_binop_as_call<PREC_MULTIPLY_DIVIDE, ASSOC_LEFT, false>("/", "_divide", lhs, i, min_precedence);
+			result = parse_binop_as_call(PREC_MULTIPLY_DIVIDE, ASSOC_LEFT, false, "/", "_divide", lhs, i, min_precedence);
 		if (result == -1)
-			result = parse_binop_as_call<PREC_ADD_SUBTRACT, ASSOC_LEFT, false>("+", "_add", lhs, i, min_precedence);
+			result = parse_binop_as_call(PREC_ADD_SUBTRACT, ASSOC_LEFT, false, "+", "_add", lhs, i, min_precedence);
 		if (result == -1)
-			result = parse_binop_as_call<PREC_ADD_SUBTRACT, ASSOC_LEFT, false>("-", "_subtract", lhs, i, min_precedence);
+			result = parse_binop_as_call(PREC_ADD_SUBTRACT, ASSOC_LEFT, false, "-", "_subtract", lhs, i, min_precedence);
 		if (result == -1)
-			result = parse_binop<AST_COMMA, PREC_COMMA, ASSOC_RIGHT, true>(",", lhs, i, min_precedence);
+			result = parse_binop(AST_COMMA, PREC_COMMA, ASSOC_RIGHT, true, ",", lhs, i, min_precedence);
 		if (result == -1)
-			result = parse_binop_as_call<PREC_EQUALITY, ASSOC_LEFT, false>("==", "_equals", lhs, i, min_precedence);
+			result = parse_binop_as_call(PREC_EQUALITY, ASSOC_LEFT, false, "==", "_equals", lhs, i, min_precedence);
 		if (result == -1)
-			result = parse_binop_as_call<PREC_EQUALITY, ASSOC_LEFT, false>("!=", "_notequals", lhs, i, min_precedence);
+			result = parse_binop_as_call(PREC_EQUALITY, ASSOC_LEFT, false, "!=", "_notequals", lhs, i, min_precedence);
 		if (result == -1)
-			result = parse_binop_as_call<PREC_EQUALITY, ASSOC_LEFT, false>("<", "_less", lhs, i, min_precedence);
+			result = parse_binop_as_call(PREC_EQUALITY, ASSOC_LEFT, false, "<", "_less", lhs, i, min_precedence);
 		if (result == -1)
-			result = parse_binop_as_call<PREC_EQUALITY, ASSOC_LEFT, false>("<=", "_less_equal", lhs, i, min_precedence);
+			result = parse_binop_as_call(PREC_EQUALITY, ASSOC_LEFT, false, "<=", "_less_equal", lhs, i, min_precedence);
 		if (result == -1)
-			result = parse_binop_as_call<PREC_EQUALITY, ASSOC_LEFT, false>(">", "_greater", lhs, i, min_precedence);
+			result = parse_binop_as_call(PREC_EQUALITY, ASSOC_LEFT, false, ">", "_greater", lhs, i, min_precedence);
 		if (result == -1)
-			result = parse_binop_as_call<PREC_EQUALITY, ASSOC_LEFT, false>(">=", "_greater_equal", lhs, i, min_precedence);
+			result = parse_binop_as_call(PREC_EQUALITY, ASSOC_LEFT, false, ">=", "_greater_equal", lhs, i, min_precedence);
 		if (result == -1)
-			result = parse_binop_as_call<PREC_ASSIGN, ASSOC_LEFT, false>("=", "_assign", lhs, i, min_precedence);
+			result = parse_binop_as_call(PREC_ASSIGN, ASSOC_LEFT, false, "=", "_assign", lhs, i, min_precedence);
 		if (result == -1)
-			result = parse_binop<AST_SEMICOLON, PREC_SEMICOLON, ASSOC_RIGHT, true>(";", lhs, i, min_precedence);
+			result = parse_binop(AST_SEMICOLON, PREC_SEMICOLON, ASSOC_RIGHT, true, ";", lhs, i, min_precedence);
 
 		// This must appear last since it's a prefix of any other
 		// operator.
 		if (result == -1)
-			result = parse_binop<AST_JUXTAPOSE, PREC_JUXTAPOSE, ASSOC_RIGHT, false>("", lhs, i, min_precedence);
+			result = parse_binop(AST_JUXTAPOSE, PREC_JUXTAPOSE, ASSOC_RIGHT, false, "", lhs, i, min_precedence);
 
 		if (result == -1) {
 			result = lhs;

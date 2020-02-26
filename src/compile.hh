@@ -103,12 +103,6 @@ struct compile_state {
 		return val;
 	}
 
-	void use_value(const ast_node_ptr &node, value_ptr val) const
-	{
-		if (!can_use_value(context, val))
-			error(node, "cannot access value at compile time");
-	}
-
 	ast_node_ptr get_node(int index) const
 	{
 		return source->tree.get(index);
@@ -143,6 +137,12 @@ struct compile_state {
 };
 
 __thread compile_state *state;
+
+void use_value(const ast_node_ptr &node, value_ptr val)
+{
+	if (!can_use_value(state->context, val))
+		state->error(node, "cannot access value at compile time");
+}
 
 struct use_function {
 	function_ptr old_function;
@@ -339,14 +339,14 @@ static value_ptr _compile_juxtapose(ast_node_ptr lhs_node, value_ptr lhs, ast_no
 	if (lhs_type == builtin_type_macro) {
 		// macros are evaluated directly
 		auto new_c = std::make_shared<context>(state->context);
-		(use_context(new_c), state->use_value(lhs_node, lhs));
+		(use_context(new_c), use_value(lhs_node, lhs));
 		assert(lhs->storage_type == VALUE_GLOBAL);
 
 		auto m = *(macro_ptr *) lhs->global.host_address;
 		return m->invoke(rhs_node);
 	} else if (lhs_type == builtin_type_type) {
 		auto new_c = std::make_shared<context>(state->context);
-		(use_context(new_c), state->use_value(lhs_node, lhs));
+		(use_context(new_c), use_value(lhs_node, lhs));
 		assert(lhs->storage_type == VALUE_GLOBAL);
 
 		// call type's constructor

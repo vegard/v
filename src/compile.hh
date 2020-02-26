@@ -61,53 +61,6 @@ struct compile_state {
 		return object_id;
 	}
 
-#if 0
-	compile_state set_objects(objects_ptr objects) const
-	{
-		auto ret = *this;
-		ret.objects = objects;
-		return ret;
-	}
-
-	compile_state set_source(source_file_ptr &new_source, scope_ptr &new_scope) const
-	{
-		auto ret = *this;
-		ret.source = new_source;
-		ret.scope = new_scope;
-		return ret;
-	}
-
-	compile_state set_context(context_ptr &new_context) const
-	{
-		auto ret = *this;
-		ret.context = new_context;
-		return ret;
-	}
-
-	compile_state set_scope(scope_ptr &new_scope) const
-	{
-		auto ret = *this;
-		ret.scope = new_scope;
-		return ret;
-	}
-
-	compile_state set_function(context_ptr &new_context, function_ptr new_function) const
-	{
-		auto ret = *this;
-		ret.context = new_context;
-		ret.function = new_function;
-		return ret;
-	}
-
-	compile_state set_function(function_ptr new_function, scope_ptr &new_scope) const
-	{
-		auto ret = *this;
-		ret.function = new_function;
-		ret.scope = new_scope;
-		return ret;
-	}
-#endif
-
 	template<typename... Args>
 	void __attribute__((noreturn)) error(const ast_node_ptr node, const char *fmt, Args... args) const
 	{

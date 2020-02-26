@@ -30,8 +30,8 @@ static value_ptr builtin_macro_equals(ast_node_ptr node)
 	if (node->type != AST_JUXTAPOSE)
 		state->error(node, "expected juxtaposition");
 
-	auto lhs = compile(state->get_node(node->binop.lhs));
-	auto rhs = compile(state->get_node(node->binop.rhs));
+	auto lhs = compile(get_node(node->binop.lhs));
+	auto rhs = compile(get_node(node->binop.rhs));
 	if (lhs->type != rhs->type)
 		state->error(node, "cannot compare values of different types");
 
@@ -45,8 +45,8 @@ static value_ptr builtin_macro_notequals(ast_node_ptr node)
 	if (node->type != AST_JUXTAPOSE)
 		state->error(node, "expected juxtaposition");
 
-	auto lhs = compile(state->get_node(node->binop.lhs));
-	auto rhs = compile(state->get_node(node->binop.rhs));
+	auto lhs = compile(get_node(node->binop.lhs));
+	auto rhs = compile(get_node(node->binop.rhs));
 	if (lhs->type != rhs->type)
 		state->error(node, "cannot compare values of different types");
 

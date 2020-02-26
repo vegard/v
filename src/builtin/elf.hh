@@ -88,14 +88,14 @@ struct define_macro: macro {
 		if (node->type != AST_JUXTAPOSE)
 			state->error(node, "expected juxtaposition");
 
-		auto lhs = state->get_node(node->binop.lhs);
+		auto lhs = get_node(node->binop.lhs);
 		if (lhs->type != AST_SYMBOL_NAME)
 			state->error(node, "definition of non-symbol");
 
-		auto symbol_name = state->get_symbol_name(lhs);
+		auto symbol_name = get_symbol_name(lhs);
 
 		// TODO: create new value?
-		auto rhs = (use_scope(s), compile(state->get_node(node->binop.rhs)));
+		auto rhs = (use_scope(s), compile(get_node(node->binop.rhs)));
 		s->define(state->function, state->source, node, symbol_name, rhs);
 
 		if (do_export)
@@ -241,12 +241,12 @@ static value_ptr builtin_macro_elf(ast_node_ptr node)
 		OBJECT,
 	} file_type = EXECUTABLE;
 
-	ast_node_ptr lhs_node = state->get_node(node->binop.lhs);
+	ast_node_ptr lhs_node = get_node(node->binop.lhs);
 	if (lhs_node->type == AST_SQUARE_BRACKETS) {
-		for (auto attribute_node: traverse<AST_COMMA>(state->source->tree, state->get_node(lhs_node->unop))) {
+		for (auto attribute_node: traverse<AST_COMMA>(state->source->tree, get_node(lhs_node->unop))) {
 			// XXX: error handling
 			assert(attribute_node->type == AST_SYMBOL_NAME);
-			auto symbol_name = state->get_symbol_name(attribute_node);
+			auto symbol_name = get_symbol_name(attribute_node);
 
 			if (symbol_name == "static")
 				linking_type = STATIC;
@@ -262,13 +262,13 @@ static value_ptr builtin_macro_elf(ast_node_ptr node)
 				state->error(attribute_node, "expected attribute");
 		}
 
-		node = state->get_node(node->binop.rhs);
+		node = get_node(node->binop.rhs);
 	}
 
 	state->expect(elf_node, node->type == AST_JUXTAPOSE,
 		"expected 'elf [attributes...] filename:<expression> <expression>'");
 
-	auto filename_node = state->get_node(node->binop.lhs);
+	auto filename_node = get_node(node->binop.lhs);
 	auto filename_value = eval(filename_node);
 	if (filename_value->storage_type != VALUE_GLOBAL)
 		state->error(filename_node, "output filename must be known at compile time");
@@ -295,7 +295,7 @@ static value_ptr builtin_macro_elf(ast_node_ptr node)
 		interp_object_id = state->new_object(interp_object);
 	}
 
-	auto expr_node = state->get_node(node->binop.rhs);
+	auto expr_node = get_node(node->binop.rhs);
 	eval(expr_node);
 
 	elf_writer w(file_type == EXECUTABLE ? exe_vaddr_base : 0);

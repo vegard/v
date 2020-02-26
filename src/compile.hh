@@ -103,37 +103,6 @@ struct compile_state {
 		return val;
 	}
 
-	ast_node_ptr get_node(int index) const
-	{
-		return source->tree.get(index);
-	}
-
-	mpz_class get_literal_integer(ast_node_ptr node) const
-	{
-		assert(node->type == AST_LITERAL_INTEGER);
-
-		// TODO: parse it correctly (sign, base, etc.)...
-		mpz_class literal_integer;
-		literal_integer.set_str(std::string(&source->data[node->pos], node->end - node->pos), 10);
-		return literal_integer;
-	}
-
-	std::string get_literal_string(ast_node_ptr node) const
-	{
-		assert(node->type == AST_LITERAL_STRING);
-
-		return source->tree.strings[node->string_index];
-	}
-
-	std::string get_symbol_name(ast_node_ptr node) const
-	{
-		assert(node->type == AST_SYMBOL_NAME);
-
-		if (node->symbol_name)
-			return node->symbol_name;
-
-		return std::string(&source->data[node->pos], node->end - node->pos);
-	}
 };
 
 __thread compile_state *state;
@@ -142,6 +111,38 @@ void use_value(const ast_node_ptr &node, value_ptr val)
 {
 	if (!can_use_value(state->context, val))
 		state->error(node, "cannot access value at compile time");
+}
+
+ast_node_ptr get_node(int index)
+{
+	return state->source->tree.get(index);
+}
+
+mpz_class get_literal_integer(ast_node_ptr node)
+{
+	assert(node->type == AST_LITERAL_INTEGER);
+
+	// TODO: parse it correctly (sign, base, etc.)...
+	mpz_class literal_integer;
+	literal_integer.set_str(std::string(&state->source->data[node->pos], node->end - node->pos), 10);
+	return literal_integer;
+}
+
+std::string get_literal_string(ast_node_ptr node)
+{
+	assert(node->type == AST_LITERAL_STRING);
+
+	return state->source->tree.strings[node->string_index];
+}
+
+std::string get_symbol_name(ast_node_ptr node)
+{
+	assert(node->type == AST_SYMBOL_NAME);
+
+	if (node->symbol_name)
+		return node->symbol_name;
+
+	return std::string(&state->source->data[node->pos], node->end - node->pos);
 }
 
 struct use_function {
@@ -324,7 +325,7 @@ static value_ptr compile_member(ast_node_ptr node)
 		// TODO: say which AST node type we got instead of a symbol name
 		state->error(node, "member name must be a symbol");
 
-	auto symbol_name = state->get_symbol_name(rhs_node);
+	auto symbol_name = get_symbol_name(rhs_node);
 	auto it = lhs_type->members.find(symbol_name);
 	if (it == lhs_type->members.end())
 		state->error(node, "unknown member: $", symbol_name);
@@ -379,7 +380,7 @@ static value_ptr compile_juxtapose(ast_node_ptr node)
 
 static value_ptr compile_symbol_name(ast_node_ptr node)
 {
-	auto symbol_name = state->get_symbol_name(node);
+	auto symbol_name = get_symbol_name(node);
 	auto ret = state->lookup(node, symbol_name);
 	if (!ret)
 		state->error(node, "could not resolve symbol: $", symbol_name);

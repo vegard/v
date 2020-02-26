@@ -77,13 +77,13 @@ static value_ptr fun_define_macro(ast_node_ptr node)
 	if (node->type != AST_JUXTAPOSE)
 		state->error(node, "expected juxtaposition");
 
-	auto lhs = state->get_node(node->binop.lhs);
+	auto lhs = get_node(node->binop.lhs);
 	if (lhs->type != AST_SYMBOL_NAME)
 		state->error(node, "definition of non-symbol");
 
-	auto symbol_name = state->get_symbol_name(lhs);
+	auto symbol_name = get_symbol_name(lhs);
 
-	auto rhs = compile(state->get_node(node->binop.rhs));
+	auto rhs = compile(get_node(node->binop.rhs));
 	auto val = state->function->alloc_local_value(state->scope, state->context, rhs->type);
 	state->scope->define(state->function, state->source, node, symbol_name, val);
 	state->function->emit_move(rhs, val);
@@ -170,23 +170,23 @@ static value_ptr _construct_fun(value_type_ptr type, ast_node_ptr node)
 	if (node->type != AST_JUXTAPOSE)
 		state->error(node, "expected (<argument types>...) <body>");
 
-	auto args_node = state->get_node(node->binop.lhs);
+	auto args_node = get_node(node->binop.lhs);
 	if (args_node->type != AST_BRACKETS)
 		state->error(node, "expected (<argument names>...)");
 
 	std::vector<std::string> args;
-	for (auto arg_node: traverse<AST_COMMA>(state->source->tree, state->get_node(args_node->unop))) {
+	for (auto arg_node: traverse<AST_COMMA>(state->source->tree, get_node(args_node->unop))) {
 		if (arg_node->type != AST_SYMBOL_NAME)
 			state->error(node, "expected symbol for argument name");
 
-		auto symbol_name = state->get_symbol_name(arg_node);
+		auto symbol_name = get_symbol_name(arg_node);
 		args.push_back(symbol_name);
 	}
 
 	if (args.size() != type->argument_types.size())
 		state->error(node, "expected $ arguments; got $", type->argument_types.size(), args.size());
 
-	auto body_node = state->get_node(node->binop.rhs);
+	auto body_node = get_node(node->binop.rhs);
 	return __construct_fun(type, node, args, body_node);
 }
 
@@ -236,7 +236,7 @@ static value_ptr _call_fun(value_ptr fn, ast_node_ptr node)
 		state->error(node, "expected parantheses");
 
 	std::vector<std::pair<ast_node_ptr, value_ptr>> args;
-	for (auto arg_node: traverse<AST_COMMA>(state->source->tree, state->get_node(node->unop)))
+	for (auto arg_node: traverse<AST_COMMA>(state->source->tree, get_node(node->unop)))
 		args.push_back(std::make_pair(arg_node, compile(arg_node)));
 
 	return __call_fun(fn, node, args, false);
@@ -271,7 +271,7 @@ static value_ptr builtin_macro_fun(ast_node_ptr node)
 	if (node->type != AST_JUXTAPOSE)
 		state->error(node, "expected 'fun <expression> (<expression>)'");
 
-	auto ret_type_node = state->get_node(node->binop.lhs);
+	auto ret_type_node = get_node(node->binop.lhs);
 	auto ret_type_value = eval(ret_type_node);
 	if (ret_type_value->storage_type != VALUE_GLOBAL)
 		state->error(ret_type_node, "return type must be known at compile time");
@@ -279,11 +279,11 @@ static value_ptr builtin_macro_fun(ast_node_ptr node)
 		state->error(ret_type_node, "return type must be an instance of a type");
 	auto ret_type = *(value_type_ptr *) ret_type_value->global.host_address;
 
-	auto brackets_node = state->get_node(node->binop.rhs);
+	auto brackets_node = get_node(node->binop.rhs);
 	if (brackets_node->type != AST_BRACKETS)
 		state->error(brackets_node, "expected (<expression>...)");
 
-	auto args_node = state->get_node(brackets_node->unop);
+	auto args_node = get_node(brackets_node->unop);
 
 	std::vector<value_type_ptr> argument_types;
 	for (auto arg_type_node: traverse<AST_COMMA>(state->source->tree, args_node)) {

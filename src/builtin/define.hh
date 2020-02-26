@@ -31,16 +31,16 @@ static value_ptr builtin_macro_define(ast_node_ptr node)
 	if (node->type != AST_JUXTAPOSE)
 		state->error(node, "expected juxtaposition");
 
-	auto lhs = state->get_node(node->binop.lhs);
+	auto lhs = get_node(node->binop.lhs);
 	if (lhs->type != AST_SYMBOL_NAME)
 		state->error(node, "definition of non-symbol");
 
-	auto symbol_name = state->get_symbol_name(lhs);
+	auto symbol_name = get_symbol_name(lhs);
 
 	// For functions that are run at compile-time, we allocate
 	// a new global value. The _name_ is still scoped as usual,
 	// though.
-	auto rhs = compile(state->get_node(node->binop.rhs));
+	auto rhs = compile(get_node(node->binop.rhs));
 	auto val = state->scope->make_value(state->context, VALUE_GLOBAL, rhs->type);
 	auto global = new uint8_t[rhs->type->size];
 	val->global.host_address = (void *) global;

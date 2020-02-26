@@ -26,13 +26,13 @@ static value_ptr builtin_macro_doc(ast_node_ptr node)
 {
 	state->expect_type(node, AST_JUXTAPOSE);
 
-	auto lhs_node = state->get_node(node->binop.lhs);
+	auto lhs_node = get_node(node->binop.lhs);
 	state->expect_type(lhs_node, AST_LITERAL_STRING);
 
 	// TODO: figure out what to do with doc strings
 	//printf("%s\n", state->get_literal_string(lhs_node).c_str());
 
-	auto rhs_node = state->get_node(node->binop.rhs);
+	auto rhs_node = get_node(node->binop.rhs);
 	return compile(rhs_node);
 }
 

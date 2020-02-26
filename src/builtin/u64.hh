@@ -64,7 +64,7 @@ static value_ptr builtin_type_u64_constructor(value_type_ptr, ast_node_ptr node)
 	if (node->type != AST_LITERAL_INTEGER)
 		state->error(node, "expected literal integer");
 
-	auto literal_integer = state->get_literal_integer(node);
+	auto literal_integer = get_literal_integer(node);
 	if (!literal_integer.fits_ulong_p())
 		state->error(node, "literal integer is too large to fit in u64");
 

@@ -30,14 +30,14 @@ static value_ptr builtin_macro_declare(ast_node_ptr node)
 	if (node->type != AST_JUXTAPOSE)
 		state->error(node, "expected juxtaposition");
 
-	auto lhs = state->get_node(node->binop.lhs);
+	auto lhs = get_node(node->binop.lhs);
 	if (lhs->type != AST_SYMBOL_NAME)
 		state->error(node, "declaration of non-symbol");
 
-	auto symbol_name = state->get_symbol_name(lhs);
+	auto symbol_name = get_symbol_name(lhs);
 
 	// see builtin_macro_define
-	auto rhs_node = state->get_node(node->binop.rhs);
+	auto rhs_node = get_node(node->binop.rhs);
 	auto rhs = eval(rhs_node);
 	if (rhs->storage_type != VALUE_GLOBAL)
 		state->error(rhs_node, "type must be known at compile time");

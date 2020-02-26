@@ -51,23 +51,23 @@ static value_ptr builtin_macro_if(ast_node_ptr node)
 	if (node->type != AST_JUXTAPOSE)
 		state->error(node, "expected 'if <expression> <expression>'");
 
-	ast_node_ptr condition_node = state->get_node(node->binop.lhs);
+	ast_node_ptr condition_node = get_node(node->binop.lhs);
 	ast_node_ptr true_node = nullptr;
 	ast_node_ptr false_node = nullptr;
 
-	auto rhs = state->get_node(node->binop.rhs);
+	auto rhs = get_node(node->binop.rhs);
 	if (rhs->type == AST_JUXTAPOSE) {
-		true_node = state->get_node(rhs->binop.lhs);
+		true_node = get_node(rhs->binop.lhs);
 
-		rhs = state->get_node(rhs->binop.rhs);
+		rhs = get_node(rhs->binop.rhs);
 		if (rhs->type != AST_JUXTAPOSE)
 			state->error(rhs, "expected 'else <expression>'");
 
-		auto else_node = state->get_node(rhs->binop.lhs);
-		if (else_node->type != AST_SYMBOL_NAME || state->get_symbol_name(else_node) != "else")
+		auto else_node = get_node(rhs->binop.lhs);
+		if (else_node->type != AST_SYMBOL_NAME || get_symbol_name(else_node) != "else")
 			state->error(else_node, "expected 'else'");
 
-		false_node = state->get_node(rhs->binop.rhs);
+		false_node = get_node(rhs->binop.rhs);
 	} else {
 		true_node = rhs;
 	}

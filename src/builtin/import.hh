@@ -33,7 +33,7 @@ static value_ptr builtin_macro_import(ast_node_ptr node)
 
 	// XXX: restrict accessible paths?
 	// TODO: search multiple paths rather than just the current dir
-	auto literal_string = state->get_literal_string(node);
+	auto literal_string = get_literal_string(node);
 
 	source_file_ptr source;
 	int source_node;

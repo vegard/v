@@ -44,7 +44,7 @@ static value_ptr builtin_type_str_constructor(value_type_ptr, ast_node_ptr node)
 	auto ret = state->scope->make_value(nullptr, VALUE_GLOBAL, builtin_type_str);
 
 	auto global = new std::string;
-	*global = state->get_literal_string(node);
+	*global = get_literal_string(node);
 	ret->global.host_address = (void *) global;
 	return ret;
 }

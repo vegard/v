@@ -38,16 +38,14 @@ struct constant_define_macro: macro {
 		if (node->type != AST_JUXTAPOSE)
 			state->error(node, "expected juxtaposition");
 
-		auto lhs = state->get_node(node->binop.lhs);
+		auto lhs = get_node(node->binop.lhs);
 		if (lhs->type != AST_SYMBOL_NAME)
 			state->error(node, "definition of non-symbol");
 
-		auto symbol_name = state->get_symbol_name(lhs);
+		auto symbol_name = get_symbol_name(lhs);
 
-		// TODO: should this be compile() instead of eval()?
-		// We shouldn't be generating any code -- it must be a compile-time constant expression.
-		//auto rhs = eval(state.set_scope(s), state.get_node(node->binop.rhs));
-		auto rhs = (use_scope(s), compile(state->get_node(node->binop.rhs)));
+		// TODO: We shouldn't be generating any code -- it must be a compile-time constant expression.
+		auto rhs = (use_scope(s), compile(get_node(node->binop.rhs)));
 		assert(rhs->type->size == 8);
 
 		auto val = s->make_value(state->context, VALUE_CONSTANT, rhs->type);

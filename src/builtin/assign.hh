@@ -30,8 +30,8 @@ static value_ptr builtin_macro_assign(ast_node_ptr node)
 	if (node->type != AST_JUXTAPOSE)
 		state->error(node, "expected juxtaposition");
 
-	auto rhs = compile(state->get_node(node->binop.rhs));
-	auto lhs = compile(state->get_node(node->binop.lhs));
+	auto rhs = compile(get_node(node->binop.rhs));
+	auto lhs = compile(get_node(node->binop.lhs));
 	if (rhs->type != lhs->type)
 		state->error(node, "type mismatch");
 

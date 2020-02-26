@@ -19,8 +19,8 @@
 #ifndef V_BUILTIN_DOC_HH
 #define V_BUILTIN_DOC_HH
 
-#include "../ast.hh"
-#include "../compile.hh"
+#include "ast.hh"
+#include "compile.hh"
 
 static value_ptr builtin_macro_doc(ast_node_ptr node)
 {

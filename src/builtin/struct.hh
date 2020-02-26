@@ -19,11 +19,11 @@
 #ifndef V_BUILTIN_STRUCT_HH
 #define V_BUILTIN_STRUCT_HH
 
-#include "../ast.hh"
-#include "../compile.hh"
-#include "../function.hh"
-#include "../scope.hh"
-#include "../value.hh"
+#include "ast.hh"
+#include "compile.hh"
+#include "function.hh"
+#include "scope.hh"
+#include "value.hh"
 
 struct struct_field: member {
 	value_type_ptr field_type;

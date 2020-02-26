@@ -19,11 +19,11 @@
 #ifndef V_BUILTIN_CONSTANT_HH
 #define V_BUILTIN_CONSTANT_HH
 
-#include "../ast.hh"
-#include "../compile.hh"
-#include "../function.hh"
-#include "../scope.hh"
-#include "../value.hh"
+#include "ast.hh"
+#include "compile.hh"
+#include "function.hh"
+#include "scope.hh"
+#include "value.hh"
 
 struct constant_define_macro: macro {
 	scope_ptr s;

@@ -19,11 +19,11 @@
 #ifndef V_BUILTIN_ADD_HH
 #define V_BUILTIN_ADD_HH
 
-#include "../ast.hh"
-#include "../compile.hh"
-#include "../function.hh"
-#include "../scope.hh"
-#include "../value.hh"
+#include "ast.hh"
+#include "compile.hh"
+#include "function.hh"
+#include "scope.hh"
+#include "value.hh"
 
 static value_ptr call_operator_fn(const char *member, ast_node_ptr node)
 {

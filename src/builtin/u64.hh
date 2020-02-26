@@ -19,8 +19,8 @@
 #ifndef V_BUILTIN_U64_H
 #define V_BUILTIN_U64_H
 
-#include "../compile.hh"
-#include "../value.hh"
+#include "compile.hh"
+#include "value.hh"
 
 struct macrofy_callback_member: member {
 	value_ptr (*fn)(value_ptr, ast_node_ptr);

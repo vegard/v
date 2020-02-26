@@ -19,8 +19,8 @@
 #ifndef V_BUILTIN_STR_H
 #define V_BUILTIN_STR_H
 
-#include "../compile.hh"
-#include "../value.hh"
+#include "compile.hh"
+#include "value.hh"
 
 static value_ptr builtin_type_str_constructor(value_type_ptr, ast_node_ptr);
 

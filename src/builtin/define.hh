@@ -19,11 +19,11 @@
 #ifndef V_BUILTIN_DEFINE_HH
 #define V_BUILTIN_DEFINE_HH
 
-#include "../ast.hh"
-#include "../compile.hh"
-#include "../function.hh"
-#include "../scope.hh"
-#include "../value.hh"
+#include "ast.hh"
+#include "compile.hh"
+#include "function.hh"
+#include "scope.hh"
+#include "value.hh"
 
 // _define at the top-level, creates globals
 static value_ptr builtin_macro_define(ast_node_ptr node)

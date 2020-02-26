@@ -19,13 +19,13 @@
 #ifndef V_BUILTIN_ASM_HH
 #define V_BUILTIN_ASM_HH
 
-#include "../ast.hh"
-#include "../compile.hh"
-#include "../function.hh"
-#include "../scope.hh"
-#include "../value.hh"
-#include "../builtin/str.hh"
-#include "../x86_64.hh"
+#include "ast.hh"
+#include "compile.hh"
+#include "function.hh"
+#include "scope.hh"
+#include "value.hh"
+#include "builtin/str.hh"
+#include "x86_64.hh"
 
 // TODO: This is specific to the x86_64 backend.
 // TODO: We should probably make the backend itself define the 'asm' macro

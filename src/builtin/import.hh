@@ -19,12 +19,12 @@
 #ifndef V_BUILTIN_IMPORT_HH
 #define V_BUILTIN_IMPORT_HH
 
-#include "../ast.hh"
-#include "../compile.hh"
-#include "../function.hh"
-#include "../namespace.hh"
-#include "../scope.hh"
-#include "../value.hh"
+#include "ast.hh"
+#include "compile.hh"
+#include "function.hh"
+#include "namespace.hh"
+#include "scope.hh"
+#include "value.hh"
 
 static value_ptr builtin_macro_import(ast_node_ptr node)
 {

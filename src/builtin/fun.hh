@@ -22,11 +22,11 @@
 #include <array>
 #include <set>
 
-#include "../ast.hh"
-#include "../compile.hh"
-#include "../function.hh"
-#include "../scope.hh"
-#include "../value.hh"
+#include "ast.hh"
+#include "compile.hh"
+#include "function.hh"
+#include "scope.hh"
+#include "value.hh"
 
 struct return_macro: macro {
 	function_ptr f;

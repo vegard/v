@@ -21,10 +21,10 @@
 
 #include <memory>
 
-#include "./compile.hh"
-#include "./function.hh"
-#include "./scope.hh"
-#include "./value.hh"
+#include "compile.hh"
+#include "function.hh"
+#include "scope.hh"
+#include "value.hh"
 #include "builtin/u64.hh"
 
 static auto builtin_type_context = std::make_shared<value_type>(value_type {

@@ -19,12 +19,12 @@
 #ifndef V_BUILTIN_QUOTE_HH
 #define V_BUILTIN_QUOTE_HH
 
-#include "../ast.hh"
-#include "../builtin.hh"
-#include "../compile.hh"
-#include "../function.hh"
-#include "../scope.hh"
-#include "../value.hh"
+#include "ast.hh"
+#include "builtin.hh"
+#include "compile.hh"
+#include "function.hh"
+#include "scope.hh"
+#include "value.hh"
 
 static value_ptr builtin_macro_quote(ast_node_ptr node)
 {

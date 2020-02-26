@@ -19,11 +19,11 @@
 #ifndef V_BUILTIN_MACRO_H
 #define V_BUILTIN_MACRO_H
 
-#include "../builtin.hh"
-#include "../macro.hh"
-#include "../value.hh"
-#include "./fun.hh"
-#include "./value.hh"
+#include "builtin.hh"
+#include "macro.hh"
+#include "value.hh"
+#include "builtin/fun.hh"
+#include "builtin/value.hh"
 
 // Macros defined by a program we're compiling
 struct user_macro: macro {

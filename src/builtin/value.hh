@@ -19,7 +19,7 @@
 #ifndef V_BUILTIN_VALUE_H
 #define V_BUILTIN_VALUE_H
 
-#include "../compile.hh"
+#include "compile.hh"
 
 static auto builtin_type_value = std::make_shared<value_type>(value_type {
 	.alignment = alignof(value_ptr),

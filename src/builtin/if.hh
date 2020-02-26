@@ -19,11 +19,11 @@
 #ifndef V_BUILTIN_IF_HH
 #define V_BUILTIN_IF_HH
 
-#include "../ast.hh"
-#include "../compile.hh"
-#include "../function.hh"
-#include "../scope.hh"
-#include "../value.hh"
+#include "ast.hh"
+#include "compile.hh"
+#include "function.hh"
+#include "scope.hh"
+#include "value.hh"
 
 static value_ptr builtin_macro_if(ast_node_ptr node)
 {

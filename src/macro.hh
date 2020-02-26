@@ -21,11 +21,11 @@
 
 #include <memory>
 
-#include "./ast.hh"
-#include "./builtin.hh"
-#include "./function.hh"
-#include "./scope.hh"
-#include "./value.hh"
+#include "ast.hh"
+#include "builtin.hh"
+#include "function.hh"
+#include "scope.hh"
+#include "value.hh"
 
 struct macro;
 typedef std::shared_ptr<macro> macro_ptr;

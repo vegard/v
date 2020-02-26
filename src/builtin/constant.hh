@@ -72,7 +72,7 @@ struct constant_define_macro: macro {
 		}
 
 		s->define(state->function, state->source, node, symbol_name, val);
-		return builtin_value_void;
+		return &builtin_value_void;
 	}
 };
 

@@ -51,7 +51,7 @@ struct break_macro: macro {
 		state->function->comment("break");
 		state->function->emit_jump(done_label);
 
-		return builtin_value_void;
+		return &builtin_value_void;
 	}
 };
 
@@ -80,7 +80,7 @@ struct continue_macro: macro {
 		state->function->comment("continue");
 		state->function->emit_jump(loop_label);
 
-		return builtin_value_void;
+		return &builtin_value_void;
 	}
 };
 
@@ -123,7 +123,7 @@ static value_ptr builtin_macro_while(ast_node_ptr node)
 	f->link_label(loop_label);
 	f->link_label(done_label);
 
-	return builtin_value_void;
+	return &builtin_value_void;
 }
 
 #endif

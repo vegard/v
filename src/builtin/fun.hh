@@ -206,7 +206,7 @@ static value_ptr __call_fun(value_ptr fn, ast_node_ptr node, std::vector<std::pa
 
 	value_ptr return_value;
 	if (return_type == builtin_type_void)
-		return_value = builtin_value_void;
+		return_value = &builtin_value_void;
 	else
 		return_value = f->alloc_local_value(state->scope, state->context, return_type);
 

@@ -78,7 +78,7 @@ static value_ptr builtin_macro_print(ast_node_ptr node)
 		print_fn->constant.u64 = (uint64_t) &_print_u64;
 
 		state->use_value(node, arg);
-		state->function->emit_c_call(print_fn, { arg }, builtin_value_void);
+		state->function->emit_c_call(print_fn, { arg }, &builtin_value_void);
 	} else if (arg->type == builtin_type_str) {
 		auto print_fn = state->scope->make_value(state->context, VALUE_CONSTANT, builtin_type_u64);
 		print_fn->constant.u64 = (uint64_t) &_print_str;
@@ -86,12 +86,12 @@ static value_ptr builtin_macro_print(ast_node_ptr node)
 		// TODO: I think this only works by pure coincidence,
 		// the problem is we're passing (part of) a std::string as char *
 		state->use_value(node, arg);
-		state->function->emit_c_call(print_fn, { arg }, builtin_value_void);
+		state->function->emit_c_call(print_fn, { arg }, &builtin_value_void);
 	} else {
 		state->error(node, "expected value of type u64");
 	}
 
-	return builtin_value_void;
+	return &builtin_value_void;
 }
 
 static auto builtin_value_namespace_lang = new value(nullptr, VALUE_CONSTANT,

@@ -109,7 +109,7 @@ struct struct_declare_macro: macro {
 
 		offset += field_type->size;
 
-		return builtin_value_void;
+		return &builtin_value_void;
 	}
 };
 

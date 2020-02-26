@@ -150,7 +150,7 @@ struct value {
 // Some builtin types
 
 static auto builtin_type_void = std::make_shared<value_type>(value_type{0, 0});
-static auto builtin_value_void = new value(nullptr, VALUE_CONSTANT, builtin_type_void);
+static auto builtin_value_void = value(nullptr, VALUE_CONSTANT, builtin_type_void);
 
 static auto builtin_type_type = std::make_shared<value_type>(value_type{alignof(value_type_ptr), sizeof(value_type_ptr)});
 

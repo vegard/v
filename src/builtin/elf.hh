@@ -40,7 +40,7 @@ struct elf_data {
 	std::map<std::string, value_ptr> exports;
 
 	elf_data():
-		entry_point(builtin_value_void)
+		entry_point(&builtin_value_void)
 	{
 	}
 };
@@ -67,7 +67,7 @@ struct entry_macro: macro {
 		// TODO: check here that entry_point is not void and callable with no args
 
 		elf.entry_point = entry_value;
-		return builtin_value_void;
+		return &builtin_value_void;
 	}
 };
 
@@ -100,7 +100,7 @@ struct define_macro: macro {
 
 		if (do_export)
 			elf.exports[symbol_name] = rhs;
-		return builtin_value_void;
+		return &builtin_value_void;
 	}
 };
 
@@ -445,7 +445,7 @@ static value_ptr builtin_macro_elf(ast_node_ptr node)
 
 	if (file_type == EXECUTABLE) {
 		// TODO: is this check sufficient?
-		if (elf.entry_point != builtin_value_void) {
+		if (elf.entry_point != &builtin_value_void) {
 			assert(elf.entry_point->storage_type == VALUE_TARGET_GLOBAL);
 
 			// We cannot set the entry point _directly_ at the function
@@ -573,7 +573,7 @@ static value_ptr builtin_macro_elf(ast_node_ptr node)
 	}
 
 	if (file_type == EXECUTABLE) {
-		if (elf.entry_point != builtin_value_void)
+		if (elf.entry_point != &builtin_value_void)
 			ehdr->e_entry = object_infos[entry_object_id].addr;
 	}
 
@@ -630,7 +630,7 @@ static value_ptr builtin_macro_elf(ast_node_ptr node)
 	}
 
 	close(fd);
-	return builtin_value_void;
+	return &builtin_value_void;
 }
 
 #endif

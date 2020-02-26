@@ -447,7 +447,7 @@ static value_ptr builtin_type_str_constructor(value_type_ptr, ast_node_ptr);
 static value_ptr compile(ast_node_ptr node)
 {
 	if (!node)
-		return builtin_value_void;
+		return &builtin_value_void;
 
 	switch (node->type) {
 	case AST_LITERAL_INTEGER:

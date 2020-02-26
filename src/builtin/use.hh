@@ -38,7 +38,7 @@ static value_ptr builtin_macro_use(ast_node_ptr node)
 		state->scope->define(nullptr, nullptr, nullptr, it.first, it.second->invoke(v, node));
 	}
 
-	return builtin_value_void;
+	return &builtin_value_void;
 }
 
 #endif

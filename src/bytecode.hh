@@ -161,7 +161,7 @@ struct bytecode_function:
 
 			// TODO: assert(arg_type->size > 0) ?
 			if (arg_type->size == 0)
-				args_values.push_back(builtin_value_void);
+				args_values.push_back(&builtin_value_void);
 			else if (arg_type->size <= 8)
 				args_values.push_back(alloc_local_value(scope, c, arg_type));
 			else
@@ -171,8 +171,8 @@ struct bytecode_function:
 		assert(return_type);
 
 		if (return_type->size == 0) {
-			return_value = builtin_value_void;
-			local_return_value = builtin_value_void;
+			return_value = &builtin_value_void;
+			local_return_value = &builtin_value_void;
 		} else {
 			return_value = alloc_local_value(scope, c, return_type);
 			local_return_value = alloc_local_pointer_value(scope, c, return_type);

@@ -74,7 +74,7 @@ struct asm_assign_input_macro: macro {
 		assert(dest_reg != RSP);
 
 		f->emit_move(src_value, 0, dest_reg);
-		return builtin_value_void;
+		return &builtin_value_void;
 	}
 };
 
@@ -82,7 +82,7 @@ struct asm_assign_output_macro: macro {
 	value_ptr invoke(ast_node_ptr node)
 	{
 		// TODO
-		return builtin_value_void;
+		return &builtin_value_void;
 	}
 };
 
@@ -118,7 +118,7 @@ struct asm_mov_macro: macro {
 
 		f->emit_move_reg_to_reg(*(machine_register *) src_value->global.host_address,
 			*(machine_register *) dest_value->global.host_address);
-		return builtin_value_void;
+		return &builtin_value_void;
 	}
 };
 
@@ -134,7 +134,7 @@ struct asm_syscall_macro: macro {
 
 		f->emit_byte(0x0f);
 		f->emit_byte(0x05);
-		return builtin_value_void;
+		return &builtin_value_void;
 	}
 };
 
@@ -189,7 +189,7 @@ static value_ptr builtin_macro_asm(ast_node_ptr node)
 
 	(use_scope(asm_scope), compile(asm_node));
 
-	return builtin_value_void;
+	return &builtin_value_void;
 }
 
 #endif

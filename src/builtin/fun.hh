@@ -44,26 +44,26 @@ struct return_macro: macro {
 	{
 	}
 
-	value_ptr invoke(const compile_state &state, ast_node_ptr node)
+	value_ptr invoke(ast_node_ptr node)
 	{
-		if (state.function != this->f)
-			state.error(node, "'return' used outside defining function");
+		if (state->function != this->f)
+			state->error(node, "'return' used outside defining function");
 
 		// The scope where we are used must be the scope where we
 		// were defined or a child.
-		if (!is_parent_of(this->s, state.scope))
-			state.error(node, "'return' used outside defining scope");
+		if (!is_parent_of(this->s, state->scope))
+			state->error(node, "'return' used outside defining scope");
 
 		f->comment("return");
 
-		auto v = compile(state, node);
+		auto v = compile(node);
 		if (v->type != return_type)
-			state.error(node, "wrong return type for function");
+			state->error(node, "wrong return type for function");
 
 		if (return_value)
-			state.function->emit_move(v, return_value);
+			state->function->emit_move(v, return_value);
 
-		state.function->emit_jump(return_label);
+		state->function->emit_jump(return_label);
 
 		// TODO: if the last "statement" in a function is a return, then we
 		// want that to be the return type/value of the expression.
@@ -72,41 +72,41 @@ struct return_macro: macro {
 };
 
 // _define inside functions always creates locals
-static value_ptr fun_define_macro(const compile_state &state, ast_node_ptr node)
+static value_ptr fun_define_macro(ast_node_ptr node)
 {
 	if (node->type != AST_JUXTAPOSE)
-		state.error(node, "expected juxtaposition");
+		state->error(node, "expected juxtaposition");
 
-	auto lhs = state.get_node(node->binop.lhs);
+	auto lhs = state->get_node(node->binop.lhs);
 	if (lhs->type != AST_SYMBOL_NAME)
-		state.error(node, "definition of non-symbol");
+		state->error(node, "definition of non-symbol");
 
-	auto symbol_name = state.get_symbol_name(lhs);
+	auto symbol_name = state->get_symbol_name(lhs);
 
-	auto rhs = compile(state, state.get_node(node->binop.rhs));
-	auto val = state.function->alloc_local_value(state.scope, state.context, rhs->type);
-	state.scope->define(state.function, state.source, node, symbol_name, val);
-	state.function->emit_move(rhs, val);
+	auto rhs = compile(state->get_node(node->binop.rhs));
+	auto val = state->function->alloc_local_value(state->scope, state->context, rhs->type);
+	state->scope->define(state->function, state->source, node, symbol_name, val);
+	state->function->emit_move(rhs, val);
 	return val;
 }
 
 // Low-level helper (for use after data has been extracted from syntax)
-static value_ptr __construct_fun(value_type_ptr type, const compile_state &state, ast_node_ptr node,
+static value_ptr __construct_fun(value_type_ptr type, ast_node_ptr node,
 	std::vector<std::string> &args, ast_node_ptr body_node)
 {
-	auto c = state.context;
+	auto c = state->context;
 
 	auto &argument_types = type->argument_types;
 	auto &return_type = type->return_type;
 
 	// TODO: this is a bit ugly, especially with the downcasting afterwards
 	function_ptr new_f;
-	if (state.objects)
-		new_f = std::make_shared<x86_64_function>(state.scope, c, !state.objects, argument_types, return_type);
+	if (state->objects)
+		new_f = std::make_shared<x86_64_function>(state->scope, c, !state->objects, argument_types, return_type);
 	else
-		new_f = std::make_shared<bytecode_function>(state.scope, c, !state.objects, argument_types, return_type);
+		new_f = std::make_shared<bytecode_function>(state->scope, c, !state->objects, argument_types, return_type);
 
-	auto new_scope = std::make_shared<scope>(state.scope);
+	auto new_scope = std::make_shared<scope>(state->scope);
 
 	auto return_label = new_f->new_label();
 
@@ -118,26 +118,26 @@ static value_ptr __construct_fun(value_type_ptr type, const compile_state &state
 	new_f->emit_prologue();
 
 	for (unsigned int i = 0; i < args.size(); ++i)
-		new_scope->define(new_f, state.source, node, args[i], new_f->args_values[i]);
+		new_scope->define(new_f, state->source, node, args[i], new_f->args_values[i]);
 
 	new_scope->define_builtin_macro("_define", fun_define_macro);
 	new_scope->define_builtin_macro("return", std::make_shared<return_macro>(new_f, new_scope, return_type, new_f->return_value, return_label));
 
-	auto v = compile(state.set_function(new_f, new_scope), body_node);
+	auto v = (use_function(new_f, new_scope), compile(body_node));
 	auto v_type = v->type;
 	if (v_type != return_type)
-		state.error(node, "wrong return type for function");
+		state->error(node, "wrong return type for function");
 
 	new_f->emit_move(v, new_f->return_value);
 	new_f->emit_label(return_label);
 	new_f->link_label(return_label);
 	new_f->emit_epilogue();
 
-	if (state.objects) {
+	if (state->objects) {
 		// target
 		auto x86_64_f = std::dynamic_pointer_cast<x86_64_function>(new_f);
 		// TODO: use new_state/new_scope?
-		return state.scope->make_value(nullptr, type, state.new_object(x86_64_f->this_object));
+		return state->scope->make_value(nullptr, type, state->new_object(x86_64_f->this_object));
 	} else {
 		// host
 		auto bytecode_f = std::dynamic_pointer_cast<bytecode_function>(new_f);
@@ -148,7 +148,7 @@ static value_ptr __construct_fun(value_type_ptr type, const compile_state &state
 		static std::set<function_ptr> functions;
 		functions.insert(bytecode_f);
 
-		auto ret = state.scope->make_value(nullptr, VALUE_GLOBAL, type);
+		auto ret = state->scope->make_value(nullptr, VALUE_GLOBAL, type);
 		auto jf = new jit_function(bytecode_f);
 		ret->global.host_address = new void *(jf);
 
@@ -165,48 +165,50 @@ static value_ptr __construct_fun(value_type_ptr type, const compile_state &state
 // actually compile a function body
 //  - 'type' is the function type (signature)
 //  - 'node' is the function body
-static value_ptr _construct_fun(value_type_ptr type, const compile_state &state, ast_node_ptr node)
+static value_ptr _construct_fun(value_type_ptr type, ast_node_ptr node)
 {
 	if (node->type != AST_JUXTAPOSE)
-		state.error(node, "expected (<argument types>...) <body>");
+		state->error(node, "expected (<argument types>...) <body>");
 
-	auto args_node = state.get_node(node->binop.lhs);
+	auto args_node = state->get_node(node->binop.lhs);
 	if (args_node->type != AST_BRACKETS)
-		state.error(node, "expected (<argument names>...)");
+		state->error(node, "expected (<argument names>...)");
 
 	std::vector<std::string> args;
-	for (auto arg_node: traverse<AST_COMMA>(state.source->tree, state.get_node(args_node->unop))) {
+	for (auto arg_node: traverse<AST_COMMA>(state->source->tree, state->get_node(args_node->unop))) {
 		if (arg_node->type != AST_SYMBOL_NAME)
-			state.error(node, "expected symbol for argument name");
+			state->error(node, "expected symbol for argument name");
 
-		auto symbol_name = state.get_symbol_name(arg_node);
+		auto symbol_name = state->get_symbol_name(arg_node);
 		args.push_back(symbol_name);
 	}
 
 	if (args.size() != type->argument_types.size())
-		state.error(node, "expected $ arguments; got $", type->argument_types.size(), args.size());
+		state->error(node, "expected $ arguments; got $", type->argument_types.size(), args.size());
 
-	auto body_node = state.get_node(node->binop.rhs);
-	return __construct_fun(type, state, node, args, body_node);
+	auto body_node = state->get_node(node->binop.rhs);
+	return __construct_fun(type, node, args, body_node);
 }
 
 // Low-level helper (for use after data has been extracted from syntax)
-static value_ptr __call_fun(const compile_state &state, value_ptr fn, ast_node_ptr node, std::vector<std::pair<ast_node_ptr, value_ptr>> args, bool c_call)
+static value_ptr __call_fun(value_ptr fn, ast_node_ptr node, std::vector<std::pair<ast_node_ptr, value_ptr>> args, bool c_call)
 {
-	auto f = state.function;
+	auto f = state->function;
 
 	// TODO: save/restore caller save registers
 	auto type = fn->type;
 
 	if (args.size() != type->argument_types.size())
-		state.error(node, "expected $ arguments; got $", type->argument_types.size(), args.size());
+		state->error(node, "expected $ arguments; got $", type->argument_types.size(), args.size());
 
 	auto return_type = type->return_type;
+	assert(return_type);
+
 	value_ptr return_value;
 	if (return_type == builtin_type_void)
 		return_value = builtin_value_void;
 	else
-		return_value = f->alloc_local_value(state.scope, state.context, return_type);
+		return_value = f->alloc_local_value(state->scope, state->context, return_type);
 
 	std::vector<value_ptr> args_values;
 	for (unsigned int i = 0; i < args.size(); ++i) {
@@ -215,7 +217,7 @@ static value_ptr __call_fun(const compile_state &state, value_ptr fn, ast_node_p
 
 		auto arg_type = arg_value->type;
 		if (arg_type != type->argument_types[i])
-			state.error(arg_node, "wrong argument type");
+			state->error(arg_node, "wrong argument type");
 
 		args_values.push_back(arg_value);
 	}
@@ -228,20 +230,20 @@ static value_ptr __call_fun(const compile_state &state, value_ptr fn, ast_node_p
 	return return_value;
 }
 
-static value_ptr _call_fun(const compile_state &state, value_ptr fn, ast_node_ptr node)
+static value_ptr _call_fun(value_ptr fn, ast_node_ptr node)
 {
 	if (node->type != AST_BRACKETS)
-		state.error(node, "expected parantheses");
+		state->error(node, "expected parantheses");
 
 	std::vector<std::pair<ast_node_ptr, value_ptr>> args;
-	for (auto arg_node: traverse<AST_COMMA>(state.source->tree, state.get_node(node->unop)))
-		args.push_back(std::make_pair(arg_node, compile(state, arg_node)));
+	for (auto arg_node: traverse<AST_COMMA>(state->source->tree, state->get_node(node->unop)))
+		args.push_back(std::make_pair(arg_node, compile(arg_node)));
 
-	return __call_fun(state, fn, node, args, false);
+	return __call_fun(fn, node, args, false);
 }
 
 // Low-level helper (for use after data has been extracted from syntax)
-static value_ptr _builtin_macro_fun(const compile_state &state, value_type_ptr ret_type, const std::vector<value_type_ptr> &argument_types)
+static value_ptr _builtin_macro_fun(value_type_ptr ret_type, const std::vector<value_type_ptr> &argument_types)
 {
 	value_type_ptr type;
 
@@ -256,46 +258,46 @@ static value_ptr _builtin_macro_fun(const compile_state &state, value_type_ptr r
 	type->members["_call"] = std::make_shared<callback_member>(_call_fun);
 
 	// XXX: refcounting
-	auto type_value = state.scope->make_value(nullptr, VALUE_GLOBAL, builtin_type_type);
+	auto type_value = state->scope->make_value(nullptr, VALUE_GLOBAL, builtin_type_type);
 	auto type_copy = new value_type_ptr(type);
 	type_value->global.host_address = (void *) type_copy;
 	return type_value;
 }
 
-static value_ptr builtin_macro_fun(const compile_state &state, ast_node_ptr node)
+static value_ptr builtin_macro_fun(ast_node_ptr node)
 {
 	// Extract parameters and code block from AST
 
 	if (node->type != AST_JUXTAPOSE)
-		state.error(node, "expected 'fun <expression> (<expression>)'");
+		state->error(node, "expected 'fun <expression> (<expression>)'");
 
-	auto ret_type_node = state.get_node(node->binop.lhs);
-	auto ret_type_value = eval(state, ret_type_node);
+	auto ret_type_node = state->get_node(node->binop.lhs);
+	auto ret_type_value = eval(ret_type_node);
 	if (ret_type_value->storage_type != VALUE_GLOBAL)
-		state.error(ret_type_node, "return type must be known at compile time");
+		state->error(ret_type_node, "return type must be known at compile time");
 	if (ret_type_value->type != builtin_type_type)
-		state.error(ret_type_node, "return type must be an instance of a type");
+		state->error(ret_type_node, "return type must be an instance of a type");
 	auto ret_type = *(value_type_ptr *) ret_type_value->global.host_address;
 
-	auto brackets_node = state.get_node(node->binop.rhs);
+	auto brackets_node = state->get_node(node->binop.rhs);
 	if (brackets_node->type != AST_BRACKETS)
-		state.error(brackets_node, "expected (<expression>...)");
+		state->error(brackets_node, "expected (<expression>...)");
 
-	auto args_node = state.get_node(brackets_node->unop);
+	auto args_node = state->get_node(brackets_node->unop);
 
 	std::vector<value_type_ptr> argument_types;
-	for (auto arg_type_node: traverse<AST_COMMA>(state.source->tree, args_node)) {
-		value_ptr arg_type_value = eval(state, arg_type_node);
+	for (auto arg_type_node: traverse<AST_COMMA>(state->source->tree, args_node)) {
+		value_ptr arg_type_value = eval(arg_type_node);
 		if (arg_type_value->storage_type != VALUE_GLOBAL)
-			state.error(arg_type_node, "argument type must be known at compile time");
+			state->error(arg_type_node, "argument type must be known at compile time");
 		if (arg_type_value->type != builtin_type_type)
-			state.error(arg_type_node, "argument type must be an instance of a type");
+			state->error(arg_type_node, "argument type must be an instance of a type");
 		auto arg_type = *(value_type_ptr *) arg_type_value->global.host_address;
 
 		argument_types.push_back(arg_type);
 	}
 
-	return _builtin_macro_fun(state, ret_type, argument_types);
+	return _builtin_macro_fun(ret_type, argument_types);
 }
 
 #endif

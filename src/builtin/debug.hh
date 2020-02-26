@@ -28,10 +28,10 @@
 #include "../scope.hh"
 #include "../value.hh"
 
-static value_ptr builtin_macro_debug(const compile_state &state, ast_node_ptr node)
+static value_ptr builtin_macro_debug(ast_node_ptr node)
 {
 	// TODO: need context so we can print line numbers and stuff too
-	printf("%s\n", serialize(state.source, node).c_str());
+	printf("%s\n", serialize(state->source, node).c_str());
 
 	return builtin_value_void;
 }

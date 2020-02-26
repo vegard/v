@@ -25,33 +25,33 @@
 #include "../scope.hh"
 #include "../value.hh"
 
-static value_ptr builtin_macro_equals(const compile_state &state, ast_node_ptr node)
+static value_ptr builtin_macro_equals(ast_node_ptr node)
 {
 	if (node->type != AST_JUXTAPOSE)
-		state.error(node, "expected juxtaposition");
+		state->error(node, "expected juxtaposition");
 
-	auto lhs = compile(state, state.get_node(node->binop.lhs));
-	auto rhs = compile(state, state.get_node(node->binop.rhs));
+	auto lhs = compile(state->get_node(node->binop.lhs));
+	auto rhs = compile(state->get_node(node->binop.rhs));
 	if (lhs->type != rhs->type)
-		state.error(node, "cannot compare values of different types");
+		state->error(node, "cannot compare values of different types");
 
-	auto ret = state.function->alloc_local_value(state.scope, state.context, builtin_type_boolean);
-	state.function->emit_compare(function::CMP_EQ, lhs, rhs, ret);
+	auto ret = state->function->alloc_local_value(state->scope, state->context, builtin_type_boolean);
+	state->function->emit_compare(function::CMP_EQ, lhs, rhs, ret);
 	return ret;
 }
 
-static value_ptr builtin_macro_notequals(const compile_state &state, ast_node_ptr node)
+static value_ptr builtin_macro_notequals(ast_node_ptr node)
 {
 	if (node->type != AST_JUXTAPOSE)
-		state.error(node, "expected juxtaposition");
+		state->error(node, "expected juxtaposition");
 
-	auto lhs = compile(state, state.get_node(node->binop.lhs));
-	auto rhs = compile(state, state.get_node(node->binop.rhs));
+	auto lhs = compile(state->get_node(node->binop.lhs));
+	auto rhs = compile(state->get_node(node->binop.rhs));
 	if (lhs->type != rhs->type)
-		state.error(node, "cannot compare values of different types");
+		state->error(node, "cannot compare values of different types");
 
-	auto ret = state.function->alloc_local_value(state.scope, state.context, builtin_type_boolean);
-	state.function->emit_compare(function::CMP_NEQ, lhs, rhs, ret);
+	auto ret = state->function->alloc_local_value(state->scope, state->context, builtin_type_boolean);
+	state->function->emit_compare(function::CMP_NEQ, lhs, rhs, ret);
 	return ret;
 }
 

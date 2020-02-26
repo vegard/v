@@ -35,10 +35,10 @@ struct macro {
 	{
 	}
 
-	virtual value_ptr invoke(const compile_state &state, ast_node_ptr node) = 0;
+	virtual value_ptr invoke(ast_node_ptr node) = 0;
 };
 
-static value_ptr builtin_type_macro_constructor(value_type_ptr type, const compile_state &state, ast_node_ptr node);
+static value_ptr builtin_type_macro_constructor(value_type_ptr type, ast_node_ptr node);
 
 static auto builtin_type_macro = std::make_shared<value_type>(value_type {
 	.alignment = alignof(macro_ptr),
@@ -48,9 +48,9 @@ static auto builtin_type_macro = std::make_shared<value_type>(value_type {
 
 // Helper for macros that can be implemented simply as a callback function
 struct simple_macro: macro {
-	value_ptr (*fn)(const compile_state &, ast_node_ptr);
+	value_ptr (*fn)(ast_node_ptr);
 
-	simple_macro(value_ptr (*fn)(const compile_state &, ast_node_ptr)):
+	simple_macro(value_ptr (*fn)(ast_node_ptr)):
 		fn(fn)
 	{
 	}
@@ -59,9 +59,9 @@ struct simple_macro: macro {
 	{
 	}
 
-	value_ptr invoke(const compile_state &state, ast_node_ptr node)
+	value_ptr invoke(ast_node_ptr node)
 	{
-		return fn(state, node);
+		return fn(node);
 	}
 };
 
@@ -70,10 +70,10 @@ struct simple_macro: macro {
 // compiled (so we can get its type), then an '_add' macro is called with
 // 'x' as a value and 'y' as an unevaluated AST node.
 struct val_macro: macro {
-	value_ptr (*fn)(const compile_state &state, value_ptr, ast_node_ptr);
+	value_ptr (*fn)(value_ptr, ast_node_ptr);
 	value_ptr val;
 
-	val_macro(value_ptr (*fn)(const compile_state &state, value_ptr, ast_node_ptr), value_ptr val):
+	val_macro(value_ptr (*fn)(value_ptr, ast_node_ptr), value_ptr val):
 		fn(fn),
 		val(val)
 	{
@@ -83,9 +83,9 @@ struct val_macro: macro {
 	{
 	}
 
-	value_ptr invoke(const compile_state &state, ast_node_ptr node)
+	value_ptr invoke(ast_node_ptr node)
 	{
-		return fn(state, val, node);
+		return fn(val, node);
 	}
 };
 

@@ -33,24 +33,24 @@ struct constant_define_macro: macro {
 	{
 	}
 
-	value_ptr invoke(const compile_state &state, ast_node_ptr node)
+	value_ptr invoke(ast_node_ptr node)
 	{
 		if (node->type != AST_JUXTAPOSE)
-			state.error(node, "expected juxtaposition");
+			state->error(node, "expected juxtaposition");
 
-		auto lhs = state.get_node(node->binop.lhs);
+		auto lhs = state->get_node(node->binop.lhs);
 		if (lhs->type != AST_SYMBOL_NAME)
-			state.error(node, "definition of non-symbol");
+			state->error(node, "definition of non-symbol");
 
-		auto symbol_name = state.get_symbol_name(lhs);
+		auto symbol_name = state->get_symbol_name(lhs);
 
 		// TODO: should this be compile() instead of eval()?
 		// We shouldn't be generating any code -- it must be a compile-time constant expression.
 		//auto rhs = eval(state.set_scope(s), state.get_node(node->binop.rhs));
-		auto rhs = compile(state.set_scope(s), state.get_node(node->binop.rhs));
+		auto rhs = (use_scope(s), compile(state->get_node(node->binop.rhs)));
 		assert(rhs->type->size == 8);
 
-		auto val = s->make_value(state.context, VALUE_CONSTANT, rhs->type);
+		auto val = s->make_value(state->context, VALUE_CONSTANT, rhs->type);
 		switch (rhs->storage_type) {
 		case VALUE_GLOBAL:
 			// XXX: Oh man, this is so wrong.
@@ -58,7 +58,7 @@ struct constant_define_macro: macro {
 			break;
 		case VALUE_TARGET_GLOBAL:
 			{
-				auto obj = (*state.objects)[rhs->target_global.object_id];
+				auto obj = (*state->objects)[rhs->target_global.object_id];
 				assert(obj->relocations.empty());
 				// XXX: Oh man, this is so wrong.
 				val->constant.u64 = *(uint64_t *) obj->bytes.data();
@@ -71,18 +71,18 @@ struct constant_define_macro: macro {
 			assert(false);
 		}
 
-		s->define(state.function, state.source, node, symbol_name, val);
+		s->define(state->function, state->source, node, symbol_name, val);
 		return builtin_value_void;
 	}
 };
 
-static value_ptr builtin_macro_constant(const compile_state &state, ast_node_ptr node)
+static value_ptr builtin_macro_constant(ast_node_ptr node)
 {
-	auto old_scope = state.scope;
-	auto new_scope = std::make_shared<scope>(state.scope);
+	auto old_scope = state->scope;
+	auto new_scope = std::make_shared<scope>(state->scope);
 	new_scope->define_builtin_macro("_define", std::make_shared<constant_define_macro>(old_scope));
 
-	return compile(state.set_scope(new_scope), node);
+	return (use_scope(new_scope), compile(node));
 }
 
 #endif

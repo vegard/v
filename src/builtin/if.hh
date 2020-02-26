@@ -25,7 +25,7 @@
 #include "../scope.hh"
 #include "../value.hh"
 
-static value_ptr builtin_macro_if(const compile_state &state, ast_node_ptr node)
+static value_ptr builtin_macro_if(ast_node_ptr node)
 {
 	// Extract condition, true block, and false block (if any) from AST
 	//
@@ -45,29 +45,29 @@ static value_ptr builtin_macro_if(const compile_state &state, ast_node_ptr node)
 	//     )
 	// )
 
-	auto c = state.context;
-	auto f = state.function;
+	auto c = state->context;
+	auto f = state->function;
 
 	if (node->type != AST_JUXTAPOSE)
-		state.error(node, "expected 'if <expression> <expression>'");
+		state->error(node, "expected 'if <expression> <expression>'");
 
-	ast_node_ptr condition_node = state.get_node(node->binop.lhs);
+	ast_node_ptr condition_node = state->get_node(node->binop.lhs);
 	ast_node_ptr true_node = nullptr;
 	ast_node_ptr false_node = nullptr;
 
-	auto rhs = state.get_node(node->binop.rhs);
+	auto rhs = state->get_node(node->binop.rhs);
 	if (rhs->type == AST_JUXTAPOSE) {
-		true_node = state.get_node(rhs->binop.lhs);
+		true_node = state->get_node(rhs->binop.lhs);
 
-		rhs = state.get_node(rhs->binop.rhs);
+		rhs = state->get_node(rhs->binop.rhs);
 		if (rhs->type != AST_JUXTAPOSE)
-			state.error(rhs, "expected 'else <expression>'");
+			state->error(rhs, "expected 'else <expression>'");
 
-		auto else_node = state.get_node(rhs->binop.lhs);
-		if (else_node->type != AST_SYMBOL_NAME || state.get_symbol_name(else_node) != "else")
-			state.error(else_node, "expected 'else'");
+		auto else_node = state->get_node(rhs->binop.lhs);
+		if (else_node->type != AST_SYMBOL_NAME || state->get_symbol_name(else_node) != "else")
+			state->error(else_node, "expected 'else'");
 
-		false_node = state.get_node(rhs->binop.rhs);
+		false_node = state->get_node(rhs->binop.rhs);
 	} else {
 		true_node = rhs;
 	}
@@ -77,17 +77,17 @@ static value_ptr builtin_macro_if(const compile_state &state, ast_node_ptr node)
 	value_ptr return_value(nullptr);
 
 	// "if" condition
-	auto condition_value = compile(state, condition_node);
+	auto condition_value = compile(condition_node);
 	if (condition_value->type != builtin_type_boolean)
-		state.error(condition_node, "'if' condition must be boolean");
+		state->error(condition_node, "'if' condition must be boolean");
 
 	auto false_label = f->new_label();
 	f->emit_jump_if_zero(condition_value, false_label);
 
 	// "if" block
-	auto true_value = compile(state, true_node);
+	auto true_value = compile(true_node);
 	if (true_value->type != builtin_type_void) {
-		return_value = f->alloc_local_value(state.scope, c, true_value->type);
+		return_value = f->alloc_local_value(state->scope, c, true_value->type);
 		f->emit_move(true_value, return_value);
 	}
 
@@ -98,7 +98,7 @@ static value_ptr builtin_macro_if(const compile_state &state, ast_node_ptr node)
 	f->emit_label(false_label);
 	value_ptr false_value(nullptr);
 	if (false_node) {
-		false_value = compile(state, false_node);
+		false_value = compile(false_node);
 		if (false_value->type != builtin_type_void && false_value->type == true_value->type)
 			f->emit_move(false_value, return_value);
 	}

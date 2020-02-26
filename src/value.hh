@@ -61,20 +61,20 @@ struct member {
 	{
 	}
 
-	virtual value_ptr invoke(const compile_state &state, value_ptr lhs, ast_node_ptr rhs_node) = 0;
+	virtual value_ptr invoke(value_ptr lhs, ast_node_ptr rhs_node) = 0;
 };
 
 struct callback_member: member {
-	value_ptr (*fn)(const compile_state &state, value_ptr, ast_node_ptr);
+	value_ptr (*fn)(value_ptr, ast_node_ptr);
 
-	callback_member(value_ptr (*fn)(const compile_state &, value_ptr, ast_node_ptr)):
+	callback_member(value_ptr (*fn)(value_ptr, ast_node_ptr)):
 		fn(fn)
 	{
 	}
 
-	value_ptr invoke(const compile_state &state, value_ptr v, ast_node_ptr node)
+	value_ptr invoke(value_ptr v, ast_node_ptr node)
 	{
-		return fn(state, v, node);
+		return fn(v, node);
 	}
 };
 
@@ -86,7 +86,7 @@ struct value_type {
 	unsigned int size;
 
 	// TODO
-	value_ptr (*constructor)(value_type_ptr, const compile_state &, ast_node_ptr);
+	value_ptr (*constructor)(value_type_ptr, ast_node_ptr);
 
 	// Callable
 	std::vector<value_type_ptr> argument_types;

@@ -25,7 +25,7 @@
 #include "../scope.hh"
 #include "../value.hh"
 
-static value_ptr call_operator_fn(const compile_state &state, const char *member, ast_node_ptr node)
+static value_ptr call_operator_fn(const char *member, ast_node_ptr node)
 {
 	// So this is probably a result of something like (x + y), which got
 	// parsed as (juxtapose _add (juxtapose x y)).
@@ -47,48 +47,48 @@ static value_ptr call_operator_fn(const compile_state &state, const char *member
 
 	// TODO: bad error message
 	if (node->type != AST_JUXTAPOSE)
-		state.error(node, "expected juxtaposition");
+		state->error(node, "expected juxtaposition");
 
 	// TODO: only evaluate the type so we don't evaluate the value twice
-	auto lhs = compile(state, state.get_node(node->binop.lhs));
+	auto lhs = compile(state->get_node(node->binop.lhs));
 	auto lhs_type = lhs->type;
 
 	auto it = lhs_type->members.find(member);
 	if (it == lhs_type->members.end())
-		state.error(node, "unknown member '$'", member);
+		state->error(node, "unknown member '$'", member);
 
-	value_ptr val = it->second->invoke(state, lhs, state.get_node(node->binop.rhs));
-	return _compile_juxtapose(state, node, val, state.get_node(node->binop.rhs));
+	value_ptr val = it->second->invoke(lhs, state->get_node(node->binop.rhs));
+	return _compile_juxtapose(node, val, state->get_node(node->binop.rhs));
 }
 
-static value_ptr builtin_macro_add(const compile_state &state, ast_node_ptr node)
+static value_ptr builtin_macro_add(ast_node_ptr node)
 {
-	return call_operator_fn(state, "_add", node);
+	return call_operator_fn("_add", node);
 }
 
-static value_ptr builtin_macro_subtract(const compile_state &state, ast_node_ptr node)
+static value_ptr builtin_macro_subtract(ast_node_ptr node)
 {
-	return call_operator_fn(state, "_subtract", node);
+	return call_operator_fn("_subtract", node);
 }
 
-static value_ptr builtin_macro_less(const compile_state &state, ast_node_ptr node)
+static value_ptr builtin_macro_less(ast_node_ptr node)
 {
-	return call_operator_fn(state, "_less", node);
+	return call_operator_fn("_less", node);
 }
 
-static value_ptr builtin_macro_less_equal(const compile_state &state, ast_node_ptr node)
+static value_ptr builtin_macro_less_equal(ast_node_ptr node)
 {
-	return call_operator_fn(state, "_less_equal", node);
+	return call_operator_fn("_less_equal", node);
 }
 
-static value_ptr builtin_macro_greater(const compile_state &state, ast_node_ptr node)
+static value_ptr builtin_macro_greater(ast_node_ptr node)
 {
-	return call_operator_fn(state, "_greater", node);
+	return call_operator_fn("_greater", node);
 }
 
-static value_ptr builtin_macro_greater_equal(const compile_state &state, ast_node_ptr node)
+static value_ptr builtin_macro_greater_equal(ast_node_ptr node)
 {
-	return call_operator_fn(state, "_greater_equal", node);
+	return call_operator_fn("_greater_equal", node);
 }
 
 #endif

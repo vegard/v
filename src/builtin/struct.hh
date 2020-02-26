@@ -35,9 +35,9 @@ struct struct_field: member {
 	{
 	}
 
-	value_ptr invoke(const compile_state &state, value_ptr v, ast_node_ptr node)
+	value_ptr invoke(value_ptr v, ast_node_ptr node)
 	{
-		auto ret_value = state.scope->make_value(state.context, v->storage_type, field_type);
+		auto ret_value = state->scope->make_value(state->context, v->storage_type, field_type);
 		switch (v->storage_type) {
 		case VALUE_GLOBAL:
 			ret_value->global.host_address = (void *) ((unsigned long) v->global.host_address + offset);
@@ -59,11 +59,11 @@ struct struct_field: member {
 	}
 };
 
-static value_ptr _struct_constructor(value_type_ptr v, const compile_state &state, ast_node_ptr node)
+static value_ptr _struct_constructor(value_type_ptr v, ast_node_ptr node)
 {
 	// TODO: zero value
 	// TODO: move allocation out!
-	return state.function->alloc_local_value(state.scope, state.context, v);
+	return state->function->alloc_local_value(state->scope, state->context, v);
 }
 
 // handle 'x := y' in structs
@@ -77,24 +77,24 @@ struct struct_declare_macro: macro {
 	{
 	}
 
-	value_ptr invoke(const compile_state &state, ast_node_ptr node)
+	value_ptr invoke(ast_node_ptr node)
 	{
 		if (node->type != AST_JUXTAPOSE)
-			state.error(node, "expected juxtaposition");
+			state->error(node, "expected juxtaposition");
 
-		auto name_node = state.get_node(node->binop.lhs);
+		auto name_node = state->get_node(node->binop.lhs);
 		if (name_node->type != AST_SYMBOL_NAME)
-			state.error(name_node, "expected symbol for member name");
+			state->error(name_node, "expected symbol for member name");
 
-		auto field_name = state.get_symbol_name(name_node);
+		auto field_name = state->get_symbol_name(name_node);
 
 		// TODO: we should call eval() here with a scope that
 		// "undefines" _declare so we get the normal definition
 		// of it
-		auto type_node = state.get_node(node->binop.rhs);
-		auto type_value = eval(state, type_node);
+		auto type_node = state->get_node(node->binop.rhs);
+		auto type_value = eval(type_node);
 		assert(type_value->storage_type == VALUE_GLOBAL);
-		state.expect_type(node, type_value, builtin_type_type);
+		state->expect_type(node, type_value, builtin_type_type);
 
 		auto field_type = *(value_type_ptr *) type_value->global.host_address;
 
@@ -113,24 +113,24 @@ struct struct_declare_macro: macro {
 	}
 };
 
-static value_ptr builtin_macro_struct(const compile_state &state, ast_node_ptr node)
+static value_ptr builtin_macro_struct(ast_node_ptr node)
 {
 	auto type = std::make_shared<value_type>();
 	// TODO: We can get away with smaller alignment for small structs
 	type->alignment = alignof(unsigned long);
 	type->constructor = &_struct_constructor;
 
-	auto new_scope = std::make_shared<scope>(state.scope);
+	auto new_scope = std::make_shared<scope>(state->scope);
 	auto macro = std::make_shared<struct_declare_macro>(type);
 	new_scope->define_builtin_macro("_declare", macro);
 
-	compile(state.set_scope(new_scope), node);
+	(use_scope(new_scope), compile(node));
 
 	// Align the final size for arrays
 	type->size = (macro->offset + type->alignment - 1) & ~(type->alignment - 1);
 
 	// XXX: refcounting
-	auto type_value = state.scope->make_value(state.context, VALUE_GLOBAL, builtin_type_type);
+	auto type_value = state->scope->make_value(state->context, VALUE_GLOBAL, builtin_type_type);
 	auto type_copy = new value_type_ptr(type);
 	type_value->global.host_address = (void *) type_copy;
 	return type_value;

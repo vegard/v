@@ -23,27 +23,27 @@
 #include "../value.hh"
 
 struct macrofy_callback_member: member {
-	value_ptr (*fn)(const compile_state &, value_ptr, ast_node_ptr);
+	value_ptr (*fn)(value_ptr, ast_node_ptr);
 
-	macrofy_callback_member(value_ptr (*fn)(const compile_state &, value_ptr, ast_node_ptr)):
+	macrofy_callback_member(value_ptr (*fn)(value_ptr, ast_node_ptr)):
 		fn(fn)
 	{
 	}
 
-	value_ptr invoke(const compile_state &state, value_ptr v, ast_node_ptr node)
+	value_ptr invoke(value_ptr v, ast_node_ptr node)
 	{
 		auto m = std::make_shared<val_macro>(fn, v);
-		auto macro_value = state.scope->make_value(nullptr, VALUE_GLOBAL, builtin_type_macro);
+		auto macro_value = state->scope->make_value(nullptr, VALUE_GLOBAL, builtin_type_macro);
 		auto macro_copy = new macro_ptr(m);
 		macro_value->global.host_address = (void *) macro_copy;
 		return macro_value;
 	}
 };
 
-static value_ptr builtin_type_u64_constructor(value_type_ptr, const compile_state &, ast_node_ptr);
-static value_ptr builtin_type_u64_add(const compile_state &, value_ptr lhs, ast_node_ptr node);
-static value_ptr builtin_type_u64_subtract(const compile_state &, value_ptr lhs, ast_node_ptr node);
-static value_ptr builtin_type_u64_less(const compile_state &, value_ptr lhs, ast_node_ptr node);
+static value_ptr builtin_type_u64_constructor(value_type_ptr, ast_node_ptr);
+static value_ptr builtin_type_u64_add(value_ptr lhs, ast_node_ptr node);
+static value_ptr builtin_type_u64_subtract(value_ptr lhs, ast_node_ptr node);
+static value_ptr builtin_type_u64_less(value_ptr lhs, ast_node_ptr node);
 
 static auto builtin_type_u64 = std::make_shared<value_type>(value_type {
 	.alignment = 8,
@@ -58,52 +58,52 @@ static auto builtin_type_u64 = std::make_shared<value_type>(value_type {
 	}),
 });
 
-static value_ptr builtin_type_u64_constructor(value_type_ptr, const compile_state &state, ast_node_ptr node)
+static value_ptr builtin_type_u64_constructor(value_type_ptr, ast_node_ptr node)
 {
 	// TODO: support conversion from other integer types?
 	if (node->type != AST_LITERAL_INTEGER)
-		state.error(node, "expected literal integer");
+		state->error(node, "expected literal integer");
 
-	auto literal_integer = state.get_literal_integer(node);
+	auto literal_integer = state->get_literal_integer(node);
 	if (!literal_integer.fits_ulong_p())
-		state.error(node, "literal integer is too large to fit in u64");
+		state->error(node, "literal integer is too large to fit in u64");
 
-	auto ret = state.scope->make_value(nullptr, VALUE_CONSTANT, builtin_type_u64);
+	auto ret = state->scope->make_value(nullptr, VALUE_CONSTANT, builtin_type_u64);
 	ret->constant.u64 = literal_integer.get_si();
 	return ret;
 }
 
 // TODO: maybe this should really be a function rather than a macro
-static value_ptr builtin_type_u64_add(const compile_state &state, value_ptr lhs, ast_node_ptr node)
+static value_ptr builtin_type_u64_add(value_ptr lhs, ast_node_ptr node)
 {
-	auto rhs = compile(state, node);
+	auto rhs = compile(node);
 	if (rhs->type != lhs->type)
-		state.error(node, "expected u64");
+		state->error(node, "expected u64");
 
-	auto ret = state.function->alloc_local_value(state.scope, state.context, lhs->type);
-	state.function->emit_add(lhs, rhs, ret);
+	auto ret = state->function->alloc_local_value(state->scope, state->context, lhs->type);
+	state->function->emit_add(lhs, rhs, ret);
 	return ret;
 }
 
-static value_ptr builtin_type_u64_subtract(const compile_state &state, value_ptr lhs, ast_node_ptr node)
+static value_ptr builtin_type_u64_subtract(value_ptr lhs, ast_node_ptr node)
 {
-	auto rhs = compile(state, node);
+	auto rhs = compile(node);
 	if (rhs->type != lhs->type)
-		state.error(node, "expected u64");
+		state->error(node, "expected u64");
 
-	auto ret = state.function->alloc_local_value(state.scope, state.context, lhs->type);
-	state.function->emit_sub(lhs, rhs, ret);
+	auto ret = state->function->alloc_local_value(state->scope, state->context, lhs->type);
+	state->function->emit_sub(lhs, rhs, ret);
 	return ret;
 }
 
-static value_ptr builtin_type_u64_less(const compile_state &state, value_ptr lhs, ast_node_ptr node)
+static value_ptr builtin_type_u64_less(value_ptr lhs, ast_node_ptr node)
 {
-	auto rhs = compile(state, node);
+	auto rhs = compile(node);
 	if (rhs->type != lhs->type)
-		state.error(node, "expected u64");
+		state->error(node, "expected u64");
 
-	auto ret = state.function->alloc_local_value(state.scope, state.context, builtin_type_boolean);
-	state.function->emit_compare(function::CMP_LESS, lhs, rhs, ret);
+	auto ret = state->function->alloc_local_value(state->scope, state->context, builtin_type_boolean);
+	state->function->emit_compare(function::CMP_LESS, lhs, rhs, ret);
 	return ret;
 }
 

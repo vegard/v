@@ -38,18 +38,18 @@ struct break_macro: macro {
 	{
 	}
 
-	value_ptr invoke(const compile_state &state, ast_node_ptr node)
+	value_ptr invoke(ast_node_ptr node)
 	{
-		if (state.function != this->f)
-			state.error(node, "'break' used outside defining function");
+		if (state->function != this->f)
+			state->error(node, "'break' used outside defining function");
 
 		// The scope where we are used must be the scope where we
 		// were defined or a child.
-		if (!is_parent_of(this->s, state.scope))
-			state.error(node, "'break' used outside defining scope");
+		if (!is_parent_of(this->s, state->scope))
+			state->error(node, "'break' used outside defining scope");
 
-		state.function->comment("break");
-		state.function->emit_jump(done_label);
+		state->function->comment("break");
+		state->function->emit_jump(done_label);
 
 		return builtin_value_void;
 	}
@@ -67,54 +67,54 @@ struct continue_macro: macro {
 	{
 	}
 
-	value_ptr invoke(const compile_state &state, ast_node_ptr node)
+	value_ptr invoke(ast_node_ptr node)
 	{
-		if (state.function != this->f)
-			state.error(node, "'continue' used outside defining function");
+		if (state->function != this->f)
+			state->error(node, "'continue' used outside defining function");
 
 		// The scope where we are used must be the scope where we
 		// were defined or a child.
-		if (!is_parent_of(this->s, state.scope))
-			state.error(node, "'continue' used outside defining scope");
+		if (!is_parent_of(this->s, state->scope))
+			state->error(node, "'continue' used outside defining scope");
 
-		state.function->comment("continue");
-		state.function->emit_jump(loop_label);
+		state->function->comment("continue");
+		state->function->emit_jump(loop_label);
 
 		return builtin_value_void;
 	}
 };
 
 
-static value_ptr builtin_macro_while(const compile_state &state, ast_node_ptr node)
+static value_ptr builtin_macro_while(ast_node_ptr node)
 {
-	auto c = state.context;
-	auto f = state.function;
+	auto c = state->context;
+	auto f = state->function;
 
 	f->comment("while");
 
 	if (node->type != AST_JUXTAPOSE)
-		state.error(node, "expected 'while <expression> <expression>'");
+		state->error(node, "expected 'while <expression> <expression>'");
 
-	auto condition_node = state.get_node(node->binop.lhs);
-	auto body_node = state.get_node(node->binop.rhs);
+	auto condition_node = state->get_node(node->binop.lhs);
+	auto body_node = state->get_node(node->binop.rhs);
 
 	auto loop_label = f->new_label();
 	f->emit_label(loop_label);
 
 	// condition
-	auto condition_value = compile(state, condition_node);
+	auto condition_value = compile(condition_node);
 	if (condition_value->type != builtin_type_boolean)
-		state.error(condition_node, "'while' condition must be boolean");
+		state->error(condition_node, "'while' condition must be boolean");
 
 	auto done_label = f->new_label();
 	f->emit_jump_if_zero(condition_value, done_label);
 
 	// body
-	auto new_scope = std::make_shared<scope>(state.scope);
+	auto new_scope = std::make_shared<scope>(state->scope);
 	new_scope->define_builtin_macro("break", std::make_shared<break_macro>(f, new_scope, done_label));
 	new_scope->define_builtin_macro("continue", std::make_shared<break_macro>(f, new_scope, loop_label));
 
-	compile(state.set_scope(new_scope), body_node);
+	(use_scope(new_scope), compile(body_node));
 	f->emit_jump(loop_label);
 
 	f->emit_label(done_label);

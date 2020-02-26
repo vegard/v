@@ -37,7 +37,7 @@ struct namespace_member: member {
 		val->global.host_address = (void *) new value_type_ptr(type);
 	}
 
-	value_ptr invoke(const compile_state &state, value_ptr v, ast_node_ptr node)
+	value_ptr invoke(value_ptr v, ast_node_ptr node)
 	{
 		return val;
 	}

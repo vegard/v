@@ -22,7 +22,7 @@
 #include "../compile.hh"
 #include "../value.hh"
 
-static value_ptr builtin_type_str_constructor(value_type_ptr, const compile_state &, ast_node_ptr);
+static value_ptr builtin_type_str_constructor(value_type_ptr, ast_node_ptr);
 
 // TODO: don't use std::string internally
 static auto builtin_type_str = std::make_shared<value_type>(value_type {
@@ -36,15 +36,15 @@ static auto builtin_type_str = std::make_shared<value_type>(value_type {
 	}),
 });
 
-static value_ptr builtin_type_str_constructor(value_type_ptr, const compile_state &state, ast_node_ptr node)
+static value_ptr builtin_type_str_constructor(value_type_ptr, ast_node_ptr node)
 {
 	if (node->type != AST_LITERAL_STRING)
-		state.error(node, "expected literal string");
+		state->error(node, "expected literal string");
 
-	auto ret = state.scope->make_value(nullptr, VALUE_GLOBAL, builtin_type_str);
+	auto ret = state->scope->make_value(nullptr, VALUE_GLOBAL, builtin_type_str);
 
 	auto global = new std::string;
-	*global = state.get_literal_string(node);
+	*global = state->get_literal_string(node);
 	ret->global.host_address = (void *) global;
 	return ret;
 }

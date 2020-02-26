@@ -25,9 +25,9 @@
 #include "../scope.hh"
 #include "../value.hh"
 
-static value_ptr builtin_macro_eval(const compile_state &state, ast_node_ptr node)
+static value_ptr builtin_macro_eval(ast_node_ptr node)
 {
-	return eval(state, node);
+	return eval(node);
 }
 
 #endif

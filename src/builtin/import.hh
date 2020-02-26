@@ -26,14 +26,14 @@
 #include "../scope.hh"
 #include "../value.hh"
 
-static value_ptr builtin_macro_import(const compile_state &state, ast_node_ptr node)
+static value_ptr builtin_macro_import(ast_node_ptr node)
 {
 	// TODO: take dotted path instead of literal filename
-	state.expect_type(node, AST_LITERAL_STRING);
+	state->expect_type(node, AST_LITERAL_STRING);
 
 	// XXX: restrict accessible paths?
 	// TODO: search multiple paths rather than just the current dir
-	auto literal_string = state.get_literal_string(node);
+	auto literal_string = state->get_literal_string(node);
 
 	source_file_ptr source;
 	int source_node;
@@ -41,11 +41,11 @@ static value_ptr builtin_macro_import(const compile_state &state, ast_node_ptr n
 		source = std::make_shared<mmap_source_file>(literal_string.c_str());
 		source_node = source->parse();
 	} catch (const std::runtime_error &e) {
-		state.error(node, e.what());
+		state->error(node, e.what());
 	}
 
-	auto new_scope = std::make_shared<scope>(state.scope);
-	compile(state.set_source(source, new_scope), source->tree.get(source_node));
+	auto new_scope = std::make_shared<scope>(state->scope);
+	(use_source(source, new_scope), compile(source->tree.get(source_node)));
 
 	// Create new namespace with the contents of the new scope as members
 	auto members = std::map<std::string, member_ptr>();
@@ -54,7 +54,7 @@ static value_ptr builtin_macro_import(const compile_state &state, ast_node_ptr n
 		members[it.first] = std::make_shared<namespace_member>(it.second.val);
 	}
 
-	auto new_namespace = state.scope->make_value(nullptr, VALUE_CONSTANT,
+	auto new_namespace = state->scope->make_value(nullptr, VALUE_CONSTANT,
 		std::make_shared<value_type>(value_type {
 			.alignment = 0,
 			.size = 0,

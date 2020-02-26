@@ -55,14 +55,14 @@ struct entry_macro: macro {
 	{
 	}
 
-	value_ptr invoke(const compile_state &state, ast_node_ptr node)
+	value_ptr invoke(ast_node_ptr node)
 	{
-		if (!is_parent_of(this->s, state.scope))
-			state.error(node, "'entry' used outside defining scope");
+		if (!is_parent_of(this->s, state->scope))
+			state->error(node, "'entry' used outside defining scope");
 
-		auto entry_value = eval(state, node);
+		auto entry_value = eval(node);
 		if (entry_value->storage_type != VALUE_TARGET_GLOBAL)
-			state.error(node, "entry point must be a compile-time target constant");
+			state->error(node, "entry point must be a compile-time target constant");
 
 		// TODO: check here that entry_point is not void and callable with no args
 
@@ -83,20 +83,20 @@ struct define_macro: macro {
 	{
 	}
 
-	value_ptr invoke(const compile_state &state, ast_node_ptr node)
+	value_ptr invoke(ast_node_ptr node)
 	{
 		if (node->type != AST_JUXTAPOSE)
-			state.error(node, "expected juxtaposition");
+			state->error(node, "expected juxtaposition");
 
-		auto lhs = state.get_node(node->binop.lhs);
+		auto lhs = state->get_node(node->binop.lhs);
 		if (lhs->type != AST_SYMBOL_NAME)
-			state.error(node, "definition of non-symbol");
+			state->error(node, "definition of non-symbol");
 
-		auto symbol_name = state.get_symbol_name(lhs);
+		auto symbol_name = state->get_symbol_name(lhs);
 
 		// TODO: create new value?
-		auto rhs = compile(state.set_scope(s), state.get_node(node->binop.rhs));
-		s->define(state.function, state.source, node, symbol_name, rhs);
+		auto rhs = (use_scope(s), compile(state->get_node(node->binop.rhs)));
+		s->define(state->function, state->source, node, symbol_name, rhs);
 
 		if (do_export)
 			elf.exports[symbol_name] = rhs;
@@ -114,18 +114,18 @@ struct export_macro: macro {
 	{
 	}
 
-	value_ptr invoke(const compile_state &state, ast_node_ptr node)
+	value_ptr invoke(ast_node_ptr node)
 	{
-		if (!is_parent_of(this->s, state.scope))
-			state.error(node, "'export' used outside defining scope");
+		if (!is_parent_of(this->s, state->scope))
+			state->error(node, "'export' used outside defining scope");
 
 		// TODO: we really need to implement read vs. write scopes so
 		// that when the user defines something it still becomes visible
 		// in the parent scope
-		auto new_scope = std::make_shared<scope>(state.scope);
+		auto new_scope = std::make_shared<scope>(state->scope);
 		new_scope->define_builtin_macro("_define", std::make_shared<define_macro>(s, elf, true));
 
-		return eval(state.set_scope(new_scope), node);
+		return (use_scope(new_scope), eval(node));
 	}
 };
 
@@ -223,11 +223,11 @@ const unsigned int page_size = 4096;
 const unsigned int exe_vaddr_base = 0x400000;
 const char interp[] = "/lib64/ld-linux-x86-64.so.2";
 
-static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node)
+static value_ptr builtin_macro_elf(ast_node_ptr node)
 {
 	auto elf_node = node;
 
-	state.expect(node, node->type == AST_JUXTAPOSE,
+	state->expect(node, node->type == AST_JUXTAPOSE,
 		"expected 'elf [attributes...] filename:<expression> <expression>'");
 
 	enum {
@@ -241,12 +241,12 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 		OBJECT,
 	} file_type = EXECUTABLE;
 
-	ast_node_ptr lhs_node = state.get_node(node->binop.lhs);
+	ast_node_ptr lhs_node = state->get_node(node->binop.lhs);
 	if (lhs_node->type == AST_SQUARE_BRACKETS) {
-		for (auto attribute_node: traverse<AST_COMMA>(state.source->tree, state.get_node(lhs_node->unop))) {
+		for (auto attribute_node: traverse<AST_COMMA>(state->source->tree, state->get_node(lhs_node->unop))) {
 			// XXX: error handling
 			assert(attribute_node->type == AST_SYMBOL_NAME);
-			auto symbol_name = state.get_symbol_name(attribute_node);
+			auto symbol_name = state->get_symbol_name(attribute_node);
 
 			if (symbol_name == "static")
 				linking_type = STATIC;
@@ -259,32 +259,32 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 			else if (symbol_name == "obj")
 				file_type = OBJECT;
 			else
-				state.error(attribute_node, "expected attribute");
+				state->error(attribute_node, "expected attribute");
 		}
 
-		node = state.get_node(node->binop.rhs);
+		node = state->get_node(node->binop.rhs);
 	}
 
-	state.expect(elf_node, node->type == AST_JUXTAPOSE,
+	state->expect(elf_node, node->type == AST_JUXTAPOSE,
 		"expected 'elf [attributes...] filename:<expression> <expression>'");
 
-	auto filename_node = state.get_node(node->binop.lhs);
-	auto filename_value = eval(state, filename_node);
+	auto filename_node = state->get_node(node->binop.lhs);
+	auto filename_value = eval(filename_node);
 	if (filename_value->storage_type != VALUE_GLOBAL)
-		state.error(filename_node, "output filename must be known at compile time");
+		state->error(filename_node, "output filename must be known at compile time");
 	if (filename_value->type != builtin_type_str)
-		state.error(filename_node, "output filename must be a string");
+		state->error(filename_node, "output filename must be a string");
 	auto filename = *(std::string *) filename_value->global.host_address;
 
 	elf_data elf;
 	auto objects = std::make_shared<std::vector<object_ptr>>();
 
-	auto new_scope = std::make_shared<scope>(state.scope);
+	auto new_scope = std::make_shared<scope>(state->scope);
 	new_scope->define_builtin_macro("_define", std::make_shared<define_macro>(new_scope, elf, false));
 	new_scope->define_builtin_macro("entry", std::make_shared<entry_macro>(new_scope, elf));
 	new_scope->define_builtin_macro("export", std::make_shared<export_macro>(new_scope, elf));
 
-	auto new_state = state.set_objects(objects).set_scope(new_scope);
+	use_objects _asdf(objects, new_scope);
 
 	// we allocate the interpreter as an object because we need to get
 	// both its address and its offset
@@ -292,11 +292,11 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 	object_ptr interp_object;
 	if (linking_type == DYNAMIC && file_type == EXECUTABLE) {
 		interp_object = std::make_shared<object>(interp);
-		interp_object_id = new_state.new_object(interp_object);
+		interp_object_id = state->new_object(interp_object);
 	}
 
-	auto expr_node = state.get_node(node->binop.rhs);
-	auto expr_value = eval(new_state, expr_node);
+	auto expr_node = state->get_node(node->binop.rhs);
+	eval(expr_node);
 
 	elf_writer w(file_type == EXECUTABLE ? exe_vaddr_base : 0);
 
@@ -456,7 +456,7 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 
 			// XXX: this is obviously highly Linux/x86-64-specific.
 
-			auto new_f = std::make_shared<x86_64_function>(state.scope, state.context, false, std::vector<value_type_ptr>(), builtin_type_void);
+			auto new_f = std::make_shared<x86_64_function>(state->scope, state->context, false, std::vector<value_type_ptr>(), builtin_type_void);
 
 			new_f->emit_call(elf.entry_point);
 			new_f->emit_move_reg_to_reg(RAX, RDI);
@@ -466,7 +466,7 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 			new_f->emit_byte(0x0f);
 			new_f->emit_byte(0x05);
 
-			entry_object_id = new_state.new_object(new_f->this_object);
+			entry_object_id = state->new_object(new_f->this_object);
 		}
 	}
 
@@ -612,7 +612,7 @@ static value_ptr builtin_macro_elf(const compile_state &state, ast_node_ptr node
 	// TODO: error handling, temporaries, etc.
 	int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0755);
 	if (fd == -1)
-		state.error(filename_node, "couldn't open '$' for writing: $", filename.c_str(), strerror(errno));
+		state->error(filename_node, "couldn't open '$' for writing: $", filename.c_str(), strerror(errno));
 
 	for (auto x: w.elements) {
 		if (x.data) {

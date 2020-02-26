@@ -38,7 +38,7 @@ static auto builtin_type_asm_register = std::make_shared<value_type>(value_type 
 });
 
 struct asm_assign_input_macro: macro {
-	value_ptr invoke(const compile_state &state, ast_node_ptr node)
+	value_ptr invoke(ast_node_ptr node)
 	{
 		// TODO: we have to be *really* careful not to clobber
 		// the already-assigned registers when compiling the
@@ -48,21 +48,21 @@ struct asm_assign_input_macro: macro {
 		// other register.
 
 		if (node->type != AST_JUXTAPOSE)
-			state.error(node, "expected juxtaposition");
+			state->error(node, "expected juxtaposition");
 
-		auto src_node = state.source->tree.get(node->binop.rhs);
-		auto src_value = compile(state, src_node);
+		auto src_node = state->source->tree.get(node->binop.rhs);
+		auto src_value = compile(src_node);
 
-		auto dest_node = state.source->tree.get(node->binop.lhs);
-		auto dest_value = eval(state, dest_node);
+		auto dest_node = state->source->tree.get(node->binop.lhs);
+		auto dest_value = eval(dest_node);
 		if (dest_value->type != builtin_type_asm_register)
-			state.error(dest_node, "expected register");
+			state->error(dest_node, "expected register");
 		if (dest_value->storage_type != VALUE_GLOBAL)
-			state.error(dest_node, "expected compile-time constant");
+			state->error(dest_node, "expected compile-time constant");
 
-		auto f = std::dynamic_pointer_cast<x86_64_function>(state.function);
+		auto f = std::dynamic_pointer_cast<x86_64_function>(state->function);
 		if (!f)
-			state.error(node, "x86_64 inline asm used in non-x86_64 function");
+			state->error(node, "x86_64 inline asm used in non-x86_64 function");
 
 		// TODO: check that size matches register
 		assert(src_value->type->size == 8);
@@ -79,7 +79,7 @@ struct asm_assign_input_macro: macro {
 };
 
 struct asm_assign_output_macro: macro {
-	value_ptr invoke(const compile_state &state, ast_node_ptr node)
+	value_ptr invoke(ast_node_ptr node)
 	{
 		// TODO
 		return builtin_value_void;
@@ -87,34 +87,34 @@ struct asm_assign_output_macro: macro {
 };
 
 struct asm_mov_macro: macro {
-	value_ptr invoke(const compile_state &state, ast_node_ptr node)
+	value_ptr invoke(ast_node_ptr node)
 	{
 		if (node->type != AST_BRACKETS)
-			state.error(node, "expected (reg, reg)");
+			state->error(node, "expected (reg, reg)");
 
-		auto unop = state.source->tree.get(node->unop);
+		auto unop = state->source->tree.get(node->unop);
 		if (unop->type != AST_COMMA)
-			state.error(node, "expected (reg, reg)");
+			state->error(node, "expected (reg, reg)");
 
 		node = unop;
 
-		auto src_node = state.source->tree.get(node->binop.lhs);
-		auto src_value = eval(state, src_node);
+		auto src_node = state->source->tree.get(node->binop.lhs);
+		auto src_value = eval(src_node);
 		if (src_value->type != builtin_type_asm_register)
-			state.error(src_node, "expected register");
+			state->error(src_node, "expected register");
 		if (src_value->storage_type != VALUE_GLOBAL)
-			state.error(src_node, "expected compile-time constant");
+			state->error(src_node, "expected compile-time constant");
 
-		auto dest_node = state.source->tree.get(node->binop.rhs);
-		auto dest_value = eval(state, dest_node);
+		auto dest_node = state->source->tree.get(node->binop.rhs);
+		auto dest_value = eval(dest_node);
 		if (dest_value->type != builtin_type_asm_register)
-			state.error(dest_node, "expected register");
+			state->error(dest_node, "expected register");
 		if (dest_value->storage_type != VALUE_GLOBAL)
-			state.error(dest_node, "expected compile-time constant");
+			state->error(dest_node, "expected compile-time constant");
 
-		auto f = std::dynamic_pointer_cast<x86_64_function>(state.function);
+		auto f = std::dynamic_pointer_cast<x86_64_function>(state->function);
 		if (!f)
-			state.error(node, "x86_64 inline asm used in non-x86_64 function");
+			state->error(node, "x86_64 inline asm used in non-x86_64 function");
 
 		f->emit_move_reg_to_reg(*(machine_register *) src_value->global.host_address,
 			*(machine_register *) dest_value->global.host_address);
@@ -123,14 +123,14 @@ struct asm_mov_macro: macro {
 };
 
 struct asm_syscall_macro: macro {
-	value_ptr invoke(const compile_state &state, ast_node_ptr node)
+	value_ptr invoke(ast_node_ptr node)
 	{
-		if (node->type != AST_BRACKETS || state.source->tree.get(node->unop))
-			state.error(node, "expected ()");
+		if (node->type != AST_BRACKETS || state->source->tree.get(node->unop))
+			state->error(node, "expected ()");
 
-		auto f = std::dynamic_pointer_cast<x86_64_function>(state.function);
+		auto f = std::dynamic_pointer_cast<x86_64_function>(state->function);
 		if (!f)
-			state.error(node, "x86_64 inline asm used in non-x86_64 function");
+			state->error(node, "x86_64 inline asm used in non-x86_64 function");
 
 		f->emit_byte(0x0f);
 		f->emit_byte(0x05);
@@ -138,21 +138,21 @@ struct asm_syscall_macro: macro {
 	}
 };
 
-static value_ptr builtin_macro_asm(const compile_state &state, ast_node_ptr node)
+static value_ptr builtin_macro_asm(ast_node_ptr node)
 {
 	if (node->type != AST_JUXTAPOSE)
-		state.error(node, "expected juxtaposition");
+		state->error(node, "expected juxtaposition");
 
-	auto inputs_node = state.source->tree.get(node->binop.lhs);
-	node = state.source->tree.get(node->binop.rhs);
+	auto inputs_node = state->source->tree.get(node->binop.lhs);
+	node = state->source->tree.get(node->binop.rhs);
 
 	if (node->type != AST_JUXTAPOSE)
-		state.error(node, "expected juxtaposition");
+		state->error(node, "expected juxtaposition");
 
-	auto outputs_node = state.source->tree.get(node->binop.lhs);
-	auto asm_node = state.source->tree.get(node->binop.rhs);
+	auto outputs_node = state->source->tree.get(node->binop.lhs);
+	auto asm_node = state->source->tree.get(node->binop.rhs);
 
-	auto new_scope = std::make_shared<scope>(state.scope);
+	auto new_scope = std::make_shared<scope>(state->scope);
 
 	// registers
 	new_scope->define_builtin_constant("rax", builtin_type_asm_register, RAX);
@@ -174,11 +174,11 @@ static value_ptr builtin_macro_asm(const compile_state &state, ast_node_ptr node
 
 	auto inputs_scope = std::make_shared<scope>(new_scope);
 	inputs_scope->define_builtin_macro("_assign", std::make_shared<asm_assign_input_macro>());
-	compile(state.set_scope(inputs_scope), inputs_node);
+	(use_scope(inputs_scope), compile(inputs_node));
 
 	auto outputs_scope = std::make_shared<scope>(new_scope);
 	outputs_scope->define_builtin_macro("_assign", std::make_shared<asm_assign_output_macro>());
-	compile(state.set_scope(outputs_scope), outputs_node);
+	(use_scope(outputs_scope), compile(outputs_node));
 
 	// TODO: this is architecture-specific for now
 	auto asm_scope = std::make_shared<scope>(new_scope);
@@ -187,7 +187,7 @@ static value_ptr builtin_macro_asm(const compile_state &state, ast_node_ptr node
 	asm_scope->define_builtin_macro("mov", std::make_shared<asm_mov_macro>());
 	asm_scope->define_builtin_macro("syscall", std::make_shared<asm_syscall_macro>());
 
-	compile(state.set_scope(asm_scope), asm_node);
+	(use_scope(asm_scope), compile(asm_node));
 
 	return builtin_value_void;
 }

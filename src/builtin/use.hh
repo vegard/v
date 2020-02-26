@@ -25,17 +25,17 @@
 #include "../scope.hh"
 #include "../value.hh"
 
-static value_ptr builtin_macro_use(const compile_state &state, ast_node_ptr node)
+static value_ptr builtin_macro_use(ast_node_ptr node)
 {
-	auto new_scope = std::make_shared<scope>(state.scope);
-	auto v = compile(state.set_scope(new_scope), node);
+	auto new_scope = std::make_shared<scope>(state->scope);
+	auto v = (use_scope(new_scope), compile(node));
 
 	// Move each newly defined variable to the current scope
 	for (auto &it: v->type->members) {
 		// XXX: what about shadowed variables? should probably be an error
 		// XXX: preserve location of original definition
 		// XXX: should we really invoke the macro here?
-		state.scope->define(nullptr, nullptr, nullptr, it.first, it.second->invoke(state, v, node));
+		state->scope->define(nullptr, nullptr, nullptr, it.first, it.second->invoke(v, node));
 	}
 
 	return builtin_value_void;

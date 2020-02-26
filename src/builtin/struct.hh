@@ -80,11 +80,11 @@ struct struct_declare_macro: macro {
 	value_ptr invoke(ast_node_ptr node)
 	{
 		if (node->type != AST_JUXTAPOSE)
-			state->error(node, "expected juxtaposition");
+			error(node, "expected juxtaposition");
 
 		auto name_node = get_node(node->binop.lhs);
 		if (name_node->type != AST_SYMBOL_NAME)
-			state->error(name_node, "expected symbol for member name");
+			error(name_node, "expected symbol for member name");
 
 		auto field_name = get_symbol_name(name_node);
 
@@ -94,7 +94,7 @@ struct struct_declare_macro: macro {
 		auto type_node = get_node(node->binop.rhs);
 		auto type_value = eval(type_node);
 		assert(type_value->storage_type == VALUE_GLOBAL);
-		state->expect_type(node, type_value, builtin_type_type);
+		expect_type(node, type_value, builtin_type_type);
 
 		auto field_type = *(value_type_ptr *) type_value->global.host_address;
 

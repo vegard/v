@@ -29,7 +29,7 @@
 static value_ptr builtin_macro_import(ast_node_ptr node)
 {
 	// TODO: take dotted path instead of literal filename
-	state->expect_type(node, AST_LITERAL_STRING);
+	expect_type(node, AST_LITERAL_STRING);
 
 	// XXX: restrict accessible paths?
 	// TODO: search multiple paths rather than just the current dir
@@ -41,7 +41,7 @@ static value_ptr builtin_macro_import(ast_node_ptr node)
 		source = std::make_shared<mmap_source_file>(literal_string.c_str());
 		source_node = source->parse();
 	} catch (const std::runtime_error &e) {
-		state->error(node, e.what());
+		error(node, e.what());
 	}
 
 	auto new_scope = std::make_shared<scope>(state->scope);

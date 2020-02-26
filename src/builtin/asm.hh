@@ -48,7 +48,7 @@ struct asm_assign_input_macro: macro {
 		// other register.
 
 		if (node->type != AST_JUXTAPOSE)
-			state->error(node, "expected juxtaposition");
+			error(node, "expected juxtaposition");
 
 		auto src_node = state->source->tree.get(node->binop.rhs);
 		auto src_value = compile(src_node);
@@ -56,13 +56,13 @@ struct asm_assign_input_macro: macro {
 		auto dest_node = state->source->tree.get(node->binop.lhs);
 		auto dest_value = eval(dest_node);
 		if (dest_value->type != builtin_type_asm_register)
-			state->error(dest_node, "expected register");
+			error(dest_node, "expected register");
 		if (dest_value->storage_type != VALUE_GLOBAL)
-			state->error(dest_node, "expected compile-time constant");
+			error(dest_node, "expected compile-time constant");
 
 		auto f = std::dynamic_pointer_cast<x86_64_function>(state->function);
 		if (!f)
-			state->error(node, "x86_64 inline asm used in non-x86_64 function");
+			error(node, "x86_64 inline asm used in non-x86_64 function");
 
 		// TODO: check that size matches register
 		assert(src_value->type->size == 8);
@@ -90,31 +90,31 @@ struct asm_mov_macro: macro {
 	value_ptr invoke(ast_node_ptr node)
 	{
 		if (node->type != AST_BRACKETS)
-			state->error(node, "expected (reg, reg)");
+			error(node, "expected (reg, reg)");
 
 		auto unop = state->source->tree.get(node->unop);
 		if (unop->type != AST_COMMA)
-			state->error(node, "expected (reg, reg)");
+			error(node, "expected (reg, reg)");
 
 		node = unop;
 
 		auto src_node = state->source->tree.get(node->binop.lhs);
 		auto src_value = eval(src_node);
 		if (src_value->type != builtin_type_asm_register)
-			state->error(src_node, "expected register");
+			error(src_node, "expected register");
 		if (src_value->storage_type != VALUE_GLOBAL)
-			state->error(src_node, "expected compile-time constant");
+			error(src_node, "expected compile-time constant");
 
 		auto dest_node = state->source->tree.get(node->binop.rhs);
 		auto dest_value = eval(dest_node);
 		if (dest_value->type != builtin_type_asm_register)
-			state->error(dest_node, "expected register");
+			error(dest_node, "expected register");
 		if (dest_value->storage_type != VALUE_GLOBAL)
-			state->error(dest_node, "expected compile-time constant");
+			error(dest_node, "expected compile-time constant");
 
 		auto f = std::dynamic_pointer_cast<x86_64_function>(state->function);
 		if (!f)
-			state->error(node, "x86_64 inline asm used in non-x86_64 function");
+			error(node, "x86_64 inline asm used in non-x86_64 function");
 
 		f->emit_move_reg_to_reg(*(machine_register *) src_value->global.host_address,
 			*(machine_register *) dest_value->global.host_address);
@@ -126,11 +126,11 @@ struct asm_syscall_macro: macro {
 	value_ptr invoke(ast_node_ptr node)
 	{
 		if (node->type != AST_BRACKETS || state->source->tree.get(node->unop))
-			state->error(node, "expected ()");
+			error(node, "expected ()");
 
 		auto f = std::dynamic_pointer_cast<x86_64_function>(state->function);
 		if (!f)
-			state->error(node, "x86_64 inline asm used in non-x86_64 function");
+			error(node, "x86_64 inline asm used in non-x86_64 function");
 
 		f->emit_byte(0x0f);
 		f->emit_byte(0x05);
@@ -141,13 +141,13 @@ struct asm_syscall_macro: macro {
 static value_ptr builtin_macro_asm(ast_node_ptr node)
 {
 	if (node->type != AST_JUXTAPOSE)
-		state->error(node, "expected juxtaposition");
+		error(node, "expected juxtaposition");
 
 	auto inputs_node = state->source->tree.get(node->binop.lhs);
 	node = state->source->tree.get(node->binop.rhs);
 
 	if (node->type != AST_JUXTAPOSE)
-		state->error(node, "expected juxtaposition");
+		error(node, "expected juxtaposition");
 
 	auto outputs_node = state->source->tree.get(node->binop.lhs);
 	auto asm_node = state->source->tree.get(node->binop.rhs);

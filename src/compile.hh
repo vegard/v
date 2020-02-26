@@ -52,58 +52,9 @@ struct compile_state {
 		scope(scope)
 	{
 	}
-
-	template<typename... Args>
-	void __attribute__((noreturn)) error(const ast_node_ptr node, const char *fmt, Args... args) const
-	{
-		throw compile_error(source, node, fmt, args...);
-	}
-
-	template<typename... Args>
-	void expect(const ast_node_ptr node, bool cond, const char *fmt, Args... args) const
-	{
-		if (!cond)
-			error(node, fmt, args...);
-	}
-
-	void expect_type(const ast_node_ptr node, ast_node_type type) const
-	{
-		// TODO: stringify the expected and actual types
-		expect(node, node->type == type, "got AST node type $, expected $", node->type, type);
-	}
-
-	void expect_type(const ast_node_ptr node, value_ptr value, value_type_ptr type) const
-	{
-		// TODO: can we even stringify these types?
-		expect(node, value->type == type, "unexpected type");
-	}
-
-	value_ptr lookup(const ast_node_ptr node, const std::string name) const
-	{
-		scope::entry e;
-		if (!scope->lookup(name, e))
-			return nullptr;
-
-		// We can always access globals
-		auto val = e.val;
-		if (val->storage_type == VALUE_GLOBAL || val->storage_type == VALUE_TARGET_GLOBAL || val->storage_type == VALUE_CONSTANT)
-			return val;
-
-		if (e.f != function)
-			error(node, "cannot access local variable of different function");
-
-		return val;
-	}
-
 };
 
 __thread compile_state *state;
-
-void use_value(const ast_node_ptr &node, value_ptr val)
-{
-	if (!can_use_value(state->context, val))
-		state->error(node, "cannot access value at compile time");
-}
 
 ast_node_ptr get_node(int index)
 {
@@ -137,6 +88,53 @@ std::string get_symbol_name(ast_node_ptr node)
 	return std::string(&state->source->data[node->pos], node->end - node->pos);
 }
 
+template<typename... Args>
+void __attribute__((noreturn)) error(const ast_node_ptr node, const char *fmt, Args... args)
+{
+	throw compile_error(state->source, node, fmt, args...);
+}
+
+template<typename... Args>
+void expect(const ast_node_ptr node, bool cond, const char *fmt, Args... args)
+{
+	if (!cond)
+		error(node, fmt, args...);
+}
+
+void expect_type(const ast_node_ptr node, ast_node_type type)
+{
+	// TODO: stringify the expected and actual types
+	expect(node, node->type == type, "got AST node type $, expected $", node->type, type);
+}
+
+void expect_type(const ast_node_ptr node, value_ptr value, value_type_ptr type)
+{
+	// TODO: can we even stringify these types?
+	expect(node, value->type == type, "unexpected type");
+}
+
+value_ptr lookup(const ast_node_ptr node, const std::string name)
+{
+	scope::entry e;
+	if (!state->scope->lookup(name, e))
+		return nullptr;
+
+	// We can always access globals
+	auto val = e.val;
+	if (val->storage_type == VALUE_GLOBAL || val->storage_type == VALUE_TARGET_GLOBAL || val->storage_type == VALUE_CONSTANT)
+		return val;
+
+	if (e.f != state->function)
+		error(node, "cannot access local variable of different function");
+
+	return val;
+}
+
+void use_value(const ast_node_ptr &node, value_ptr val)
+{
+	if (!can_use_value(state->context, val))
+		error(node, "cannot access value at compile time");
+}
 
 unsigned int new_object(object_ptr object)
 {
@@ -324,12 +322,12 @@ static value_ptr compile_member(ast_node_ptr node)
 	auto rhs_node = state->source->tree.get(node->binop.rhs);
 	if (rhs_node->type != AST_SYMBOL_NAME)
 		// TODO: say which AST node type we got instead of a symbol name
-		state->error(node, "member name must be a symbol");
+		error(node, "member name must be a symbol");
 
 	auto symbol_name = get_symbol_name(rhs_node);
 	auto it = lhs_type->members.find(symbol_name);
 	if (it == lhs_type->members.end())
-		state->error(node, "unknown member: $", symbol_name);
+		error(node, "unknown member: $", symbol_name);
 
 	return it->second->invoke(lhs, rhs_node);
 }
@@ -354,7 +352,7 @@ static value_ptr _compile_juxtapose(ast_node_ptr lhs_node, value_ptr lhs, ast_no
 		// call type's constructor
 		auto type = *(value_type_ptr *) lhs->global.host_address;
 		if (!type->constructor)
-			state->error(lhs_node, "type doesn't have a constructor");
+			error(lhs_node, "type doesn't have a constructor");
 
 		// TODO: functions as constructors
 		return type->constructor(type, rhs_node);
@@ -364,7 +362,7 @@ static value_ptr _compile_juxtapose(ast_node_ptr lhs_node, value_ptr lhs, ast_no
 	if (it != lhs_type->members.end())
 		return it->second->invoke(lhs, rhs_node);
 
-	state->error(lhs_node, "type is not callable");
+	error(lhs_node, "type is not callable");
 }
 
 static value_ptr compile_juxtapose(ast_node_ptr node)
@@ -382,9 +380,9 @@ static value_ptr compile_juxtapose(ast_node_ptr node)
 static value_ptr compile_symbol_name(ast_node_ptr node)
 {
 	auto symbol_name = get_symbol_name(node);
-	auto ret = state->lookup(node, symbol_name);
+	auto ret = lookup(node, symbol_name);
 	if (!ret)
-		state->error(node, "could not resolve symbol: $", symbol_name);
+		error(node, "could not resolve symbol: $", symbol_name);
 
 	return ret;
 }
@@ -426,7 +424,7 @@ static value_ptr compile(ast_node_ptr node)
 		return compile_semicolon(node);
 
 	default:
-		state->error(node, "unrecognised expression");
+		error(node, "unrecognised expression");
 	}
 
 	assert(false);

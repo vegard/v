@@ -39,7 +39,7 @@ static auto builtin_type_str = std::make_shared<value_type>(value_type {
 static value_ptr builtin_type_str_constructor(value_type_ptr, ast_node_ptr node)
 {
 	if (node->type != AST_LITERAL_STRING)
-		state->error(node, "expected literal string");
+		error(node, "expected literal string");
 
 	auto ret = state->scope->make_value(nullptr, VALUE_GLOBAL, builtin_type_str);
 

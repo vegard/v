@@ -36,11 +36,11 @@ struct constant_define_macro: macro {
 	value_ptr invoke(ast_node_ptr node)
 	{
 		if (node->type != AST_JUXTAPOSE)
-			state->error(node, "expected juxtaposition");
+			error(node, "expected juxtaposition");
 
 		auto lhs = get_node(node->binop.lhs);
 		if (lhs->type != AST_SYMBOL_NAME)
-			state->error(node, "definition of non-symbol");
+			error(node, "definition of non-symbol");
 
 		auto symbol_name = get_symbol_name(lhs);
 

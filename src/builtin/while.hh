@@ -41,12 +41,12 @@ struct break_macro: macro {
 	value_ptr invoke(ast_node_ptr node)
 	{
 		if (state->function != this->f)
-			state->error(node, "'break' used outside defining function");
+			error(node, "'break' used outside defining function");
 
 		// The scope where we are used must be the scope where we
 		// were defined or a child.
 		if (!is_parent_of(this->s, state->scope))
-			state->error(node, "'break' used outside defining scope");
+			error(node, "'break' used outside defining scope");
 
 		state->function->comment("break");
 		state->function->emit_jump(done_label);
@@ -70,12 +70,12 @@ struct continue_macro: macro {
 	value_ptr invoke(ast_node_ptr node)
 	{
 		if (state->function != this->f)
-			state->error(node, "'continue' used outside defining function");
+			error(node, "'continue' used outside defining function");
 
 		// The scope where we are used must be the scope where we
 		// were defined or a child.
 		if (!is_parent_of(this->s, state->scope))
-			state->error(node, "'continue' used outside defining scope");
+			error(node, "'continue' used outside defining scope");
 
 		state->function->comment("continue");
 		state->function->emit_jump(loop_label);
@@ -93,7 +93,7 @@ static value_ptr builtin_macro_while(ast_node_ptr node)
 	f->comment("while");
 
 	if (node->type != AST_JUXTAPOSE)
-		state->error(node, "expected 'while <expression> <expression>'");
+		error(node, "expected 'while <expression> <expression>'");
 
 	auto condition_node = get_node(node->binop.lhs);
 	auto body_node = get_node(node->binop.rhs);
@@ -104,7 +104,7 @@ static value_ptr builtin_macro_while(ast_node_ptr node)
 	// condition
 	auto condition_value = compile(condition_node);
 	if (condition_value->type != builtin_type_boolean)
-		state->error(condition_node, "'while' condition must be boolean");
+		error(condition_node, "'while' condition must be boolean");
 
 	auto done_label = f->new_label();
 	f->emit_jump_if_zero(condition_value, done_label);

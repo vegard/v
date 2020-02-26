@@ -28,11 +28,11 @@
 static value_ptr builtin_macro_declare(ast_node_ptr node)
 {
 	if (node->type != AST_JUXTAPOSE)
-		state->error(node, "expected juxtaposition");
+		error(node, "expected juxtaposition");
 
 	auto lhs = get_node(node->binop.lhs);
 	if (lhs->type != AST_SYMBOL_NAME)
-		state->error(node, "declaration of non-symbol");
+		error(node, "declaration of non-symbol");
 
 	auto symbol_name = get_symbol_name(lhs);
 
@@ -40,9 +40,9 @@ static value_ptr builtin_macro_declare(ast_node_ptr node)
 	auto rhs_node = get_node(node->binop.rhs);
 	auto rhs = eval(rhs_node);
 	if (rhs->storage_type != VALUE_GLOBAL)
-		state->error(rhs_node, "type must be known at compile time");
+		error(rhs_node, "type must be known at compile time");
 	if (rhs->type != builtin_type_type)
-		state->error(rhs_node, "type must be an instance of a type");
+		error(rhs_node, "type must be an instance of a type");
 	auto rhs_type = *(value_type_ptr *) rhs->global.host_address;
 
 	// For functions that are run at compile-time, we allocate

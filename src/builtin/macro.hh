@@ -126,7 +126,7 @@ static void _builtin_macro__define(uint64_t *args)
 	auto value = (value_ptr) args[1];
 
 	if (name->type != AST_SYMBOL_NAME)
-		state->error(name, "expected symbol");
+		error(name, "expected symbol");
 
 	assert(value);
 	state->scope->define(state->function, state->source, name, get_symbol_name(name), value);
@@ -134,7 +134,7 @@ static void _builtin_macro__define(uint64_t *args)
 
 static value_ptr builtin_macro__define(ast_node_ptr node)
 {
-	state->expect_type(node, AST_BRACKETS);
+	expect_type(node, AST_BRACKETS);
 
 	std::vector<std::pair<ast_node_ptr, value_ptr>> args;
 	for (auto arg_node: traverse<AST_COMMA>(state->source->tree, get_node(node->unop)))
@@ -167,7 +167,7 @@ static void _builtin_macro__compile(uint64_t *args)
 
 static value_ptr builtin_macro__compile(ast_node_ptr node)
 {
-	state->expect_type(node, AST_BRACKETS);
+	expect_type(node, AST_BRACKETS);
 
 	std::vector<std::pair<ast_node_ptr, value_ptr>> args;
 	for (auto arg_node: traverse<AST_COMMA>(state->source->tree, get_node(node->unop)))
@@ -199,7 +199,7 @@ static void _builtin_macro__eval(uint64_t *args)
 
 static value_ptr builtin_macro__eval(ast_node_ptr node)
 {
-	state->expect_type(node, AST_BRACKETS);
+	expect_type(node, AST_BRACKETS);
 
 	std::vector<std::pair<ast_node_ptr, value_ptr>> args;
 	for (auto arg_node: traverse<AST_COMMA>(state->source->tree, get_node(node->unop)))

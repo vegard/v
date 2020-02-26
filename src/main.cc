@@ -88,7 +88,7 @@ static value_ptr builtin_macro_print(ast_node_ptr node)
 		use_value(node, arg);
 		state->function->emit_c_call(print_fn, { arg }, &builtin_value_void);
 	} else {
-		state->error(node, "expected value of type u64");
+		error(node, "expected value of type u64");
 	}
 
 	return &builtin_value_void;

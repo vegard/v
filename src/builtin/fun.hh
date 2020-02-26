@@ -47,18 +47,18 @@ struct return_macro: macro {
 	value_ptr invoke(ast_node_ptr node)
 	{
 		if (state->function != this->f)
-			state->error(node, "'return' used outside defining function");
+			error(node, "'return' used outside defining function");
 
 		// The scope where we are used must be the scope where we
 		// were defined or a child.
 		if (!is_parent_of(this->s, state->scope))
-			state->error(node, "'return' used outside defining scope");
+			error(node, "'return' used outside defining scope");
 
 		f->comment("return");
 
 		auto v = compile(node);
 		if (v->type != return_type)
-			state->error(node, "wrong return type for function");
+			error(node, "wrong return type for function");
 
 		if (return_value)
 			state->function->emit_move(v, return_value);
@@ -75,11 +75,11 @@ struct return_macro: macro {
 static value_ptr fun_define_macro(ast_node_ptr node)
 {
 	if (node->type != AST_JUXTAPOSE)
-		state->error(node, "expected juxtaposition");
+		error(node, "expected juxtaposition");
 
 	auto lhs = get_node(node->binop.lhs);
 	if (lhs->type != AST_SYMBOL_NAME)
-		state->error(node, "definition of non-symbol");
+		error(node, "definition of non-symbol");
 
 	auto symbol_name = get_symbol_name(lhs);
 
@@ -126,7 +126,7 @@ static value_ptr __construct_fun(value_type_ptr type, ast_node_ptr node,
 	auto v = (use_function(new_f, new_scope), compile(body_node));
 	auto v_type = v->type;
 	if (v_type != return_type)
-		state->error(node, "wrong return type for function");
+		error(node, "wrong return type for function");
 
 	new_f->emit_move(v, new_f->return_value);
 	new_f->emit_label(return_label);
@@ -168,23 +168,23 @@ static value_ptr __construct_fun(value_type_ptr type, ast_node_ptr node,
 static value_ptr _construct_fun(value_type_ptr type, ast_node_ptr node)
 {
 	if (node->type != AST_JUXTAPOSE)
-		state->error(node, "expected (<argument types>...) <body>");
+		error(node, "expected (<argument types>...) <body>");
 
 	auto args_node = get_node(node->binop.lhs);
 	if (args_node->type != AST_BRACKETS)
-		state->error(node, "expected (<argument names>...)");
+		error(node, "expected (<argument names>...)");
 
 	std::vector<std::string> args;
 	for (auto arg_node: traverse<AST_COMMA>(state->source->tree, get_node(args_node->unop))) {
 		if (arg_node->type != AST_SYMBOL_NAME)
-			state->error(node, "expected symbol for argument name");
+			error(node, "expected symbol for argument name");
 
 		auto symbol_name = get_symbol_name(arg_node);
 		args.push_back(symbol_name);
 	}
 
 	if (args.size() != type->argument_types.size())
-		state->error(node, "expected $ arguments; got $", type->argument_types.size(), args.size());
+		error(node, "expected $ arguments; got $", type->argument_types.size(), args.size());
 
 	auto body_node = get_node(node->binop.rhs);
 	return __construct_fun(type, node, args, body_node);
@@ -199,7 +199,7 @@ static value_ptr __call_fun(value_ptr fn, ast_node_ptr node, std::vector<std::pa
 	auto type = fn->type;
 
 	if (args.size() != type->argument_types.size())
-		state->error(node, "expected $ arguments; got $", type->argument_types.size(), args.size());
+		error(node, "expected $ arguments; got $", type->argument_types.size(), args.size());
 
 	auto return_type = type->return_type;
 	assert(return_type);
@@ -217,7 +217,7 @@ static value_ptr __call_fun(value_ptr fn, ast_node_ptr node, std::vector<std::pa
 
 		auto arg_type = arg_value->type;
 		if (arg_type != type->argument_types[i])
-			state->error(arg_node, "wrong argument type");
+			error(arg_node, "wrong argument type");
 
 		args_values.push_back(arg_value);
 	}
@@ -233,7 +233,7 @@ static value_ptr __call_fun(value_ptr fn, ast_node_ptr node, std::vector<std::pa
 static value_ptr _call_fun(value_ptr fn, ast_node_ptr node)
 {
 	if (node->type != AST_BRACKETS)
-		state->error(node, "expected parantheses");
+		error(node, "expected parantheses");
 
 	std::vector<std::pair<ast_node_ptr, value_ptr>> args;
 	for (auto arg_node: traverse<AST_COMMA>(state->source->tree, get_node(node->unop)))
@@ -269,19 +269,19 @@ static value_ptr builtin_macro_fun(ast_node_ptr node)
 	// Extract parameters and code block from AST
 
 	if (node->type != AST_JUXTAPOSE)
-		state->error(node, "expected 'fun <expression> (<expression>)'");
+		error(node, "expected 'fun <expression> (<expression>)'");
 
 	auto ret_type_node = get_node(node->binop.lhs);
 	auto ret_type_value = eval(ret_type_node);
 	if (ret_type_value->storage_type != VALUE_GLOBAL)
-		state->error(ret_type_node, "return type must be known at compile time");
+		error(ret_type_node, "return type must be known at compile time");
 	if (ret_type_value->type != builtin_type_type)
-		state->error(ret_type_node, "return type must be an instance of a type");
+		error(ret_type_node, "return type must be an instance of a type");
 	auto ret_type = *(value_type_ptr *) ret_type_value->global.host_address;
 
 	auto brackets_node = get_node(node->binop.rhs);
 	if (brackets_node->type != AST_BRACKETS)
-		state->error(brackets_node, "expected (<expression>...)");
+		error(brackets_node, "expected (<expression>...)");
 
 	auto args_node = get_node(brackets_node->unop);
 
@@ -289,9 +289,9 @@ static value_ptr builtin_macro_fun(ast_node_ptr node)
 	for (auto arg_type_node: traverse<AST_COMMA>(state->source->tree, args_node)) {
 		value_ptr arg_type_value = eval(arg_type_node);
 		if (arg_type_value->storage_type != VALUE_GLOBAL)
-			state->error(arg_type_node, "argument type must be known at compile time");
+			error(arg_type_node, "argument type must be known at compile time");
 		if (arg_type_value->type != builtin_type_type)
-			state->error(arg_type_node, "argument type must be an instance of a type");
+			error(arg_type_node, "argument type must be an instance of a type");
 		auto arg_type = *(value_type_ptr *) arg_type_value->global.host_address;
 
 		argument_types.push_back(arg_type);

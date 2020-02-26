@@ -58,11 +58,11 @@ struct entry_macro: macro {
 	value_ptr invoke(ast_node_ptr node)
 	{
 		if (!is_parent_of(this->s, state->scope))
-			state->error(node, "'entry' used outside defining scope");
+			error(node, "'entry' used outside defining scope");
 
 		auto entry_value = eval(node);
 		if (entry_value->storage_type != VALUE_TARGET_GLOBAL)
-			state->error(node, "entry point must be a compile-time target constant");
+			error(node, "entry point must be a compile-time target constant");
 
 		// TODO: check here that entry_point is not void and callable with no args
 
@@ -86,11 +86,11 @@ struct define_macro: macro {
 	value_ptr invoke(ast_node_ptr node)
 	{
 		if (node->type != AST_JUXTAPOSE)
-			state->error(node, "expected juxtaposition");
+			error(node, "expected juxtaposition");
 
 		auto lhs = get_node(node->binop.lhs);
 		if (lhs->type != AST_SYMBOL_NAME)
-			state->error(node, "definition of non-symbol");
+			error(node, "definition of non-symbol");
 
 		auto symbol_name = get_symbol_name(lhs);
 
@@ -117,7 +117,7 @@ struct export_macro: macro {
 	value_ptr invoke(ast_node_ptr node)
 	{
 		if (!is_parent_of(this->s, state->scope))
-			state->error(node, "'export' used outside defining scope");
+			error(node, "'export' used outside defining scope");
 
 		// TODO: we really need to implement read vs. write scopes so
 		// that when the user defines something it still becomes visible
@@ -227,7 +227,7 @@ static value_ptr builtin_macro_elf(ast_node_ptr node)
 {
 	auto elf_node = node;
 
-	state->expect(node, node->type == AST_JUXTAPOSE,
+	expect(node, node->type == AST_JUXTAPOSE,
 		"expected 'elf [attributes...] filename:<expression> <expression>'");
 
 	enum {
@@ -259,21 +259,21 @@ static value_ptr builtin_macro_elf(ast_node_ptr node)
 			else if (symbol_name == "obj")
 				file_type = OBJECT;
 			else
-				state->error(attribute_node, "expected attribute");
+				error(attribute_node, "expected attribute");
 		}
 
 		node = get_node(node->binop.rhs);
 	}
 
-	state->expect(elf_node, node->type == AST_JUXTAPOSE,
+	expect(elf_node, node->type == AST_JUXTAPOSE,
 		"expected 'elf [attributes...] filename:<expression> <expression>'");
 
 	auto filename_node = get_node(node->binop.lhs);
 	auto filename_value = eval(filename_node);
 	if (filename_value->storage_type != VALUE_GLOBAL)
-		state->error(filename_node, "output filename must be known at compile time");
+		error(filename_node, "output filename must be known at compile time");
 	if (filename_value->type != builtin_type_str)
-		state->error(filename_node, "output filename must be a string");
+		error(filename_node, "output filename must be a string");
 	auto filename = *(std::string *) filename_value->global.host_address;
 
 	elf_data elf;
@@ -612,7 +612,7 @@ static value_ptr builtin_macro_elf(ast_node_ptr node)
 	// TODO: error handling, temporaries, etc.
 	int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0755);
 	if (fd == -1)
-		state->error(filename_node, "couldn't open '$' for writing: $", filename.c_str(), strerror(errno));
+		error(filename_node, "couldn't open '$' for writing: $", filename.c_str(), strerror(errno));
 
 	for (auto x: w.elements) {
 		if (x.data) {

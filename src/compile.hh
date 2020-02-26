@@ -54,6 +54,9 @@ struct compile_state {
 	}
 };
 
+// We bundle the whole state of the compiler into a single pointer so that
+// switching out the whole state is cheap. Avoid adding any more compiler
+// state outside this variable!
 __thread compile_state *state;
 
 ast_node_ptr get_node(int index)

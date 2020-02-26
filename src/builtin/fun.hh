@@ -137,7 +137,7 @@ static value_ptr __construct_fun(value_type_ptr type, ast_node_ptr node,
 		// target
 		auto x86_64_f = std::dynamic_pointer_cast<x86_64_function>(new_f);
 		// TODO: use new_state/new_scope?
-		return state->scope->make_value(nullptr, type, state->new_object(x86_64_f->this_object));
+		return state->scope->make_value(nullptr, type, new_object(x86_64_f->this_object));
 	} else {
 		// host
 		auto bytecode_f = std::dynamic_pointer_cast<bytecode_function>(new_f);

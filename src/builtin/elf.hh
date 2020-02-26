@@ -292,7 +292,7 @@ static value_ptr builtin_macro_elf(ast_node_ptr node)
 	object_ptr interp_object;
 	if (linking_type == DYNAMIC && file_type == EXECUTABLE) {
 		interp_object = std::make_shared<object>(interp);
-		interp_object_id = state->new_object(interp_object);
+		interp_object_id = new_object(interp_object);
 	}
 
 	auto expr_node = get_node(node->binop.rhs);
@@ -466,7 +466,7 @@ static value_ptr builtin_macro_elf(ast_node_ptr node)
 			new_f->emit_byte(0x0f);
 			new_f->emit_byte(0x05);
 
-			entry_object_id = state->new_object(new_f->this_object);
+			entry_object_id = new_object(new_f->this_object);
 		}
 	}
 

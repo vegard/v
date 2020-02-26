@@ -53,14 +53,6 @@ struct compile_state {
 	{
 	}
 
-	unsigned int new_object(object_ptr object) const
-	{
-		assert(objects);
-		unsigned int object_id = objects->size();
-		objects->push_back(object);
-		return object_id;
-	}
-
 	template<typename... Args>
 	void __attribute__((noreturn)) error(const ast_node_ptr node, const char *fmt, Args... args) const
 	{
@@ -143,6 +135,15 @@ std::string get_symbol_name(ast_node_ptr node)
 		return node->symbol_name;
 
 	return std::string(&state->source->data[node->pos], node->end - node->pos);
+}
+
+
+unsigned int new_object(object_ptr object)
+{
+	assert(state->objects);
+	unsigned int object_id = state->objects->size();
+	state->objects->push_back(object);
+	return object_id;
 }
 
 struct use_function {

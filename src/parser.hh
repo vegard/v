@@ -34,17 +34,16 @@
  * Nullary/unary (outfix) operators:
  *   (x)
  *   [x]
- *   <x>
  *   {x}
  *   (C++-style multiline comments)
  *
  * Unary prefix operators:
  *   @x
  *
- * Binary operators (highest precedence first):
+ * Binary operators:
  *   x.y
  *   x y
- *   x:y
+ *   x: y
  *   x..y
  *   x * y    x / y
  *   x + y    x - y
@@ -54,21 +53,43 @@
  *   x; y
  */
 
+// Numerically higher means higher precedence
 enum precedence {
 	PREC_SEMICOLON,
 	PREC_AT,
+	PREC_COMMA,
+	PREC_PAIR,
 	PREC_DEFINE,
 	PREC_ASSIGN,
-	PREC_COMMA,
 	PREC_EQUALITY,
 	PREC_ADD_SUBTRACT,
 	PREC_MULTIPLY_DIVIDE,
-	PREC_PAIR,
 	PREC_JUXTAPOSE,
 	PREC_MEMBER,
 	PREC_OUTFIX,
 	PREC_LITERAL,
 };
+
+static_assert(PREC_SEMICOLON < PREC_AT,
+	"'@a; b' should parse as '(@a); b'");
+
+static_assert(PREC_COMMA < PREC_PAIR,
+	"'a: 0, b: 1' should parse as '(a: 0), (b: 1)' for JSON compatibility");
+
+static_assert(PREC_PAIR < PREC_DEFINE,
+	"'x: y := z' should parse as 'x: (y := z)' so that we can use prefix");
+
+static_assert(PREC_ADD_SUBTRACT < PREC_MULTIPLY_DIVIDE,
+	"'a + b * c + d' should parse as 'a + (b * c) + d'");
+
+static_assert(PREC_ASSIGN < PREC_ADD_SUBTRACT,
+	"'a = b + c' should parse as 'a = (b + c)'");
+
+static_assert(PREC_ASSIGN < PREC_EQUALITY,
+	"'a = b == c' should parse as 'a = (b == c)'");
+
+static_assert(PREC_EQUALITY < PREC_ADD_SUBTRACT,
+	"'a == b + c' should parse as 'a == (b + c)'");
 
 enum associativity {
 	ASSOC_RIGHT,
